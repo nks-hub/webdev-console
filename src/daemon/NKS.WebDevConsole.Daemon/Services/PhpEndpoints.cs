@@ -28,15 +28,57 @@ namespace NKS.WebDevConsole.Daemon.Services;
 /// </summary>
 internal static class PhpEndpoints
 {
+    /// <summary>
+    /// Sets <c>extension=</c>/<c>zend_extension=</c> for one extension in php.ini
+    /// lines. Matches the bare name, a php_ prefix, a .dll/.so suffix and a
+    /// full path, and keeps the directive kind, so Xdebug and OPcache stay
+    /// zend extensions. Unknown extensions are appended.
+    /// </summary>
+    internal static List<string> PatchExtensionLines(IEnumerable<string> lines, string extName, bool enabled)
+    {
+        var result = lines.ToList();
+        var pattern = new System.Text.RegularExpressions.Regex(
+            @"^\s*;?\s*(zend_extension|extension)\s*=\s*""?(?:[^""]*[\\/])?(?:php_)?"
+            + System.Text.RegularExpressions.Regex.Escape(extName) + @"(?:\.dll|\.so)?""?\s*$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        var found = false;
+        for (int i = 0; i < result.Count; i++)
+        {
+            var m = pattern.Match(result[i]);
+            if (!m.Success) continue;
+            var directive = result[i].Trim().TrimStart(';').Trim();
+            result[i] = enabled ? directive : ";" + directive;
+            found = true;
+        }
+        if (!found)
+        {
+            var kind = extName is "xdebug" or "opcache" ? "zend_extension" : "extension";
+            result.Add("");
+            result.Add($"{(enabled ? "" : ";")}{kind}={extName}");
+        }
+        return result;
+    }
+
+    private static void ApplyPreferredActiveVersion(object phpPlugin, SettingsStore settings, ILogger logger)
+    {
+        var preferred = settings.GetString("php", "activeVersion");
+        if (string.IsNullOrEmpty(preferred)) return;
+        try { phpPlugin.GetType().GetMethod("SetActiveVersion")?.Invoke(phpPlugin, [preferred]); }
+        catch (Exception ex) { logger.LogDebug(ex, "Saved active PHP {Version} is not installed", preferred); }
+    }
+
     public static void MapPhpEndpoints(this WebApplication app, PluginLoader pluginLoader)
     {
-        // PHP versions — delegate to PhpPlugin via reflection
-        app.MapGet("/api/php/versions", () =>
+        // PHP versions — delegate to PhpPlugin via reflection. The plugin keeps
+        // the active version in memory only, so the user's choice from
+        // PUT /api/php/default is stored in settings and re-applied here.
+        app.MapGet("/api/php/versions", (SettingsStore settings) =>
         {
             var phpPlugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.php");
             if (phpPlugin == null) return Results.NotFound();
             var method = phpPlugin.Instance.GetType().GetMethod("GetInstalledVersions");
             if (method == null) return Results.Ok(Array.Empty<object>());
+            ApplyPreferredActiveVersion(phpPlugin.Instance, settings, app.Logger);
             try
             {
                 var versions = method.Invoke(phpPlugin.Instance, null);
@@ -49,6 +91,29 @@ internal static class PhpEndpoints
                 app.Logger.LogWarning(ex, "GetInstalledVersions reflection failed on php plugin");
                 return Results.Ok(Array.Empty<object>());
             }
+        });
+
+        // Active PHP version for new sites. Body: { "version": "8.4.12" | "8.4" }.
+        app.MapPut("/api/php/default", async (HttpContext ctx, SettingsStore settings) =>
+        {
+            var phpPlugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.php");
+            if (phpPlugin == null) return Results.NotFound(new { error = "PHP plugin not loaded" });
+            Dictionary<string, string>? body;
+            try { body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(); }
+            catch (JsonException) { return Results.BadRequest(new { error = "Invalid JSON body" }); }
+            var version = body?.GetValueOrDefault("version") ?? "";
+            var majorMinor = string.Join('.', version.Split('.').Take(2));
+            if (!System.Text.RegularExpressions.Regex.IsMatch(majorMinor, @"^\d+\.\d+$"))
+                return Results.BadRequest(new { error = "version must look like 8.4 or 8.4.12" });
+            var setter = phpPlugin.Instance.GetType().GetMethod("SetActiveVersion");
+            if (setter == null) return Results.Problem("PHP plugin cannot switch the active version");
+            try { setter.Invoke(phpPlugin.Instance, [majorMinor]); }
+            catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is ArgumentException)
+            {
+                return Results.BadRequest(new { error = $"PHP {majorMinor} is not installed" });
+            }
+            settings.Set("php", "activeVersion", majorMinor);
+            return Results.Ok(new { version = majorMinor });
         });
 
         // PHP extensions for a given version
@@ -126,7 +191,7 @@ internal static class PhpEndpoints
                     if (!File.Exists(iniPath)) continue;
                     try
                     {
-                        PatchExtensionLine(iniPath, name, enabled);
+                        File.WriteAllLines(iniPath, PatchExtensionLines(File.ReadAllLines(iniPath), name, enabled));
                         patched.Add(iniPath);
                     }
                     catch (Exception ex)
@@ -154,32 +219,6 @@ internal static class PhpEndpoints
             }
 
             return Results.Ok(new { version, name, enabled, patchedFiles = patched });
-
-            // --- local helper ---
-            static void PatchExtensionLine(string iniPath, string extName, bool shouldBeEnabled)
-            {
-                var lines = File.ReadAllLines(iniPath).ToList();
-                var enableLine = $"extension={extName}";
-                var disableLine = $";extension={extName}";
-                var pattern = new System.Text.RegularExpressions.Regex(
-                    @"^\s*;?\s*extension\s*=\s*" + System.Text.RegularExpressions.Regex.Escape(extName) + @"\s*$",
-                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-
-                bool found = false;
-                for (int i = 0; i < lines.Count; i++)
-                {
-                    if (!pattern.IsMatch(lines[i])) continue;
-                    lines[i] = shouldBeEnabled ? enableLine : disableLine;
-                    found = true;
-                }
-                if (!found)
-                {
-                    // Extension not yet mentioned — add under [ext] section or EOF.
-                    lines.Add("");
-                    lines.Add(shouldBeEnabled ? enableLine : disableLine);
-                }
-                File.WriteAllLines(iniPath, lines);
-            }
         });
     }
 }

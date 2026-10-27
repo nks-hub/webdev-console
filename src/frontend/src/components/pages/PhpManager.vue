@@ -3,10 +3,11 @@
     <div class="page-header">
       <div class="header-left">
         <h1 class="page-title">{{ $t('php.title') }}</h1>
-        <span class="version-count" v-if="versions.length">{{ versions.length }} {{ $t('binaries.installed') }}</span>
+        <span class="version-count" v-if="versions.length">{{ $t('php.installedCount', { n: versions.length }, versions.length) }}</span>
       </div>
       <div class="header-actions">
         <el-button size="small" @click="loadVersions" :loading="loading">{{ $t('common.refresh') }}</el-button>
+        <el-button size="small" type="primary" :icon="Plus" @click="addVersion">{{ $t('php.addVersion') }}</el-button>
       </div>
     </div>
 
@@ -31,26 +32,41 @@
         <div
           v-for="ver in versions"
           :key="ver.version"
+          v-activate
           class="version-card"
-          :class="{ active: selectedVersion === ver.version, default: ver.isDefault }"
+          :class="{ active: selectedVersion === ver.version, default: isActive(ver) }"
+          :aria-pressed="selectedVersion === ver.version"
           @click="selectVersion(ver)"
         >
           <div class="ver-header">
             <span class="ver-number">PHP {{ ver.majorMinor }}</span>
-            <el-tag v-if="ver.isDefault" type="success" size="small" effect="plain">{{ $t('php.default') }}</el-tag>
+            <el-tag v-if="isActive(ver)" type="success" size="small" effect="plain">{{ $t('php.default') }}</el-tag>
           </div>
           <div class="ver-full">{{ ver.version }}</div>
           <div class="ver-path mono">{{ ver.path }}</div>
-          <div class="ver-actions" v-if="!ver.isDefault">
+          <div class="ver-actions" v-if="!isActive(ver)">
             <el-button size="small" text @click.stop="setDefault(ver.version)">{{ $t('php.setDefault') }}</el-button>
           </div>
         </div>
       </div>
 
-      <el-empty v-else-if="!loading" :description="$t('php.noVersions')" :image-size="64" />
+      <el-empty v-else-if="!loading" :description="$t('php.noVersions')" :image-size="64">
+        <el-button type="primary" @click="addVersion">{{ $t('php.addVersion') }}</el-button>
+      </el-empty>
+
+      <div v-if="selectedVersion && configLoading" class="php-detail">
+        <el-skeleton :rows="4" animated />
+      </div>
+      <el-alert
+        v-else-if="selectedVersion && configError"
+        type="warning"
+        :title="configError"
+        :closable="false"
+        show-icon
+      />
 
       <!-- Selected version detail -->
-      <div v-if="selectedVersion && selectedConfig" class="php-detail">
+      <div v-else-if="selectedVersion && selectedConfig" class="php-detail">
         <div class="detail-header">
           <h2 class="detail-title">PHP {{ selectedVersion }}</h2>
           <div class="detail-actions">
@@ -68,15 +84,16 @@
               class="ext-item"
               :class="{ enabled: ext.enabled }"
             >
-              <span class="ext-name">{{ ext.name }}</span>
+              <span class="ext-name">
+                {{ ext.name }}
+                <el-tag v-if="ext.zend" size="small" type="info" effect="plain" class="ext-zend">Zend</el-tag>
+              </span>
               <el-switch
                 :model-value="ext.enabled"
                 :loading="togglingExt === ext.name"
+                :aria-label="$t('php.extensionAria', { name: ext.name })"
                 size="small"
-                inline-prompt
-                active-text="ON"
-                inactive-text="OFF"
-                @change="(val: boolean) => toggleExtension(ext.name, val)"
+                @change="(val: string | number | boolean) => toggleExtension(ext.name, Boolean(val))"
               />
             </div>
           </div>
@@ -94,17 +111,22 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { Plus } from '@element-plus/icons-vue'
 import { daemonBaseUrl, daemonAuthHeaders as authHeaders, fetchPhpVersions } from '../../api/daemon'
 import type { PhpVersion } from '../../api/types'
 import { errorMessage } from '../../utils/errors'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
+const router = useRouter()
 
 interface ExtInfo {
   name: string
   enabled: boolean
+  /** Loaded with zend_extension= (Xdebug, OPcache). */
+  zend: boolean
 }
 
 const versions = ref<PhpVersion[]>([])
@@ -114,6 +136,17 @@ const selectedVersion = ref('')
 const selectedConfig = ref('')
 const extensions = ref<ExtInfo[]>([])
 const togglingExt = ref<string>('')
+const configLoading = ref(false)
+const configError = ref('')
+
+// The daemon marks the version new sites get as `isActive`.
+function isActive(ver: PhpVersion): boolean {
+  return !!(ver.isActive ?? ver.isDefault)
+}
+
+function addVersion() {
+  void router.push({ path: '/binaries', query: { app: 'php' } })
+}
 
 const enabledCount = computed(() => extensions.value.filter(e => e.enabled).length)
 
@@ -124,7 +157,7 @@ async function loadVersions() {
   try {
     versions.value = await fetchPhpVersions()
   } catch (e) {
-    loadError.value = `Cannot connect to daemon: ${errorMessage(e)}`
+    loadError.value = t('php.daemonUnreachable', { err: errorMessage(e) })
   } finally { loading.value = false }
 }
 
@@ -136,42 +169,45 @@ function selectVersion(ver: PhpVersion) {
 async function loadConfig(version: string) {
   selectedConfig.value = ''
   extensions.value = []
+  configError.value = ''
+  configLoading.value = true
   try {
-    // Load php.ini from config endpoint
     const r = await fetch(`${daemonBaseUrl()}/api/services/php/config`, { headers: authHeaders() })
-    if (r.ok) {
-      const data: { files?: Array<{ name?: string; path?: string; content: string }> } = await r.json()
-      const file = data.files?.find(f => f.name?.includes(version) || f.path?.includes(version))
-      if (file) {
-        selectedConfig.value = file.content
-        // Parse extensions from php.ini
-        parseExtensions(file.content)
-      }
+    if (!r.ok) {
+      configError.value = t('php.configLoadFailed', { err: `HTTP ${r.status}` })
+      return
     }
-  } catch { /* skip */ }
+    const data: { files?: Array<{ name?: string; path?: string; content: string }> } = await r.json()
+    // Each version keeps its php.ini in its own install folder, named by the full version.
+    const file = data.files?.find(f => (f.path ?? '').split(/[\\/]/).includes(version))
+      ?? data.files?.find(f => f.name?.includes(version) || f.path?.includes(version))
+    if (!file) {
+      configError.value = t('php.configNotFound', { version })
+      return
+    }
+    selectedConfig.value = file.content
+    extensions.value = parseExtensions(file.content)
+  } catch (e) {
+    configError.value = t('php.configLoadFailed', { err: errorMessage(e) })
+  } finally {
+    configLoading.value = false
+  }
 }
 
-function parseExtensions(iniContent: string) {
+/** extension= / zend_extension= lines of php.ini, by bare name (no path, php_ prefix or suffix). */
+function parseExtensions(iniContent: string): ExtInfo[] {
   const exts: ExtInfo[] = []
-  const lines = iniContent.split('\n')
-  for (const line of lines) {
-    const trimmed = line.trim()
-    // extension=name or ;extension=name (disabled)
-    const match = trimmed.match(/^(;?)extension=(.+)$/)
-    if (match) {
-      const enabled = match[1] !== ';'
-      const name = match[2].replace(/\.dll$|\.so$/, '').trim()
-      exts.push({ name, enabled })
-    }
-    // zend_extension=name
-    const zendMatch = trimmed.match(/^(;?)zend_extension=(.+)$/)
-    if (zendMatch) {
-      const enabled = zendMatch[1] !== ';'
-      const name = zendMatch[2].replace(/\.dll$|\.so$/, '').trim()
-      exts.push({ name: `[zend] ${name}`, enabled })
-    }
+  for (const line of iniContent.split('\n')) {
+    const match = line.trim().match(/^(;?)\s*(zend_extension|extension)\s*=\s*"?([^"]+?)"?\s*$/)
+    if (!match) continue
+    const name = (match[3].split(/[\\/]/).pop() ?? '')
+      .replace(/^php_/i, '')
+      .replace(/\.(dll|so)$/i, '')
+      .trim()
+    if (!/^[a-z0-9_]{1,64}$/i.test(name) || exts.some(e => e.name === name)) continue
+    exts.push({ name, enabled: match[1] !== ';', zend: match[2] === 'zend_extension' })
   }
-  extensions.value = exts
+  return exts
 }
 
 async function toggleExtension(name: string, enabled: boolean) {
@@ -191,8 +227,8 @@ async function toggleExtension(name: string, enabled: boolean) {
       },
     )
     if (!r.ok) {
-      const text = await r.text().catch(() => r.statusText)
-      ElMessage.error(t('toast.extToggleFailed', { name, err: text }))
+      const body = await r.json().catch(() => ({})) as { error?: string }
+      ElMessage.error(t('toast.extToggleFailed', { name, err: body.error || `HTTP ${r.status}` }))
       return
     }
     // Optimistically update local state; daemon also restarted PHP so a
@@ -220,11 +256,10 @@ async function setDefault(version: string) {
       ElMessage.success(t('toast.phpDefaultSet', { version }))
       await loadVersions()
     } else {
-      // Surface the daemon's response body so the user can see WHY the
-      // operation failed (permission denied, invalid version, file locked…)
+      // Surface the daemon's reason (version not installed, plugin missing)
       // instead of a generic "Failed to set default" dead-end.
-      const text = await r.text().catch(() => r.statusText)
-      ElMessage.error(t('toast.setDefaultFailed', { err: text || `HTTP ${r.status}` }))
+      const body = await r.json().catch(() => ({})) as { error?: string }
+      ElMessage.error(t('toast.setDefaultFailed', { err: body.error || `HTTP ${r.status}` }))
     }
   } catch (e) {
     ElMessage.error(t('toast.setDefaultFailed', { err: errorMessage(e) }))
@@ -374,8 +409,10 @@ onMounted(() => { void loadVersions() })
 }
 
 .ext-item.enabled {
-  border-color: rgba(34, 197, 94, 0.2);
+  border-color: color-mix(in oklab, var(--wdc-status-running) 35%, var(--wdc-border));
 }
+
+.ext-zend { margin-left: var(--wdc-space-1); }
 
 .ext-name {
   color: var(--wdc-text);

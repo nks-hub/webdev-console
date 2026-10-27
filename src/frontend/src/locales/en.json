@@ -1138,11 +1138,17 @@
   "php": {
     "title": "PHP Versions",
     "extensions": "Extensions",
-    "setDefault": "Set Default",
-    "noVersions": "No PHP versions installed",
+    "setDefault": "Use for new sites",
+    "noVersions": "No PHP version is installed yet.",
     "refreshConfig": "Refresh Config",
     "extensionsCount": "Extensions ({enabled}/{total} enabled)",
-    "default": "default"
+    "default": "For new sites",
+    "installedCount": "{n} version installed | {n} versions installed",
+    "addVersion": "Add version",
+    "extensionAria": "Extension {name} enabled",
+    "daemonUnreachable": "Cannot connect to the daemon: {err}",
+    "configLoadFailed": "Could not load php.ini: {err}",
+    "configNotFound": "No php.ini was found for PHP {version}. Reload the page; if that does not help, reinstall the version in Binaries."
   },
   "ssl": {
     "title": "SSL Certificates",
@@ -3059,7 +3065,7 @@
     "extEnabledRestarted": "{name} enabled — PHP restarted",
     "extDisabledRestarted": "{name} disabled — PHP restarted",
     "extToggleFailed": "Failed to toggle {name}: {err}",
-    "phpDefaultSet": "PHP {version} set as default",
+    "phpDefaultSet": "New sites now get PHP {version}",
     "setDefaultFailed": "Failed to set default: {err}",
     "vhostsRegenerated": "All {n} vhosts regenerated",
     "vhostsPartial": "{ok} OK, {failed} failed: {list}",

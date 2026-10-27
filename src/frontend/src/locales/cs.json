@@ -1138,11 +1138,17 @@
   "php": {
     "title": "Verze PHP",
     "extensions": "Rozšíření",
-    "setDefault": "Nastavit výchozí",
-    "noVersions": "Žádné verze PHP nainstalovány",
+    "setDefault": "Použít pro nové weby",
+    "noVersions": "Zatím není nainstalovaná žádná verze PHP.",
     "refreshConfig": "Obnovit konfiguraci",
     "extensionsCount": "Rozšíření ({enabled}/{total} povoleno)",
-    "default": "výchozí"
+    "default": "Pro nové weby",
+    "installedCount": "{n} nainstalovaná verze | {n} nainstalované verze | {n} nainstalovaných verzí",
+    "addVersion": "Přidat verzi",
+    "extensionAria": "Rozšíření {name} zapnuté",
+    "daemonUnreachable": "Nepodařilo se spojit s daemonem: {err}",
+    "configLoadFailed": "Soubor php.ini se nepodařilo načíst: {err}",
+    "configNotFound": "Pro PHP {version} se nenašel soubor php.ini. Zkuste stránku načíst znovu; pokud to nepomůže, verzi v Binárkách přeinstalujte."
   },
   "ssl": {
     "title": "SSL certifikáty",
@@ -3059,7 +3065,7 @@
     "extEnabledRestarted": "{name} zapnuto — PHP restartováno",
     "extDisabledRestarted": "{name} vypnuto — PHP restartováno",
     "extToggleFailed": "Přepnutí {name} selhalo: {err}",
-    "phpDefaultSet": "PHP {version} nastaveno jako výchozí",
+    "phpDefaultSet": "Nové weby teď dostanou PHP {version}",
     "setDefaultFailed": "Nastavení výchozí verze selhalo: {err}",
     "vhostsRegenerated": "Všech {n} vhostů přegenerováno",
     "vhostsPartial": "{ok} v pořádku, {failed} selhalo: {list}",

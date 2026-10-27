@@ -95,4 +95,14 @@ test.describe('Tool pages — source contract', () => {
     expect(vue).not.toContain(':description="errorHint"')
     expect(vue).not.toContain('accent-glow')
   })
+
+  test('php page toggles zend extensions by bare name and sets the active version', () => {
+    const vue = page('PhpManager.vue')
+    expect(vue).not.toContain('[zend] ')
+    expect(vue).toContain("zend: match[2] === 'zend_extension'")
+    expect(vue).toContain('isActive(ver)')
+    const endpoint = daemon('Services/PhpEndpoints.cs')
+    expect(endpoint).toContain('app.MapPut("/api/php/default"')
+    expect(endpoint).toContain('PatchExtensionLines(')
+  })
 })
