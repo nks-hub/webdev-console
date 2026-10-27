@@ -73,7 +73,7 @@
                 @keyup.escape="cancelEdit"
                 autofocus
               />
-              <span v-else class="mono editable" @click="startEdit(row, 'ip')">{{ row.ip }}</span>
+              <span v-else v-activate class="mono editable" @click="startEdit(row, 'ip')">{{ row.ip }}</span>
             </template>
           </el-table-column>
 
@@ -89,7 +89,7 @@
                 @keyup.escape="cancelEdit"
                 autofocus
               />
-              <span v-else class="editable" @click="startEdit(row, 'hostname')">
+              <span v-else v-activate class="editable" @click="startEdit(row, 'hostname')">
                 {{ row.hostname }}
                 <el-tooltip
                   v-if="row.source === 'wdc' && !siteExists(row.hostname)"

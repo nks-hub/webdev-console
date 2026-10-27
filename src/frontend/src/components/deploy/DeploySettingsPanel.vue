@@ -1510,7 +1510,7 @@ async function submitHostForm(): Promise<void> {
     if (idx !== -1) settings.hosts.splice(idx, 1, { ...payload })
   } else {
     if (settings.hosts.some(h => h.name === payload.name)) {
-      ElMessage.error(`A host named "${payload.name}" already exists`)
+      ElMessage.error(t('toast.hostExists', { name: payload.name }))
       return
     }
     store.addHost(props.domain, payload)
@@ -1533,7 +1533,7 @@ async function removeHost(name: string): Promise<void> {
   store.removeHost(props.domain, name)
   const idx = settings.hosts.findIndex(h => h.name === name)
   if (idx !== -1) settings.hosts.splice(idx, 1)
-  ElMessage.success(`Host "${name}" removed`)
+  ElMessage.success(t('toast.hostRemoved', { name }))
 }
 
 // ── Hooks ─────────────────────────────────────────────────────────────────────
@@ -1618,7 +1618,7 @@ async function onSnapshotNow(): Promise<void> {
     snapshots.value = await fetchDeploySnapshots(props.domain)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    ElMessage.error(`Snapshot failed: ${msg}`)
+    ElMessage.error(t('toast.snapshotFailed', { err: msg }))
   } finally {
     snapshotting.value = false
   }
@@ -1691,7 +1691,7 @@ async function onRestoreSnapshot(snapshot: DeploySnapshotEntry): Promise<void> {
     snapshots.value = await fetchDeploySnapshots(props.domain)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    ElMessage.error(`Restore failed: ${msg}`)
+    ElMessage.error(t('toast.restoreFailed', { err: msg }))
   } finally {
     restoringId.value = null
   }

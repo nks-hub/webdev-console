@@ -41,7 +41,7 @@
           :key="site.domain"
           class="site-mobile-card"
         >
-          <div class="site-mobile-main" @click="editSite(site)">
+          <div v-activate:link class="site-mobile-main" @click="editSite(site)">
             <div class="site-mobile-title-row">
               <span class="site-mobile-title">{{ site.domain }}</span>
               <el-tag
@@ -367,7 +367,7 @@
           </el-form-item>
         </el-form>
         <div class="simple-advanced-link">
-          <span @click="uiModeStore.setUiMode('advanced')">{{ $t('uiMode.switchToAdvanced') }}</span>
+          <span v-activate @click="uiModeStore.setUiMode('advanced')">{{ $t('uiMode.switchToAdvanced') }}</span>
         </div>
       </div>
 
@@ -936,15 +936,15 @@ async function reapplyAll() {
       const ok = results.filter(r => r.ok).length
       const failed = results.filter(r => !r.ok)
       if (failed.length === 0) {
-        ElMessage.success(`All ${ok} vhosts regenerated`)
+        ElMessage.success(t('toast.vhostsRegenerated', { n: ok }))
       } else {
-        ElMessage.warning(`${ok} OK, ${failed.length} failed: ${failed.map(f => f.domain).join(', ')}`)
+        ElMessage.warning(t('toast.vhostsPartial', { ok, failed: failed.length, list: failed.map(f => f.domain).join(', ') }))
       }
     } else {
-      ElMessage.error(`Failed: HTTP ${res.status}`)
+      ElMessage.error(t('toast.httpFailed', { status: res.status }))
     }
   } catch (e) {
-    ElMessage.error(`Reapply failed: ${errorMessage(e)}`)
+    ElMessage.error(t('toast.reapplyFailed', { err: errorMessage(e) }))
   } finally {
     reapplying.value = false
   }

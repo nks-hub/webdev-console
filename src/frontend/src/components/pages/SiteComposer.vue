@@ -250,7 +250,7 @@
                 circle
                 type="danger"
                 plain
-                :title="t('sites.composer.removeTitle')"
+                :title="t('sites.composer.removeTitle')" :aria-label="t('sites.composer.removeTitle')"
                 @click="confirmRemove(row.raw)"
               />
             </template>

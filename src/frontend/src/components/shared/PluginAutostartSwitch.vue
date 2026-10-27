@@ -35,6 +35,9 @@ import { VideoPlay } from '@element-plus/icons-vue'
 import { fetchSettings, saveSettings } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import { usePluginsStore } from '../../stores/plugins'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   /** Plugin-like object — backend-resolved serviceId is what drives the toggle.
@@ -89,10 +92,10 @@ async function toggle(next: boolean) {
   saving.value = true
   try {
     await saveSettings({ [`service.${sid}.autoStart`]: String(next) })
-    ElMessage.success(`${sid}: auto-start ${next ? 'zapnut' : 'vypnut'}`)
+    ElMessage.success(t(next ? 'toast.autostartOn' : 'toast.autostartOff', { name: sid }))
   } catch (e) {
     currentRaw.value = prev
-    ElMessage.error(`Uložení selhalo: ${errorMessage(e)}`)
+    ElMessage.error(t('toast.saveFailed', { err: errorMessage(e) }))
   } finally {
     saving.value = false
   }

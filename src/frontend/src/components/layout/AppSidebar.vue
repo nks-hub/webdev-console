@@ -8,11 +8,11 @@
     -->
 
     <div class="nav-cluster">
-      <div class="nav-item" :class="{ active: isActive('/dashboard') }" @click="navigate('/dashboard')">
+      <div v-activate:link :aria-current="isActive('/dashboard') ? 'page' : undefined" class="nav-item" :class="{ active: isActive('/dashboard') }" @click="navigate('/dashboard')">
         <span class="nav-icon-shell"><el-icon :size="18"><House /></el-icon></span>
         <span class="nav-label">{{ $t('nav.overview') }}</span>
       </div>
-      <div class="nav-item sites-btn" :class="{ active: isActive('/sites') }" @click="navigate('/sites')">
+      <div v-activate:link :aria-current="isActive('/sites') ? 'page' : undefined" class="nav-item sites-btn" :class="{ active: isActive('/sites') }" @click="navigate('/sites')">
         <span class="nav-icon-shell"><el-icon :size="18"><Link /></el-icon></span>
         <span class="nav-label">{{ $t('nav.sites') }}</span>
       </div>
@@ -28,17 +28,17 @@
           <span class="section-count">{{ essentialServices.length }}</span>
         </div>
         <template v-for="svc in essentialServices" :key="svc.id">
-          <div
+          <div v-activate:link :aria-current="isActive(`/service/${svc.id}`) ? 'page' : undefined"
             class="service-item"
             :class="{ active: isActive(`/service/${svc.id}`), running: svc.state === 2 }"
             @click="openService(svc.id)"
           >
-            <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
+            <el-tooltip :content="svc.state === 2 ? $t('common.running') : $t('common.stopped')" placement="right" :show-after="500">
               <ServiceIcon :service="svc.id" :active="svc.state === 2" />
             </el-tooltip>
             <div class="svc-copy">
               <span class="svc-name">{{ shortName(svc) }}</span>
-              <span class="svc-meta">{{ svc.state === 2 ? 'Running' : 'Stopped' }}</span>
+              <span class="svc-meta">{{ svc.state === 2 ? $t('common.running') : $t('common.stopped') }}</span>
             </div>
             <span class="svc-led" :class="{ on: svc.state === 2 }" />
             <el-switch
@@ -60,13 +60,13 @@
         <span class="section-count">{{ webServices.length }}</span>
       </div>
       <template v-for="svc in webServices" :key="svc.id">
-        <div class="service-item" :class="{ active: isActive(`/service/${svc.id}`), running: svc.state === 2 }" @click="openService(svc.id)">
-          <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
+        <div v-activate:link :aria-current="isActive(`/service/${svc.id}`) ? 'page' : undefined" class="service-item" :class="{ active: isActive(`/service/${svc.id}`), running: svc.state === 2 }" @click="openService(svc.id)">
+          <el-tooltip :content="svc.state === 2 ? $t('common.running') : $t('common.stopped')" placement="right" :show-after="500">
             <ServiceIcon :service="svc.id" :active="svc.state === 2" />
           </el-tooltip>
           <div class="svc-copy">
             <span class="svc-name">{{ shortName(svc) }}</span>
-            <span class="svc-meta">{{ svc.state === 2 ? 'Running' : 'Stopped' }}</span>
+            <span class="svc-meta">{{ svc.state === 2 ? $t('common.running') : $t('common.stopped') }}</span>
           </div>
           <span class="svc-led" :class="{ on: svc.state === 2 }" />
           <el-switch
@@ -86,8 +86,8 @@
         <span class="section-count">{{ langServices.length }}</span>
       </div>
       <template v-for="svc in langServices" :key="svc.id">
-        <div class="service-item" :class="{ active: isActive(`/service/${svc.id}`), running: svc.state === 2 }" @click="openService(svc.id)">
-          <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
+        <div v-activate:link :aria-current="isActive(`/service/${svc.id}`) ? 'page' : undefined" class="service-item" :class="{ active: isActive(`/service/${svc.id}`), running: svc.state === 2 }" @click="openService(svc.id)">
+          <el-tooltip :content="svc.state === 2 ? $t('common.running') : $t('common.stopped')" placement="right" :show-after="500">
             <ServiceIcon :service="svc.id" :active="svc.state === 2" />
           </el-tooltip>
           <div class="svc-copy">
@@ -112,13 +112,13 @@
         <span class="section-count">{{ dbServices.length }}</span>
       </div>
       <template v-for="svc in dbServices" :key="svc.id">
-        <div class="service-item" :class="{ active: isActive(`/service/${svc.id}`), running: svc.state === 2 }" @click="openService(svc.id)">
-          <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
+        <div v-activate:link :aria-current="isActive(`/service/${svc.id}`) ? 'page' : undefined" class="service-item" :class="{ active: isActive(`/service/${svc.id}`), running: svc.state === 2 }" @click="openService(svc.id)">
+          <el-tooltip :content="svc.state === 2 ? $t('common.running') : $t('common.stopped')" placement="right" :show-after="500">
             <ServiceIcon :service="svc.id" :active="svc.state === 2" />
           </el-tooltip>
           <div class="svc-copy">
             <span class="svc-name">{{ shortName(svc) }}</span>
-            <span class="svc-meta">{{ svc.state === 2 ? 'Running' : 'Offline' }}</span>
+            <span class="svc-meta">{{ svc.state === 2 ? $t('common.running') : $t('common.stopped') }}</span>
           </div>
           <span class="svc-led" :class="{ on: svc.state === 2 }" />
           <el-switch
@@ -138,13 +138,13 @@
         <span class="section-count">{{ cacheServices.length }}</span>
       </div>
       <template v-for="svc in cacheServices" :key="svc.id">
-        <div class="service-item" :class="{ active: isActive(`/service/${svc.id}`), running: svc.state === 2 }" @click="openService(svc.id)">
-          <el-tooltip :content="svc.state === 2 ? 'Running' : 'Stopped'" placement="right" :show-after="500">
+        <div v-activate:link :aria-current="isActive(`/service/${svc.id}`) ? 'page' : undefined" class="service-item" :class="{ active: isActive(`/service/${svc.id}`), running: svc.state === 2 }" @click="openService(svc.id)">
+          <el-tooltip :content="svc.state === 2 ? $t('common.running') : $t('common.stopped')" placement="right" :show-after="500">
             <ServiceIcon :service="svc.id" :active="svc.state === 2" />
           </el-tooltip>
           <div class="svc-copy">
             <span class="svc-name">{{ shortName(svc) }}</span>
-            <span class="svc-meta">{{ svc.state === 2 ? 'Running' : 'Standby' }}</span>
+            <span class="svc-meta">{{ svc.state === 2 ? $t('common.running') : $t('common.stopped') }}</span>
           </div>
           <span class="svc-led" :class="{ on: svc.state === 2 }" />
           <el-switch
@@ -168,7 +168,7 @@
            each plugin's manifest (UiSchemaBuilder.AddNavEntry order field)
            so the sidebar rearranges itself when plugins are enabled /
            disabled without hardcoded composer/hosts/ssl/cloudflare paths. -->
-      <div
+      <div v-activate:link :aria-current="isActive(entry.route) ? 'page' : undefined"
         v-for="entry in pluginsStore.toolsNavEntries"
         :key="entry.pluginId + ':' + entry.id"
         class="nav-item"
@@ -187,7 +187,7 @@
           class="nav-badge mono"
         >{{ exposedSiteCount }}</span>
       </div>
-      <div class="nav-item" :class="{ active: isActive('/binaries') }" @click="navigate('/binaries')">
+      <div v-activate:link :aria-current="isActive('/binaries') ? 'page' : undefined" class="nav-item" :class="{ active: isActive('/binaries') }" @click="navigate('/binaries')">
         <span class="nav-icon-shell"><el-icon :size="18"><Download /></el-icon></span>
         <span class="nav-label">{{ $t('nav.binaries') }}</span>
       </div>
@@ -197,18 +197,18 @@
     <div class="sidebar-spacer" />
 
     <div class="sidebar-bottom">
-      <div v-if="uiModeStore.isAdvanced" class="nav-item" :class="{ active: isActive('/databases') }" @click="navigate('/databases')">
+      <div v-activate:link :aria-current="isActive('/databases') ? 'page' : undefined" v-if="uiModeStore.isAdvanced" class="nav-item" :class="{ active: isActive('/databases') }" @click="navigate('/databases')">
         <span class="nav-icon-shell"><el-icon :size="18"><Coin /></el-icon></span>
         <span class="nav-label">{{ $t('nav.databases') }}</span>
       </div>
       <!-- PHP entry removed from bottom nav: per-runtime managers get crowded
            fast once we add Node/Go/Python/Ruby. Users still reach PHP via the
            Dashboard service toggle and the /plugin/nks.wdc.php panel. -->
-      <div v-if="uiModeStore.isAdvanced" class="nav-item" :class="{ active: isActive('/plugins') }" @click="navigate('/plugins')">
+      <div v-activate:link :aria-current="isActive('/plugins') ? 'page' : undefined" v-if="uiModeStore.isAdvanced" class="nav-item" :class="{ active: isActive('/plugins') }" @click="navigate('/plugins')">
         <span class="nav-icon-shell"><el-icon :size="18"><Box /></el-icon></span>
         <span class="nav-label">{{ $t('nav.plugins') }}</span>
       </div>
-      <div class="nav-item" :class="{ active: isActive('/backups') }" @click="navigate('/backups')">
+      <div v-activate:link :aria-current="isActive('/backups') ? 'page' : undefined" class="nav-item" :class="{ active: isActive('/backups') }" @click="navigate('/backups')">
         <span class="nav-icon-shell"><el-icon :size="18"><Files /></el-icon></span>
         <span class="nav-label">{{ $t('nav.backups') }}</span>
       </div>
@@ -221,7 +221,7 @@
            but run an AI client (incident 2026-05-07). -->
       <!-- Phase 7.3 — single MCP hub entry; tabs inside the page split
            between Intents (audit log) and Oprávnění (persistent grants). -->
-      <div
+      <div v-activate:link :aria-current="isActive('/mcp') ? 'page' : undefined"
         v-if="featureFlagsStore.showMcpSurface"
         class="nav-item"
         :class="{ active: isActive('/mcp') }"
@@ -230,7 +230,7 @@
         <span class="nav-icon-shell"><el-icon :size="18"><Lock /></el-icon></span>
         <span class="nav-label">{{ $t('nav.mcp') }}</span>
       </div>
-      <div
+      <div v-activate
         class="nav-item nav-item-mode"
         :title="$t('settings.mode.description')"
         @click="uiModeStore.toggleMode()"
@@ -248,14 +248,14 @@
           @change="(v: boolean) => uiModeStore.setUiMode(v ? 'advanced' : 'simple')"
         />
       </div>
-      <div class="nav-item" :class="{ active: isActive('/settings') }" @click="navigate('/settings')">
+      <div v-activate:link :aria-current="isActive('/settings') ? 'page' : undefined" class="nav-item" :class="{ active: isActive('/settings') }" @click="navigate('/settings')">
         <span class="nav-icon-shell"><el-icon :size="18"><Setting /></el-icon></span>
         <span class="nav-label">{{ $t('nav.settings') }}</span>
       </div>
       <!-- F89: Help entry — always visible in both Simple + Advanced modes. -->
-      <div class="nav-item" :class="{ active: isActive('/help') }" @click="navigate('/help')">
+      <div v-activate:link :aria-current="isActive('/help') ? 'page' : undefined" class="nav-item" :class="{ active: isActive('/help') }" @click="navigate('/help')">
         <span class="nav-icon-shell"><el-icon :size="18"><QuestionFilled /></el-icon></span>
-        <span class="nav-label">Help</span>
+        <span class="nav-label">{{ $t('nav.help') }}</span>
       </div>
       <!-- F83: top-level sign-in entry point so users don't have to
            drill into Settings → About to discover the SSO flow. When
@@ -267,12 +267,12 @@
            generic "Signed in". Falls back to "Signed in" when the JWT
            decode and /auth/me both produced nothing (unlikely, but
            keeps the layout stable). -->
-      <div
+      <div v-activate
         class="nav-item nav-item-sso"
         :class="{ signedin: authStore.isAuthenticated }"
         :title="authStore.isAuthenticated
-          ? `Signed in as ${authStore.displayName || '(unknown)'} — click to sign out`
-          : 'Sign in with SSO'"
+          ? $t('nav.signedInAsTitle', { name: authStore.displayName || '?' })
+          : $t('nav.signInTitle')"
         @click="toggleSso"
       >
         <span class="nav-icon-shell">
@@ -449,12 +449,18 @@ async function toggleSvc(svc: ServiceInfo) {
       ElMessage.success(t('nav.serviceStarted', { name }))
     }
   } catch (err) {
-    ElMessage.error(`${name}: ${err instanceof Error ? err.message : String(err)}`)
+    ElMessage.error(t('toast.prefixedError', { name, err: err instanceof Error ? err.message : String(err) }))
   }
 }
 </script>
 
 <style scoped>
+/* Keyboard focus (rows are focusable via v-activate). */
+.nav-item:focus-visible,
+.service-item:focus-visible {
+  outline: 2px solid var(--wdc-accent);
+  outline-offset: -2px;
+}
 /*
   Sidebar — translucent glass panel that sits over the page mesh.
   Backdrop-filter blur + low-opacity surface so the ambient gradient

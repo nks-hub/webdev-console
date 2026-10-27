@@ -166,6 +166,9 @@ import { errorMessage } from '../../utils/errors'
 import LogViewer from '../shared/LogViewer.vue'
 import PluginAutostartSwitch from '../shared/PluginAutostartSwitch.vue'
 import EditCard from '../shared/EditCard.vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 defineOptions({ name: 'PhpPluginPage' })
 
@@ -243,9 +246,9 @@ async function toggleExtension(name: string, enabled: boolean) {
     if (!r.ok) throw new Error(`HTTP ${r.status}`)
     const ext = extensions.value.find(e => e.name === name)
     if (ext) ext.enabled = enabled
-    ElMessage.success(`${cleanName} ${enabled ? 'enabled' : 'disabled'}`)
+    ElMessage.success(t(enabled ? 'toast.extEnabled' : 'toast.extDisabled', { name: cleanName }))
   } catch (e) {
-    ElMessage.error(`Toggle failed: ${errorMessage(e)}`)
+    ElMessage.error(t('toast.toggleFailed', { err: errorMessage(e) }))
   } finally {
     togglingExt.value = ''
   }

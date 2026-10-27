@@ -205,7 +205,7 @@ async function installCA() {
     if (data.ok) ElMessage.success(t('ssl.caInstalled'))
     else ElMessage.error(data.message || 'CA install failed')
   } catch (e) {
-    ElMessage.error(`CA install failed: ${errorMessage(e)}`)
+    ElMessage.error(t('toast.caInstallFailed', { err: errorMessage(e) }))
   } finally {
     installingCA.value = false
   }
@@ -225,7 +225,7 @@ async function generateCert() {
     })
     const data = await r.json()
     if (data.ok) {
-      ElMessage.success(`Certificate generated for ${genDomain.value}`)
+      ElMessage.success(t('toast.certGenerated', { domain: genDomain.value }))
       showGenerateDialog.value = false
       genDomain.value = ''
       genAliases.value = ''
@@ -234,7 +234,7 @@ async function generateCert() {
       ElMessage.error(data.message || 'Generation failed')
     }
   } catch (e) {
-    ElMessage.error(`Generation failed: ${errorMessage(e)}`)
+    ElMessage.error(t('toast.generationFailed', { err: errorMessage(e) }))
   } finally {
     generating.value = false
   }
@@ -258,13 +258,13 @@ async function revokeCert(domain: string) {
     })
     const data = await r.json()
     if (data.ok) {
-      ElMessage.success(`Certificate for ${domain} revoked`)
+      ElMessage.success(t('toast.certRevoked', { domain }))
       await loadCerts()
     } else {
       ElMessage.error(data.message || 'Revoke failed')
     }
   } catch (e) {
-    ElMessage.error(`Revoke failed: ${errorMessage(e)}`)
+    ElMessage.error(t('toast.revokeFailed', { err: errorMessage(e) }))
   } finally {
     revoking.value.delete(domain)
   }

@@ -156,6 +156,9 @@ import {
   updateSite,
 } from '../api/daemon'
 import type { SiteInfo } from '../api/types'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   name: string
@@ -326,7 +329,7 @@ async function suggest() {
       emit('dirty')
     }
   } catch (e) {
-    ElMessage.warning('Nepodařilo se navrhnout subdoménu: ' + (e instanceof Error ? e.message : ''))
+    ElMessage.warning(t('toast.suggestSubdomainFailed', { err: e instanceof Error ? e.message : '' }))
   } finally {
     suggesting.value = false
   }
@@ -375,11 +378,11 @@ async function applyNow() {
       kind: 'success',
       message: `Synced ${sync.synced ?? 0} site(s) — ${publicUrl.value}`,
     }
-    ElMessage.success('Tunel aplikován: ' + publicUrl.value)
+    ElMessage.success(t('toast.tunnelApplied', { url: publicUrl.value }))
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     applyStatus.value = { kind: 'error', message: msg }
-    ElMessage.error('Apply failed: ' + msg)
+    ElMessage.error(t('toast.applyFailed', { err: msg }))
   } finally {
     applying.value = false
   }
@@ -405,9 +408,9 @@ async function copyPublicUrl() {
   if (!publicUrl.value) return
   try {
     await navigator.clipboard.writeText(publicUrl.value)
-    ElMessage.success('Zkopírováno: ' + publicUrl.value)
+    ElMessage.success(t('toast.copied', { url: publicUrl.value }))
   } catch {
-    ElMessage.warning('Schránka nedostupná — URL: ' + publicUrl.value)
+    ElMessage.warning(t('toast.clipboardUnavailable', { url: publicUrl.value }))
   }
 }
 </script>

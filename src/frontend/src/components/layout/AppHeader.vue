@@ -7,7 +7,7 @@
       removing dual-nav cognitive load.
     -->
     <div class="header-left" style="-webkit-app-region: no-drag">
-      <span class="app-logo" @click="router.push('/dashboard')">
+      <span v-activate:link class="app-logo" :aria-label="$t('nav.overview')" @click="router.push('/dashboard')">
         <span class="logo-mark">NW</span>
         <span class="logo-text">NKS WDC</span>
       </span>

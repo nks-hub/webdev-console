@@ -41,7 +41,7 @@
   /* Text — warm whites */
   --wdc-text:        #f5f3f7;
   --wdc-text-2:      #c4c0cc;
-  --wdc-text-3:      #8c8794;
+  --wdc-text-3:      #a09ba7;  /* ≥4.5:1 on surface and surface-2 (was #8c8794, 4.2:1) */
 
   /* Primary accent — Material 3 indigo, vibrant */
   --wdc-accent:      #818cf8;  /* indigo-400, AAA on bg */
@@ -55,7 +55,7 @@
 
   /* Status palette — Material 3 vibrant saturation */
   --wdc-status-running:  #34d399;  /* emerald-400 */
-  --wdc-status-stopped:  #71717a;
+  --wdc-status-stopped:  #a1a1aa;  /* zinc-400 — "Stopped" text was 3.1:1 on surface */
   --wdc-status-error:    #f87171;  /* red-400 */
   --wdc-status-starting: #fbbf24;  /* amber-400 */
   --wdc-warning:         var(--wdc-status-starting);

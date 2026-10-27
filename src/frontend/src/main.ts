@@ -16,6 +16,7 @@ import App from './App.vue'
 // xterm for LogViewer) get code-split into their own chunks instead of
 // being pulled into the main bundle through this eager import barrel.
 import { registerPanelComponent } from './plugins/PluginRegistry'
+import { vActivate } from './directives/activate'
 
 registerPanelComponent('service-status-card', defineAsyncComponent(() => import('./components/shared/ServiceCard.vue')))
 registerPanelComponent('version-switcher', defineAsyncComponent(() => import('./components/shared/VersionSwitcher.vue')))
@@ -34,6 +35,7 @@ app.use(createPinia())
 app.use(ElementPlus)
 app.use(router)
 app.use(i18n)
+app.directive('activate', vActivate)
 
 // Sentry renderer init — the main process already sets up the transport +
 // DSN via @sentry/electron/main; renderer init picks that up automatically

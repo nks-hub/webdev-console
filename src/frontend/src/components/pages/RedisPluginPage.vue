@@ -134,6 +134,9 @@ import { errorMessage } from '../../utils/errors'
 import LogViewer from '../shared/LogViewer.vue'
 import PluginAutostartSwitch from '../shared/PluginAutostartSwitch.vue'
 import EditCard from '../shared/EditCard.vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 defineOptions({ name: 'RedisPluginPage' })
 
@@ -151,7 +154,7 @@ async function toggleService() {
     if (serviceRunning.value) await stopService('redis')
     else await startService('redis')
   } catch (e) {
-    ElMessage.error(`${serviceRunning.value ? 'Stop' : 'Start'} failed: ${errorMessage(e)}`)
+    ElMessage.error(t(serviceRunning.value ? 'toast.stopFailed' : 'toast.startFailed', { err: errorMessage(e) }))
   } finally {
     toggling.value = false
   }

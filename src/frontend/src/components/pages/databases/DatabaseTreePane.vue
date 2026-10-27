@@ -42,7 +42,7 @@
           class="tree-db"
           :class="{ expanded: expanded.has(db.name), selected: selectedDb === db.name && !selectedTable }"
         >
-          <div class="tree-row" @click="toggleDb(db.name)">
+          <div v-activate class="tree-row" :aria-expanded="expanded.has(db.name)" @click="toggleDb(db.name)">
             <el-icon class="caret"><CaretRight /></el-icon>
             <el-icon class="kind-icon"><Coin /></el-icon>
             <span class="db-name">{{ db.name }}</span>

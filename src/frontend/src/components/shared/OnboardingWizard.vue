@@ -207,14 +207,14 @@ async function doInstall(app: string, explicitVersion?: string) {
     // — apache 2.4.62 was Windows-only so a pinned macOS version 404'd.
     const version = explicitVersion?.trim() || await resolveLatest(app)
     if (!version) {
-      ElMessage.warning(`${app}: no binary available for this platform`)
+      ElMessage.warning(t('toast.noBinaryForPlatform', { app }))
       return
     }
     await installBinary(app, version)
-    ElMessage.success(`${app} ${version} installed`)
+    ElMessage.success(t('toast.installedVersion', { app, version }))
     await refreshState()
   } catch (e) {
-    ElMessage.error(`${app}: ${errorMessage(e)}`)
+    ElMessage.error(t('toast.prefixedError', { name: app, err: errorMessage(e) }))
   } finally {
     installing.value.delete(app)
   }
@@ -269,7 +269,7 @@ async function installCa() {
     ElMessage.success(t('ssl.caTrusted'))
     await refreshState()
   } catch (e) {
-    ElMessage.error(`mkcert CA install failed: ${errorMessage(e)}`)
+    ElMessage.error(t('toast.caInstallFailed', { err: errorMessage(e) }))
   } finally {
     installingCa.value = false
   }
