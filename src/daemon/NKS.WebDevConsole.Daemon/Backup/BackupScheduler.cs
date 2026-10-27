@@ -32,8 +32,8 @@ public sealed class BackupScheduler : IDisposable
     /// Default schedule: 24 hours (changed from 0/off so new installs get
     /// automatic daily backups without manual configuration).
     /// </summary>
-    private const int DefaultScheduleHours = 24;
-    private const int DefaultRetainCount = 10;
+    internal const int DefaultScheduleHours = 24;
+    internal const int DefaultRetainCount = 10;
     private const int MinRetainCount = 1;
     private const int MaxRetainCount = 100;
 

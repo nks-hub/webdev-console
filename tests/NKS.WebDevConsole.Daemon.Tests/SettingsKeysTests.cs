@@ -15,6 +15,40 @@ public sealed class SettingsKeysTests
     }
 
     [Fact]
+    public void ForRead_FreshInstallShowsTheEffectiveDefaults()
+    {
+        var view = SettingsKeys.ForRead([]);
+
+        Assert.Equal("80", view["ports.http"]);
+        Assert.Equal("24", view["backup.scheduleHours"]);
+        Assert.Equal("true", view["deploy.enabled"]);
+        Assert.Equal("false", view["mcp.enabled"]);
+        // Every MCP capability group appears, switched off by default.
+        Assert.All(NKS.WebDevConsole.Daemon.Mcp.McpCapabilities.All,
+            c => Assert.Equal("false", view[c.SettingKey]));
+        // Run-time resolved values have no fixed default.
+        Assert.False(view.ContainsKey("ports.mysql"));
+        Assert.False(view.ContainsKey("daemon.catalogUrl"));
+    }
+
+    [Fact]
+    public void ForRead_StoredValuesWinAndSecretsStayHidden()
+    {
+        var view = SettingsKeys.ForRead(new Dictionary<string, string>
+        {
+            ["ports.http"] = "8080",
+            ["MCP.enabled"] = "true",
+            ["sync.deviceId"] = "dev-1",
+            ["sync.accountToken"] = "eyJhbGciOi",
+        });
+
+        Assert.Equal("8080", view["ports.http"]);
+        Assert.Equal("true", view["mcp.enabled"]);
+        Assert.Equal("dev-1", view["sync.deviceId"]);
+        Assert.False(view.ContainsKey("sync.accountToken"));
+    }
+
+    [Fact]
     public void Changed_IgnoresValuesThatMatchTheStoredOnes()
     {
         var stored = new Dictionary<string, string> { ["ports.http"] = "80", ["ports.https"] = "443" };

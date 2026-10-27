@@ -34,14 +34,9 @@ internal static class SettingsEndpoints
         app.MapGet("/api/settings", async (Database db) =>
         {
             using var conn = db.CreateConnection();
-            var settings = await conn.QueryAsync<dynamic>("SELECT category, key, value FROM settings");
-            var dict = new Dictionary<string, string>();
-            foreach (var s in settings)
-            {
-                string name = $"{s.category}.{s.key}";
-                if (!SettingsKeys.Secret.Contains(name)) dict[name] = s.value;
-            }
-            return Results.Ok(dict);
+            var rows = await conn.QueryAsync<dynamic>("SELECT category, key, value FROM settings");
+            var stored = rows.Select(r => new KeyValuePair<string, string>((string)r.category + "." + (string)r.key, (string)r.value));
+            return Results.Ok(SettingsKeys.ForRead(stored));
         });
 
         // Settings → Ports asks before saving a port another process listens on.
