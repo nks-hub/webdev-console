@@ -1,21 +1,20 @@
 <template>
-  <div class="svc-config-page">
-    <!-- Page header -->
-    <div class="config-header">
-      <div class="header-left">
-        <el-button size="small" text :aria-label="t('common.back')" @click="goBack">
-          <el-icon><ArrowLeft /></el-icon>
-          <span>{{ $t('services.back') }}</span>
+  <div class="wdc-page svc-config-page">
+    <header class="page-head">
+      <div class="head-left">
+        <el-button size="small" text @click="goBack">
+          <el-icon aria-hidden="true"><ArrowLeft /></el-icon>
+          <span>{{ t('services.back') }}</span>
         </el-button>
-        <div class="title-block">
-          <div class="title-label">{{ $t('services.title') }}</div>
-          <div class="title-name">{{ displayName }}</div>
+        <div>
+          <h1 class="page-title">{{ displayName }}</h1>
+          <p class="page-sub">{{ t('services.title') }}</p>
         </div>
       </div>
-      <div class="header-actions">
-        <el-button size="small" :loading="loading" :aria-label="t('common.refresh')" @click="reload">
-          <el-icon><Refresh /></el-icon>
-          <span>{{ $t('services.reload') }}</span>
+      <div v-if="files.length > 0" class="header-actions">
+        <el-button size="small" :loading="loading" @click="reload">
+          <el-icon aria-hidden="true"><Refresh /></el-icon>
+          <span>{{ t('services.reload') }}</span>
         </el-button>
         <el-button
           type="primary"
@@ -27,34 +26,37 @@
           {{ t('serviceConfig.saveApply') }}
         </el-button>
       </div>
-    </div>
+    </header>
 
-    <!-- Loading state -->
     <div v-if="loading" class="state-box">
       <el-skeleton :rows="8" animated />
     </div>
 
-    <!-- Empty state -->
-    <div v-else-if="files.length === 0" class="state-box">
-      <el-empty :description="emptyStateMessage">
-        <template v-if="isConfigless">
-          <p class="empty-hint">
-            {{ $t('services.configless.hint') }}
-          </p>
-        </template>
-        <template v-else>
-          <p class="empty-hint">
-            {{ $t('services.configless.daemonLooked', { paths: expectedPathsHint }) }}
-            <strong>{{ $t('services.configless.daemonLookedBinaries') }}</strong>
-            {{ $t('services.configless.daemonLookedAnd') }}
-          </p>
-        </template>
-      </el-empty>
+    <!-- The binary is missing: say so and offer the install, not file paths. -->
+    <div v-else-if="notInstalled" class="state-box state-text">
+      <p>{{ t('serviceConfig.notInstalled', { name: displayName }) }}</p>
+      <el-button type="primary" @click="router.push({ path: '/binaries', query: { app: binaryAppOf(serviceId) } })">
+        {{ t('servicesPage.install') }}
+      </el-button>
     </div>
 
-    <!-- Content -->
+    <div v-else-if="files.length === 0" class="state-box state-text">
+      <template v-if="isConfigless">
+        <p>{{ t('services.configlessSummary', { name: displayName }) }}</p>
+        <p class="empty-hint">{{ t('services.configless.hint') }}</p>
+      </template>
+      <template v-else>
+        <p>{{ t('services.noConfigSummary', { name: displayName }) }}</p>
+        <p class="empty-hint">{{ t('serviceConfig.noConfigHint') }}</p>
+        <details class="empty-details">
+          <summary>{{ t('serviceConfig.details') }}</summary>
+          <p class="empty-hint">{{ t('serviceConfig.lookedIn', { paths: expectedPathsHint }) }}</p>
+        </details>
+        <el-button size="small" :loading="loading" @click="load">{{ t('services.reload') }}</el-button>
+      </template>
+    </div>
+
     <div v-else class="config-body">
-      <!-- File tabs -->
       <el-tabs v-model="activeFilePath" class="file-tabs" @tab-change="onTabChange">
         <el-tab-pane
           v-for="file in files"
@@ -62,73 +64,57 @@
           :name="file.path"
         >
           <template #label>
-            <span class="tab-label" :aria-label="t('serviceConfig.openFile')">
-              <el-icon><Document /></el-icon>
+            <span class="tab-label">
+              <el-icon aria-hidden="true"><Document /></el-icon>
               <span>{{ file.name }}</span>
-              <span v-if="dirtyFiles.has(file.path)" class="dirty-dot" />
+              <span v-if="dirtyFiles.has(file.path)" class="dirty-dot" :title="t('serviceConfig.unsaved')" />
             </span>
           </template>
         </el-tab-pane>
       </el-tabs>
 
-      <!-- Active file editor -->
       <div v-if="activeFile" class="editor-wrap">
-        <!-- File meta row -->
         <div class="file-meta">
           <div class="meta-row">
-            <span class="meta-label">{{ $t('serviceConfig.meta.path') }}</span>
+            <span class="meta-label">{{ t('serviceConfig.meta.path') }}</span>
             <code class="meta-value mono">{{ activeFile.path }}</code>
           </div>
           <div class="meta-row">
-            <span class="meta-label">{{ $t('serviceConfig.meta.size') }}</span>
+            <span class="meta-label">{{ t('serviceConfig.meta.size') }}</span>
             <span class="meta-value mono">{{ contentSize }}</span>
           </div>
           <div class="meta-row">
-            <span class="meta-label">{{ $t('serviceConfig.meta.lines') }}</span>
+            <span class="meta-label">{{ t('serviceConfig.meta.lines') }}</span>
             <span class="meta-value mono">{{ lineCount }}</span>
-          </div>
-          <div class="meta-row">
-            <span class="meta-label">{{ $t('serviceConfig.meta.format') }}</span>
-            <el-tag size="small" effect="plain">{{ fileFormat }}</el-tag>
           </div>
         </div>
 
-        <!-- Monaco code editor — replaces textarea, Phase 4 plan item -->
         <div class="editor-main">
           <MonacoEditor
             v-model="editingContent"
+            :path="activeFile.path"
             :language="fileFormat"
+            :aria-label="editorLabel"
+            @save="saveCurrent"
           />
         </div>
 
-        <!-- Validation + actions row -->
+        <el-alert
+          v-if="validation.state === 'failed'"
+          type="error"
+          :closable="false"
+          :title="t('serviceConfig.status.failed')"
+          show-icon
+        >
+          <pre v-if="validation.error" class="validation-output mono">{{ validation.error }}</pre>
+          <el-button v-if="validation.error" size="small" @click="copyValidation">{{ t('servicesPage.lastError.copy') }}</el-button>
+        </el-alert>
+
         <div class="validation-bar">
-          <div class="val-left">
-            <el-tag
-              v-if="validation.state === 'idle'"
-              size="small"
-              type="info"
-            >
-              {{ t('serviceConfig.status.ready') }}
-            </el-tag>
-            <el-tag
-              v-else-if="validation.state === 'validating'"
-              size="small"
-              type="warning"
-              effect="plain"
-            >
-              {{ t('serviceConfig.status.validating') }}
-            </el-tag>
-            <el-tag
-              v-else-if="validation.state === 'passed'"
-              size="small"
-              type="success"
-            >{{ t('serviceConfig.status.passed') }}</el-tag>
-            <el-tag
-              v-else-if="validation.state === 'failed'"
-              size="small"
-              type="danger"
-            >{{ validation.error || t('serviceConfig.status.failed') }}</el-tag>
+          <div class="val-left" role="status" aria-live="polite">
+            <span v-if="validation.state === 'validating'">{{ t('serviceConfig.status.validating') }}</span>
+            <span v-else-if="validation.state === 'passed'" class="val-ok">{{ t('serviceConfig.status.passedLong') }}</span>
+            <span v-else-if="dirty" class="val-dirty">{{ t('serviceConfig.unsavedHint') }}</span>
           </div>
           <div class="val-right">
             <el-button size="small" :disabled="!dirty" @click="revert">
@@ -147,12 +133,15 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRoute, useRouter } from 'vue-router'
+import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, Refresh, Document } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { fetchServiceConfig, saveServiceConfig, validateServiceConfig, type ConfigFile } from '../../api/daemon'
 import { useDaemonStore } from '../../stores/daemon'
+import { binaryAppOf, cleanError, shortName, stateOf } from '../../utils/services'
 import MonacoEditor from '../shared/MonacoEditor.vue'
+
+defineOptions({ name: 'ServiceConfig' })
 
 const { t } = useI18n()
 const route = useRoute()
@@ -214,10 +203,10 @@ const fileFormat = computed(() => {
   return 'text'
 })
 
-const displayName = computed(() => {
-  const svc = daemonStore.services.find(s => s.id === serviceId.value)
-  return svc?.displayName || svc?.id || serviceId.value
-})
+const service = computed(() => daemonStore.services.find(s => s.id === serviceId.value))
+const displayName = computed(() => service.value ? shortName(service.value) : serviceId.value)
+const notInstalled = computed(() => !!service.value && stateOf(service.value) === 'notInstalled')
+const editorLabel = computed(() => `${activeFile.value?.name ?? ''}, ${displayName.value}`)
 
 // Services that legitimately have no file-backed config — they configure
 // themselves via CLI args, per-site TOML, or environment variables. The
@@ -226,14 +215,8 @@ const displayName = computed(() => {
 const CONFIGLESS_SERVICES = new Set(['mailpit', 'node', 'cloudflare', 'cloudflared', 'mkcert'])
 const isConfigless = computed(() => CONFIGLESS_SERVICES.has(serviceId.value.toLowerCase()))
 
-const emptyStateMessage = computed(() =>
-  isConfigless.value
-    ? t('services.configlessSummary', { name: displayName.value })
-    : t('services.noConfigSummary', { name: displayName.value })
-)
-
-// Shown to the user so they know where WDC looked. Matches the lookup
-// order in ServiceConfigManager.GetFilesAsync — keep in sync.
+// Shown under "Details" so a power user knows where WDC looked. Matches the
+// lookup order in ServiceConfigManager.GetFilesAsync — keep in sync.
 const expectedPathsHint = computed(() => {
   const id = serviceId.value.toLowerCase()
   if (id === 'apache') return '~/.wdc/binaries/apache/<version>/conf/httpd.conf'
@@ -241,7 +224,7 @@ const expectedPathsHint = computed(() => {
   if (id === 'mysql') return '~/.wdc/data/mysql/my.ini, ~/.wdc/binaries/mysql/<version>/my.ini'
   if (id === 'redis') return '~/.wdc/binaries/redis/<version>/redis.conf'
   if (id === 'caddy') return '~/.wdc/caddy/Caddyfile, ~/.wdc/binaries/caddy/<version>/Caddyfile'
-  return 'well-known plugin config locations'
+  return t('serviceConfig.pluginLocations')
 })
 
 function onEdit() {
@@ -254,7 +237,7 @@ function onEdit() {
   validation.error = ''
 }
 
-function onTabChange(_name: string) {
+function onTabChange() {
   validation.state = 'idle'
   validation.error = ''
 }
@@ -272,28 +255,52 @@ async function load() {
       editedContents[f.path] = f.content
     }
     dirtyFiles.clear()
-    if (files.value.length > 0) activeFilePath.value = files.value[0].path
+    // Stay on the open file after a save or reload.
+    if (!files.value.some(f => f.path === activeFilePath.value)) activeFilePath.value = files.value[0]?.path ?? ''
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Failed to load config'
-    ElMessage.error(msg)
+    ElMessage.error(t('serviceConfig.loadFailed', { err: cleanError(err) }))
     files.value = []
   } finally {
     loading.value = false
   }
 }
 
-async function reload() {
-  if (dirtyFiles.size > 0) {
-    try {
-      await ElMessageBox.confirm(
-        t('serviceConfig.unsavedConfirm.message'),
-        t('serviceConfig.unsavedConfirm.title'),
-        { type: 'warning', confirmButtonText: t('serviceConfig.unsavedConfirm.reload'), cancelButtonText: t('common.cancel') }
-      )
-    } catch { return }
+/** True when nothing is unsaved or the user agreed to drop it. */
+async function confirmDiscard(message: string, confirmText: string): Promise<boolean> {
+  if (dirtyFiles.size === 0) return true
+  try {
+    await ElMessageBox.confirm(message, t('serviceConfig.unsavedConfirm.title'), {
+      type: 'warning',
+      confirmButtonText: confirmText,
+      cancelButtonText: t('common.cancel'),
+    })
+    return true
+  } catch {
+    return false
   }
+}
+
+function discardEdits() {
+  for (const k of Object.keys(originalContents)) editedContents[k] = originalContents[k]
+  dirtyFiles.clear()
+}
+
+async function reload() {
+  if (!await confirmDiscard(t('serviceConfig.unsavedConfirm.message'), t('serviceConfig.unsavedConfirm.reload'))) return
   await load()
 }
+
+// Unsaved edits survive neither another service's config (same route,
+// new :id) nor leaving the page: ask first instead of dropping them.
+onBeforeRouteUpdate((to, from) => {
+  if (to.params.id === from.params.id) return true
+  return confirmDiscard(t('serviceConfig.unsavedConfirm.leave'), t('serviceConfig.unsavedConfirm.discard'))
+})
+onBeforeRouteLeave(async () => {
+  if (!await confirmDiscard(t('serviceConfig.unsavedConfirm.leave'), t('serviceConfig.unsavedConfirm.discard'))) return false
+  discardEdits()
+  return true
+})
 
 function revert() {
   const p = activeFilePath.value
@@ -311,21 +318,21 @@ async function validateOnly() {
   try {
     const result = await validateServiceConfig(serviceId.value, activeFile.value.path, editingContent.value)
     validation.state = result.isValid ? 'passed' : 'failed'
-    validation.error = result.isValid ? '' : (result.output || 'Validation failed')
+    validation.error = result.isValid ? '' : (result.output || '')
   } catch (err: unknown) {
     validation.state = 'failed'
-    validation.error = err instanceof Error ? err.message : 'Validation failed'
+    validation.error = cleanError(err)
   }
 }
 
 async function saveCurrent() {
-  if (!activeFile.value || !dirty.value) return
+  if (!activeFile.value || !dirty.value || saving.value) return
   saving.value = true
   try {
     const validationResult = await validateServiceConfig(serviceId.value, activeFile.value.path, editingContent.value)
     if (!validationResult.isValid) {
       validation.state = 'failed'
-      validation.error = validationResult.output || 'Validation failed'
+      validation.error = validationResult.output || ''
       return
     }
 
@@ -336,76 +343,55 @@ async function saveCurrent() {
     validation.state = 'idle'
     validation.error = ''
     await load()
-    if (result.applied) ElMessage.success(result.message)
-    else ElMessage.warning(result.message)
+    if (result.applied) ElMessage.success(t('serviceConfig.savedApplied', { name: displayName.value }))
+    else ElMessage.warning(t('serviceConfig.savedNotApplied', { name: displayName.value, msg: result.message }))
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Save failed'
-    ElMessage.error(msg)
+    ElMessage.error(t('serviceConfig.saveFailed', { err: cleanError(err) }))
   } finally {
     saving.value = false
   }
 }
 
-function goBack() {
-  if (window.history.length > 1) router.back()
-  else router.push('/dashboard')
+async function copyValidation() {
+  try {
+    await navigator.clipboard.writeText(validation.error)
+    ElMessage.success(t('servicesPage.lastError.copied'))
+  } catch (e) {
+    ElMessage.error(cleanError(e))
+  }
 }
 
-watch(serviceId, () => { void load() })
+function goBack() {
+  if (window.history.length > 1) router.back()
+  else router.push('/services')
+}
+
+watch(serviceId, (id) => { if (id) void load() })
 onMounted(() => { void load() })
 </script>
 
 <style scoped>
 .svc-config-page {
-  display: flex;
-  flex-direction: column;
   height: 100%;
-  min-height: 100%;
-  background: var(--wdc-bg);
 }
 
-.config-header {
+.page-head {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
+  align-items: flex-end;
   justify-content: space-between;
-  padding: 0 0 var(--wdc-space-4);
-  border-bottom: 1px solid var(--wdc-border);
-  background: transparent;
-  flex-shrink: 0;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
   gap: var(--wdc-space-4);
 }
+.head-left { display: flex; align-items: flex-end; gap: var(--wdc-space-3); }
+.page-title { font-size: 1.728rem; line-height: 1.1; letter-spacing: -0.028em; }
+.page-sub { margin-top: var(--wdc-space-1); color: var(--wdc-text-2); }
+.header-actions { display: flex; gap: var(--wdc-space-2); }
 
-.title-block {
-  display: flex;
-  flex-direction: column;
-  gap: var(--wdc-space-1);
-}
-.title-label {
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--wdc-accent);
-  font-family: var(--wdc-font-display);
-}
-.title-name {
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: var(--wdc-text);
-  letter-spacing: -0.02em;
-}
-
-.header-actions {
-  display: flex;
-  gap: var(--wdc-space-2);
-}
-
-.state-box {
-  padding: var(--wdc-space-6) var(--wdc-space-5);
-}
+.state-box { padding: var(--wdc-space-5) 0; }
+.state-text { display: grid; gap: var(--wdc-space-3); justify-items: start; max-width: 60ch; }
+.empty-hint { color: var(--wdc-text-2); font-size: 0.87rem; line-height: 1.5; }
+.empty-details summary { cursor: pointer; color: var(--wdc-text-2); font-size: 0.87rem; }
+.empty-details .empty-hint { margin-top: var(--wdc-space-2); font-family: var(--wdc-font-mono); overflow-wrap: anywhere; }
 
 .config-body {
   display: flex;
@@ -414,15 +400,8 @@ onMounted(() => { void load() })
   min-height: 0;
 }
 
-.file-tabs {
-  padding: 0 var(--wdc-space-4-5);
-  border-bottom: 1px solid var(--wdc-border);
-  background: var(--wdc-surface);
-  flex-shrink: 0;
-}
-.file-tabs :deep(.el-tabs__nav-wrap::after) {
-  display: none;
-}
+.file-tabs { flex-shrink: 0; }
+.file-tabs :deep(.el-tabs__nav-wrap::after) { background-color: var(--wdc-border); }
 
 .tab-label {
   display: inline-flex;
@@ -444,7 +423,6 @@ onMounted(() => { void load() })
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  padding: var(--wdc-space-3-5) var(--wdc-space-4-5);
   gap: var(--wdc-space-3);
 }
 
@@ -452,10 +430,6 @@ onMounted(() => { void load() })
   display: flex;
   flex-wrap: wrap;
   gap: var(--wdc-space-4-5);
-  padding: var(--wdc-space-2-5) var(--wdc-space-3-5);
-  background: var(--wdc-surface);
-  border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius-sm);
   flex-shrink: 0;
 }
 .meta-row {
@@ -473,23 +447,30 @@ onMounted(() => { void load() })
 .meta-value {
   color: var(--wdc-text);
   font-weight: 500;
+  overflow-wrap: anywhere;
 }
 
 .editor-main {
   flex: 1;
   display: flex;
-  min-height: 280px;
+  min-height: 360px;
   min-width: 0;
+}
+
+.validation-output {
+  margin: var(--wdc-space-2) 0;
+  max-height: 200px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.78rem;
 }
 
 .validation-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--wdc-space-2-5) var(--wdc-space-3-5);
-  background: var(--wdc-surface);
-  border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius-sm);
+  gap: var(--wdc-space-3);
   flex-shrink: 0;
 }
 .val-left, .val-right {
@@ -497,8 +478,7 @@ onMounted(() => { void load() })
   align-items: center;
   gap: var(--wdc-space-2);
 }
-
-.mono {
-  font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
-}
+.val-right :deep(.el-button + .el-button) { margin-left: 0; }
+.val-ok { color: var(--wdc-status-running); font-size: 0.82rem; }
+.val-dirty { color: var(--wdc-text-2); font-size: 0.82rem; }
 </style>

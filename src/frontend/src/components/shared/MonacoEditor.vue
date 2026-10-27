@@ -11,20 +11,46 @@ const props = withDefaults(defineProps<{
   language?: string
   readOnly?: boolean
   height?: string
+  /** File the content belongs to. Each path keeps its own model, so
+   *  switching files keeps cursor, scroll and undo history per file. */
+  path?: string
+  /** Accessible name of the editor, e.g. "httpd.conf, Apache". */
+  ariaLabel?: string
 }>(), {
   language: 'plaintext',
   readOnly: false,
   height: '100%',
+  path: undefined,
+  ariaLabel: undefined,
 })
 
 const emit = defineEmits<{
   (e: 'update:modelValue', v: string): void
   (e: 'ready', ed: monaco.editor.IStandaloneCodeEditor): void
+  /** Ctrl+S / Cmd+S inside the editor. */
+  (e: 'save'): void
 }>()
 
 const containerRef = ref<HTMLDivElement | null>(null)
 let editor: monaco.editor.IStandaloneCodeEditor | null = null
 let suppressChange = false
+// Models this editor created per path; disposed with the editor.
+const models = new Map<string, monaco.editor.ITextModel>()
+
+function modelFor(path: string, value: string): monaco.editor.ITextModel {
+  let model = models.get(path)
+  if (!model || model.isDisposed()) {
+    model = monaco.editor.createModel(value, mapLanguage(props.language))
+    models.set(path, model)
+  }
+  return model
+}
+
+function setValueQuietly(target: { setValue(v: string): void }, value: string) {
+  suppressChange = true
+  target.setValue(value)
+  suppressChange = false
+}
 
 function mapLanguage(lang: string): string {
   const normalized = lang.toLowerCase()
@@ -71,8 +97,10 @@ onMounted(() => {
   if (!containerRef.value) return
   monaco.editor.defineTheme('wdc-dark', WDC_DARK)
   editor = monaco.editor.create(containerRef.value, {
-    value: props.modelValue,
-    language: mapLanguage(props.language),
+    ...(props.path !== undefined
+      ? { model: modelFor(props.path, props.modelValue) }
+      : { value: props.modelValue, language: mapLanguage(props.language) }),
+    ariaLabel: props.ariaLabel,
     theme: 'wdc-dark',
     readOnly: props.readOnly,
     automaticLayout: true,
@@ -99,16 +127,25 @@ onMounted(() => {
     const v = editor?.getValue() ?? ''
     emit('update:modelValue', v)
   })
+  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => emit('save'))
 
   emit('ready', editor)
 })
 
-watch(() => props.modelValue, (v) => {
+// Path and content change together when the parent switches files.
+watch(() => [props.path, props.modelValue] as const, ([path, v], [oldPath]) => {
   if (!editor) return
-  if (v === editor.getValue()) return
-  suppressChange = true
-  editor.setValue(v)
-  suppressChange = false
+  if (path !== undefined && path !== oldPath) {
+    const model = modelFor(path, v)
+    if (model.getValue() !== v) setValueQuietly(model, v)
+    editor.setModel(model)
+    return
+  }
+  if (v !== editor.getValue()) setValueQuietly(editor, v)
+})
+
+watch(() => props.ariaLabel, (v) => {
+  editor?.updateOptions({ ariaLabel: v })
 })
 
 watch(() => props.language, (v) => {
@@ -124,6 +161,8 @@ watch(() => props.readOnly, (v) => {
 onBeforeUnmount(() => {
   editor?.dispose()
   editor = null
+  for (const model of models.values()) model.dispose()
+  models.clear()
 })
 </script>
 

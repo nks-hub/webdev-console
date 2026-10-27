@@ -2143,10 +2143,7 @@
     "configlessSummary": "{name} is configured differently",
     "noConfigSummary": "No config file found for {name}",
     "configless": {
-      "hint": "Configuration for this service is passed via CLI arguments, per-site TOML config, or environment variables. There are no individual files to edit here.",
-      "daemonLooked": "The daemon looked for {paths}. Check that the binary is installed via",
-      "daemonLookedBinaries": "Binaries",
-      "daemonLookedAnd": "and that the service has been started at least once."
+      "hint": "Configuration for this service is passed via CLI arguments, per-site TOML config, or environment variables. There are no individual files to edit here."
     }
   },
   "serviceConfig": {
@@ -2157,27 +2154,39 @@
     "closeTip": "Close (Esc)",
     "noFiles": "No config files found for this service.",
     "linesSuffix": "lines",
-    "openFile": "Open file",
     "saveApply": "Save & Apply",
     "revert": "Revert",
     "validate": "Validate",
     "meta": {
       "path": "Path",
       "size": "Size",
-      "lines": "Lines",
-      "format": "Format"
+      "lines": "Lines"
     },
     "status": {
       "ready": "Ready",
       "validating": "Validating…",
       "passed": "Passed",
-      "failed": "Failed"
+      "failed": "Failed",
+      "passedLong": "The configuration is valid."
     },
     "unsavedConfirm": {
       "title": "Unsaved changes",
       "message": "You have unsaved changes. Reload anyway?",
-      "reload": "Reload"
-    }
+      "reload": "Reload",
+      "leave": "You have unsaved configuration changes. Leaving drops them.",
+      "discard": "Discard changes"
+    },
+    "notInstalled": "{name} is not installed yet, so it has no configuration. Once it is installed you can edit it here.",
+    "noConfigHint": "The config file is usually created the first time the service starts. Start it, then reload this page.",
+    "details": "Details",
+    "lookedIn": "WDC looked for files here: {paths}",
+    "pluginLocations": "in the folders the service plugin uses",
+    "unsaved": "Unsaved",
+    "unsavedHint": "You have unsaved changes. Save them with Save & Apply or Ctrl+S.",
+    "loadFailed": "Could not load the configuration: {err}",
+    "saveFailed": "Could not save the configuration: {err}",
+    "savedApplied": "Saved. {name} now uses the new configuration.",
+    "savedNotApplied": "Saved, but {name} could not reload it: {msg}"
   },
   "settingsDb": {
     "tabDesc": "MySQL databases managed by NKS WDC.",
