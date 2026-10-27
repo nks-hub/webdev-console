@@ -1567,13 +1567,13 @@
   "phpPlugin": {
     "title": "PHP",
     "subtitle": "Versions, extensions and php.ini",
-    "defaultVersion": "Default version",
+    "defaultVersion": "Version for new sites",
     "tabVersions": "Versions",
     "tabExtensions": "Extensions",
     "tabLogs": "Log",
     "selectVersionHint": "Pick a PHP version on the Versions tab first.",
     "noExtensions": "The php.ini of this version lists no extensions.",
-    "noDefault": "Not set",
+    "noDefault": "Not chosen",
     "configFailed": "Could not load php.ini: {err}",
     "installedVersions": "Installed",
     "loadFailed": "Could not load PHP versions: {err}",
@@ -1657,7 +1657,8 @@
     "resetDescription": "Stops MySQL, restarts in safe mode (--skip-grant-tables), resets all root accounts to the new password, then restarts normally.",
     "newRootPassword": "New root password",
     "resetPasswordBtn": "Reset root password",
-    "needsRunning": "Databases and users show up once MySQL is running."
+    "needsRunning": "Databases and users show up once MySQL is running. Start it with the button at the top.",
+    "changeNeedsRunning": "The password can only be changed while MySQL is running. If you do not know it, use the reset below."
   },
   "postgresPlugin": {
     "title": "PostgreSQL",
@@ -2623,7 +2624,9 @@
     "lookedIn": "WDC looked for files here: {paths}",
     "loadFailed": "Could not load the configuration: {err}",
     "unsavedHint": "You have unsaved changes. Save them with Save & Apply or Ctrl+S.",
-    "noConfigHint": "The config file is usually created the first time the service starts. Start it, then reload this page."
+    "noConfigHint": "The config file is usually created the first time the service starts. Start it, then reload this page.",
+    "generatedTitle": "WDC writes this file itself",
+    "generatedHint": "WDC rewrites it on the next change to a site, a port or a PHP version, and your edits are lost. Make lasting changes in the app (Sites, Settings)."
   },
   "settingsToast": {
     "ssoFailed": "SSO sign-in failed: {err}",
@@ -3505,7 +3508,7 @@
       "crashed": "The service crashed: its process exited on its own. The end of the log usually says why.",
       "disabled": "The service crashed several times in a row, so WDC stopped restarting it. The end of the log says why.",
       "notInstalled": "{name} is not installed yet. Install it on the Binaries page, then it can be started.",
-      "startFailed": "The service did not start: its process exited before it was up. The end of the log says why."
+      "startFailed": "The service did not start. The reason is below or at the end of the log."
     },
     "facts": {
       "uptime": "Uptime",
@@ -3526,7 +3529,9 @@
       "title": "The last action failed",
       "copy": "Copy",
       "copied": "Copied to clipboard",
-      "openPorts": "Change port"
+      "openPorts": "Change port",
+      "startTitle": "The service failed to start",
+      "fromLog": "Error from the service log"
     },
     "summaryProblems": "{n} has a problem | {n} have a problem",
     "emptyFilter": "No service matches this filter.",

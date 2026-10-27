@@ -14,10 +14,23 @@ export const stateOf = (svc: ServiceInfo | null | undefined): ServiceViewState =
 /** Crashed, or switched off by the daemon after too many crashes in a row. */
 export const isProblemState = (s: ServiceViewState) => s === 'crashed' || s === 'disabled'
 
-/** Key under servicesPage.status / .explain: a crash before the service ever ran reads as a failed start. */
-export function stateKeyOf(svc: ServiceInfo | null | undefined): ServiceViewState | 'startFailed' {
+export type ServiceStateKey = ServiceViewState | 'startFailed'
+
+/**
+ * Key under servicesPage.status / .explain: a crash before the service ever
+ * ran, or a start that threw and left it stopped, reads as a failed start.
+ */
+export function stateKeyOf(svc: ServiceInfo | null | undefined): ServiceStateKey {
   const state = stateOf(svc)
-  return state === 'crashed' && svc?.crashKind === 'startFailed' ? 'startFailed' : state
+  if (state === 'crashed' && svc?.crashKind === 'startFailed') return 'startFailed'
+  if (state === 'stopped' && svc?.startError) return 'startFailed'
+  return state
+}
+
+/** Crashed, off after crashes, or its last start failed. */
+export const needsAttention = (svc: ServiceInfo) => {
+  const key = stateKeyOf(svc)
+  return key === 'startFailed' || isProblemState(key as ServiceViewState)
 }
 
 /** Binaries page link for a service that is not installed. */

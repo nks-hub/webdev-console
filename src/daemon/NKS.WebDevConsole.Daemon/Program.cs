@@ -752,7 +752,7 @@ foreach (var p in pluginLoader.Plugins)
                 "postgresql" => new[] { ("ports.postgresql", "Port") },
                 "redis"      => new[] { ("ports.redis",      "Port") },
                 "mailpit"    => new[] { ("ports.mailpitSmtp", "SmtpPort"),
-                                        ("ports.mailpitHttp", "HttpPort") },
+                                        ("ports.mailpitHttp", "WebPort") },
                 _ => Array.Empty<(string, string)>(),
             };
             foreach (var (k, propName) in mapping)
@@ -1413,6 +1413,9 @@ if (autoStartEnabled)
             }
         }
     }
+    // A failed auto-start is otherwise only in the console log; the tracker
+    // hands the reason to /api/services so the UI can show it.
+    var autoStartTracker = app.Services.GetRequiredService<ServiceRunTracker>();
     autoStartServicesAsync = async () =>
     {
     var startTasks = modules.Select(async module =>
@@ -1445,12 +1448,14 @@ if (autoStartEnabled)
             // slowest module without stalling anything — these run in the
             // background after Kestrel is already listening.
             using var moduleCts = new CancellationTokenSource(TimeSpan.FromSeconds(45));
+            autoStartTracker.MarkStartRequested(module.ServiceId);
             var startTask = module.StartAsync(moduleCts.Token);
             var timeoutTask = Task.Delay(TimeSpan.FromSeconds(50), CancellationToken.None);
             if (await Task.WhenAny(startTask, timeoutTask) == timeoutTask)
             {
                 moduleCts.Cancel();
                 Console.WriteLine($"[auto-start] {module.ServiceId}: timed out after 50s — continuing");
+                autoStartTracker.RecordStartFailure(module.ServiceId, "Automatic start did not finish within 50 seconds.");
                 return;
             }
             await startTask;
@@ -1460,6 +1465,7 @@ if (autoStartEnabled)
         catch (Exception ex)
         {
             Console.WriteLine($"[auto-start] {module.ServiceId} failed: {ex.Message}");
+            autoStartTracker.RecordStartFailure(module.ServiceId, ex.Message);
         }
     });
     await Task.WhenAll(startTasks);

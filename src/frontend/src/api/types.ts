@@ -28,6 +28,8 @@ export interface ServiceInfo {
   port?: number
   /** All configured ports by role: port, http, https, smtp. */
   ports?: Record<string, number>
+  /** Why the last start (also auto-start) failed; absent once the service runs. */
+  startError?: string
 }
 
 export interface StatusResponse {

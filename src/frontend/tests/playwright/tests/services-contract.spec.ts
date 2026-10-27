@@ -2,7 +2,7 @@ import { test, expect } from './_fixtures'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { cleanError, errorCause, installRouteOf, portsLabel, stateKeyOf, stateOf } from '../../../src/utils/services'
-import { logLevelOf, matchesLogLevel } from '../../../src/utils/logLevel'
+import { firstErrorLine, logLevelOf, matchesLogLevel } from '../../../src/utils/logLevel'
 import type { ServiceInfo } from '../../../src/api/types'
 
 // Services page, service plugin pages and the shared LogViewer: the daemon
@@ -30,6 +30,8 @@ test.describe('Service status helpers', () => {
   test('a crash before the service ever ran reads as a failed start', () => {
     expect(stateKeyOf(svc({ state: 4, crashKind: 'startFailed' }))).toBe('startFailed')
     expect(stateKeyOf(svc({ state: 4, crashKind: 'exited' }))).toBe('crashed')
+    // A start that threw (also auto-start) leaves the service stopped with the reason.
+    expect(stateKeyOf(svc({ state: 0, startError: 'mailpit.exe not found' }))).toBe('startFailed')
   })
 
   test('Install opens the binary the daemon names for the service', () => {
@@ -58,6 +60,10 @@ test.describe('Log level filter', () => {
     expect(logLevelOf('2026-10-27 10:00:00 CET LOG:  database system is ready')).toBe('info')
     expect(logLevelOf('PHP Fatal error:  Uncaught Error')).toBe('error')
     expect(logLevelOf('plain line without a level')).toBeNull()
+    // The plugin's stream and file tags say nothing about severity.
+    expect(logLevelOf('[ERR] 2026-10-27T17:41:04Z 0 [System] [MY-015015] [Server] MySQL Server - start.')).toBe('info')
+    expect(logLevelOf('[error.log] [Tue Oct 27 18:42:06 2026] [mpm_winnt:notice] [pid 6296] AH00418: Parent: Created child')).toBe('info')
+    expect(logLevelOf('[error.log] [Tue Oct 27 18:42:06 2026] [mpm_winnt:crit] [pid 6296] AH02538: Child: Parent process exited')).toBe('error')
   })
 
   test('"warn" keeps warnings and errors, "all" keeps everything', () => {
@@ -66,6 +72,16 @@ test.describe('Log level filter', () => {
     expect(matchesLogLevel('[mpm_winnt:notice] started', 'warn')).toBe(false)
     expect(matchesLogLevel('plain line', 'all')).toBe(true)
     expect(matchesLogLevel('plain line', 'info')).toBe(false)
+  })
+
+  test('the first error line of a crashed service is its likely reason', () => {
+    const tail = [
+      '[ERR] 2026-10-27T17:41:05Z 1 [System] [MY-013576] [InnoDB] InnoDB initialization has started.',
+      '[ERR] 2026-10-27T17:41:05Z 1 [ERROR] [MY-012960] [InnoDB] Cannot create redo log files.',
+      '[ERR] 2026-10-27T17:41:05Z 0 [ERROR] [MY-010119] [Server] Aborting',
+    ]
+    expect(firstErrorLine(tail)).toBe('2026-10-27T17:41:05Z 1 [ERROR] [MY-012960] [InnoDB] Cannot create redo log files.')
+    expect(firstErrorLine(['[ERR] 2026-10-27 0 [System] start'])).toBeNull()
   })
 })
 
@@ -89,6 +105,12 @@ test.describe('Services UI contract', () => {
       expect(source).toMatch(/notInstalled/)
       expect(source).toMatch(/installRouteOf\(/)
     }
+  })
+
+  test('the summary sentence counts the same services as the "All" filter', () => {
+    const page = read('components', 'pages', 'ServicesPage.vue')
+    expect(page).toMatch(/const summary = computed\(\(\) => \{\s*const total = services\.value\.length/)
+    expect(page).toMatch(/id: 'all' as const, label: t\('servicesPage\.filter\.all'\), count: services\.value\.length/)
   })
 
   test('/service/:id opens the Services page with that service selected', () => {

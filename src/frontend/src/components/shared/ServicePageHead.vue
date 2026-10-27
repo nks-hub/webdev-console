@@ -18,24 +18,27 @@
         <el-button :loading="busy" @click="act('restart')">{{ t('servicesPage.restart') }}</el-button>
         <el-button type="danger" :loading="busy" @click="act('stop')">{{ t('servicesPage.stop') }}</el-button>
       </template>
+      <el-button v-else-if="state === 'starting' || state === 'stopping'" type="primary" loading disabled>
+        {{ t(`servicesPage.status.${state}`) }}
+      </el-button>
       <el-button
-        v-else-if="state !== 'starting' && state !== 'stopping'"
+        v-else
         type="primary"
         :loading="busy"
         :disabled="!daemonStore.connected"
         @click="act('start')"
-      >{{ isProblemState(state) ? t('servicesPage.fixRestart') : t('servicesPage.start') }}</el-button>
+      >{{ service && needsAttention(service) ? t('servicesPage.fixRestart') : t('servicesPage.start') }}</el-button>
     </div>
   </header>
 
   <p v-if="!daemonStore.connected" class="svc-sentence" role="status">{{ t('dashboard.connectingTitle') }}</p>
   <p v-else-if="!service" class="svc-sentence" role="status">{{ t('servicesPage.unknown', { name: title }) }}</p>
   <template v-else>
-    <p class="svc-sentence" :class="`st-${state}`" role="status" aria-live="polite">
+    <p class="svc-sentence" :class="`st-${stateKeyOf(service)}`" role="status" aria-live="polite">
       {{ t(`servicesPage.explain.${stateKeyOf(service)}`, { name: shortName(service) }) }}
     </p>
 
-    <ServiceErrorNote :service-id="serviceId" />
+    <ServiceErrorNote :service-id="serviceId" :log-reason="logReason" />
 
     <dl v-if="state !== 'notInstalled'" class="dl">
       <div v-if="state === 'running' && service.uptimeSeconds != null">
@@ -52,14 +55,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useDaemonStore } from '../../stores/daemon'
 import { useServicesStore, type ServiceOp } from '../../stores/services'
+import { fetchServiceLogs } from '../../api/daemon'
 import { formatDuration } from '../../utils/format'
+import { firstErrorLine } from '../../utils/logLevel'
 import { shortServiceName as shortName } from '../../utils/serviceState'
-import { installRouteOf, isProblemState, portsLabel, stateKeyOf, stateOf } from '../../utils/services'
+import { installRouteOf, needsAttention, portsLabel, stateKeyOf, stateOf } from '../../utils/services'
 import PluginAutostartSwitch from './PluginAutostartSwitch.vue'
 import ServiceErrorNote from './ServiceErrorNote.vue'
 
@@ -78,6 +83,21 @@ const servicesStore = useServicesStore()
 const service = computed(() => daemonStore.services.find(s => s.id === props.serviceId))
 const state = computed(() => stateOf(service.value))
 const busy = computed(() => servicesStore.isBusy(props.serviceId))
+
+// When the service failed, its own log usually says why: show the first
+// error line of the tail next to the failure instead of sending the user to
+// the Log tab. Reloaded whenever the service enters a failed state.
+const logReason = ref<string | null>(null)
+const failureKey = computed(() =>
+  service.value && needsAttention(service.value) ? `${stateKeyOf(service.value)}:${service.value.startError ?? ''}` : '')
+watch(failureKey, async (key) => {
+  logReason.value = null
+  if (!key) return
+  try {
+    const lines = await fetchServiceLogs(props.serviceId, 60)
+    if (key === failureKey.value) logReason.value = firstErrorLine(Array.isArray(lines) ? lines : [])
+  } catch { /* the failure itself is still shown; the log is optional */ }
+}, { immediate: true })
 
 function act(op: ServiceOp) {
   void servicesStore.act(props.serviceId, op, service.value ? shortName(service.value) : props.title)
@@ -102,7 +122,7 @@ function install() {
 .head-actions :deep(.el-button + .el-button) { margin-left: 0; }
 
 .svc-sentence { color: var(--wdc-text); line-height: 1.45; }
-.svc-sentence.st-crashed, .svc-sentence.st-disabled { color: var(--wdc-status-error); }
+.svc-sentence.st-crashed, .svc-sentence.st-disabled, .svc-sentence.st-startFailed { color: var(--wdc-status-error); }
 
 .dl { margin: 0; display: grid; max-width: 40rem; }
 .dl > div, .dl :slotted(div) {

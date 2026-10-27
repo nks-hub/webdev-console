@@ -1,12 +1,20 @@
 <!--
-  The last failed start/stop/restart of a service, kept until the next
-  successful action (servicesStore.lastError). Names the cause when the
-  message is one the OS or the server binary prints, and links to the fix.
+  Why a service is not running, in one place: the last failed action from
+  this window (servicesStore.lastError), else the reason the daemon kept for
+  a failed start (also auto-start), and the first error line of the service
+  log when the parent has one. Names the cause when the message is one the
+  OS or the server binary prints, and links to the fix.
 -->
 <template>
-  <div v-if="message" class="svc-error" role="alert">
-    <p class="svc-error-title">{{ t('servicesPage.lastError.title') }}</p>
-    <pre class="svc-error-text mono">{{ message }}</pre>
+  <div v-if="message || logReason" class="svc-error" role="alert">
+    <template v-if="message">
+      <p class="svc-error-title">{{ t(fromAction ? 'servicesPage.lastError.title' : 'servicesPage.lastError.startTitle') }}</p>
+      <pre class="svc-error-text mono">{{ message }}</pre>
+    </template>
+    <template v-if="logReason">
+      <p class="svc-error-title">{{ t('servicesPage.lastError.fromLog') }}</p>
+      <pre class="svc-error-text mono">{{ logReason }}</pre>
+    </template>
     <p v-if="cause" class="svc-error-hint">{{ t(`servicesPage.cause.${cause}`) }}</p>
     <div class="svc-error-actions">
       <el-button size="small" @click="copy">{{ t('servicesPage.lastError.copy') }}</el-button>
@@ -25,21 +33,26 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
+import { useDaemonStore } from '../../stores/daemon'
 import { useServicesStore } from '../../stores/services'
 import { cleanError, errorCause } from '../../utils/services'
 
-const props = defineProps<{ serviceId: string }>()
+const props = defineProps<{ serviceId: string; logReason?: string | null }>()
 
 const { t } = useI18n()
 const router = useRouter()
+const daemonStore = useDaemonStore()
 const servicesStore = useServicesStore()
 
-const message = computed(() => servicesStore.lastError[props.serviceId] ?? '')
-const cause = computed(() => message.value ? errorCause(message.value) : null)
+const actionError = computed(() => servicesStore.lastError[props.serviceId] ?? '')
+const fromAction = computed(() => !!actionError.value)
+const message = computed(() =>
+  actionError.value || daemonStore.services.find(s => s.id === props.serviceId)?.startError || '')
+const cause = computed(() => errorCause(`${message.value}\n${props.logReason ?? ''}`))
 
 async function copy() {
   try {
-    await navigator.clipboard.writeText(message.value)
+    await navigator.clipboard.writeText([message.value, props.logReason].filter(Boolean).join('\n'))
     ElMessage.success(t('servicesPage.lastError.copied'))
   } catch (e) {
     ElMessage.error(cleanError(e))

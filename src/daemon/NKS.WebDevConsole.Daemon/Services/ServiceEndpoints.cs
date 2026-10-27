@@ -70,6 +70,7 @@ internal static class ServiceEndpoints
             catch (Exception ex)
             {
                 lf.CreateLogger("ServiceControl").LogError(ex, "Failed to start service {Id}", id);
+                tracker.RecordStartFailure(module.ServiceId, ex.Message);
                 return Results.Problem(
                     title: $"Failed to start {id}",
                     detail: ex.Message,
@@ -169,6 +170,7 @@ internal static class ServiceEndpoints
             catch (Exception ex)
             {
                 lf.CreateLogger("ServiceControl").LogError(ex, "Failed to restart service {Id}", id);
+                tracker.RecordStartFailure(module.ServiceId, ex.Message);
                 return Results.Problem(
                     title: $"Failed to restart {id}",
                     detail: ex.Message,
