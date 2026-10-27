@@ -53,6 +53,11 @@ test.describe('Shell services contract', () => {
     expect(dashboard).toMatch(/\/service\/\$\{encodeURIComponent\(id\)\}\/config/)
   })
 
+  test('a disabled primary button is a neutral key, not a faded cobalt one', () => {
+    const tokens = read('assets', 'tokens.css')
+    expect(tokens).toMatch(/\.el-button--primary\.is-disabled:not\(\.is-text\):not\(\.is-link\)[\s\S]*?--el-button-bg-color: var\(--wdc-surface-2\)/)
+  })
+
   test('browser sign-in can be cancelled and times out', () => {
     const auth = read('stores', 'auth.ts')
     expect(auth).toMatch(/function cancelLogin/)
