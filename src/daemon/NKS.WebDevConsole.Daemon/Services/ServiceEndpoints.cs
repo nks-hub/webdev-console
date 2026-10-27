@@ -31,7 +31,7 @@ internal static class ServiceEndpoints
     public static void MapServiceEndpoints(this WebApplication app)
     {
         // Service management endpoints — query real plugin modules
-        app.MapGet("/api/services", async (IServiceProvider sp) =>
+        app.MapGet("/api/services", async (IServiceProvider sp, BinaryManager bm) =>
         {
             // Fan out status probes concurrently — same rationale as /api/system
             // (commit 9cf5d53). This endpoint is hit by every AppSidebar poll (5s
@@ -40,20 +40,21 @@ internal static class ServiceEndpoints
             var modules = sp.GetServices<IServiceModule>().ToArray();
             var statuses = await Task.WhenAll(
                 modules.Select(m => m.GetStatusAsync(CancellationToken.None)));
-            return Results.Ok(statuses);
+            var installed = bm.ListInstalled();
+            return Results.Ok(modules.Select((m, i) => ServiceStatusDto.From(m, statuses[i], installed)));
         });
 
-        app.MapGet("/api/services/{id}", async (string id, IServiceProvider sp) =>
+        app.MapGet("/api/services/{id}", async (string id, IServiceProvider sp, BinaryManager bm) =>
         {
             var modules = sp.GetServices<IServiceModule>();
             var module = modules.FirstOrDefault(m => m.ServiceId.Equals(id, StringComparison.OrdinalIgnoreCase)
                 || m.Type.ToString().Equals(id, StringComparison.OrdinalIgnoreCase));
             if (module == null) return Results.NotFound();
             var status = await module.GetStatusAsync(CancellationToken.None);
-            return Results.Ok(status);
+            return Results.Ok(ServiceStatusDto.From(module, status, bm.ListInstalled()));
         });
 
-        app.MapPost("/api/services/{id}/start", async (string id, IServiceProvider sp, ILoggerFactory lf) =>
+        app.MapPost("/api/services/{id}/start", async (string id, IServiceProvider sp, BinaryManager bm, ILoggerFactory lf) =>
         {
             var modules = sp.GetServices<IServiceModule>();
             var module = modules.FirstOrDefault(m => m.ServiceId.Equals(id, StringComparison.OrdinalIgnoreCase)
@@ -64,7 +65,7 @@ internal static class ServiceEndpoints
             {
                 await module.StartAsync(CancellationToken.None);
                 var status = await module.GetStatusAsync(CancellationToken.None);
-                return Results.Ok(status);
+                return Results.Ok(ServiceStatusDto.From(module, status, bm.ListInstalled()));
             }
             catch (Exception ex)
             {
@@ -84,6 +85,7 @@ internal static class ServiceEndpoints
         app.MapPost("/api/services/{id}/stop", async (
             string id,
             IServiceProvider sp,
+            BinaryManager bm,
             ILoggerFactory lf,
             NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
             HttpContext ctx,
@@ -112,7 +114,7 @@ internal static class ServiceEndpoints
             {
                 await module.StopAsync(CancellationToken.None);
                 var status = await module.GetStatusAsync(CancellationToken.None);
-                return Results.Ok(status);
+                return Results.Ok(ServiceStatusDto.From(module, status, bm.ListInstalled()));
             }
             catch (Exception ex)
             {
@@ -129,6 +131,7 @@ internal static class ServiceEndpoints
         app.MapPost("/api/services/{id}/restart", async (
             string id,
             IServiceProvider sp,
+            BinaryManager bm,
             ILoggerFactory lf,
             NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
             HttpContext ctx,
@@ -158,7 +161,7 @@ internal static class ServiceEndpoints
                 await module.StopAsync(CancellationToken.None);
                 await module.StartAsync(CancellationToken.None);
                 var status = await module.GetStatusAsync(CancellationToken.None);
-                return Results.Ok(status);
+                return Results.Ok(ServiceStatusDto.From(module, status, bm.ListInstalled()));
             }
             catch (Exception ex)
             {
