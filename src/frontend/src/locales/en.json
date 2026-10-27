@@ -1034,7 +1034,19 @@
       "runHint": "Type SQL above and press Ctrl+Enter to execute. Multiple statements separated by ; are supported.",
       "affected": "{count} rows affected",
       "tabAffected": "#{n}: affected ({count})",
-      "tabRows": "#{n}: rows ({count})"
+      "tabRows": "#{n}: rows ({count})",
+      "run": "Run query"
+    },
+    "diag": {
+      "notInstalledTitle": "MySQL is not installed yet",
+      "notInstalledHint": "Databases cannot be managed here without MySQL. Install it in Binaries; one version is enough.",
+      "installMysql": "Install MySQL",
+      "createNeedsMysql": "Install MySQL first",
+      "notRunning": "MySQL is installed but not running.",
+      "startMysql": "Start MySQL",
+      "startFailed": "Could not start MySQL: {err}",
+      "portConflictTitle": "Port {port} rejected the WDC root password.",
+      "portConflictHint": "Another MySQL server (MAMP, XAMPP or a system service) probably runs on this port. Switch WDC to a free port or reset the root password."
     }
   },
   "binaries": {

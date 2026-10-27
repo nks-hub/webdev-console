@@ -1709,9 +1709,11 @@ internal static class DatabaseEndpoints
         app.MapGet("/api/databases/v2", async (
             BinaryManager bm, SettingsStore settings, IServiceProvider sp, CancellationToken ct) =>
         {
+            // `reason` lets the UI word the problem and offer the next step:
+            // mysql_not_installed | mysql_not_running | port_conflict | query_failed.
             var mysql = bm.ListInstalled("mysql").FirstOrDefault();
             if (mysql?.Executable is null)
-                return Results.Ok(new { error = "MySQL not installed", databases = Array.Empty<object>() });
+                return Results.Ok(new { error = "MySQL not installed", reason = "mysql_not_installed", databases = Array.Empty<object>() });
             try
             {
                 var driver = MakeMySqlDriverV2(settings, sp, bm);
@@ -1725,11 +1727,17 @@ internal static class DatabaseEndpoints
                     ? $"Port {port} accepted the connection but rejected the WDC root password. Likely an external mysqld (MAMP/XAMPP/system service) on this port."
                     : null;
                 int? suggestedPort = mex.Number == 1045 ? FindFreeTcpPort(port + 1) : null;
-                return Results.Ok(new { error = mex.Message, code = mex.Number, hint, suggestedPort, databases = Array.Empty<object>() });
+                var reason = mex.Number switch
+                {
+                    1045 => "port_conflict",
+                    (int)MySqlConnector.MySqlErrorCode.UnableToConnectToHost => "mysql_not_running",
+                    _ => "query_failed",
+                };
+                return Results.Ok(new { error = mex.Message, code = mex.Number, reason, port, hint, suggestedPort, databases = Array.Empty<object>() });
             }
             catch (Exception ex)
             {
-                return Results.Ok(new { error = ex.Message, databases = Array.Empty<object>() });
+                return Results.Ok(new { error = ex.Message, reason = "query_failed", databases = Array.Empty<object>() });
             }
         });
 

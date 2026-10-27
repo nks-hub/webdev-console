@@ -950,12 +950,12 @@
     "rowsCol": "Řádky",
     "sizeCol": "Velikost",
     "noTables": "V této databázi nejsou žádné tabulky.",
-    "noDatabases": "Žádné uživatelské databáze. Vytvoř první.",
+    "noDatabases": "Žádné uživatelské databáze. Vytvořte první.",
     "emptyTitle": "Žádné uživatelské databáze",
     "emptyHint": "Vytvořte první databázi pro začátek.",
-    "selectFirst": "Nejprve vyber databázi",
-    "selectDb": "Vyber databázi pro začátek",
-    "selectDbHint": "Vlevo ve stromu vyber databázi a poté tabulku — můžeš procházet data, prohlédnout si strukturu nebo otevřít SQL konzoli.",
+    "selectFirst": "Nejprve vyberte databázi",
+    "selectDb": "Vyberte databázi",
+    "selectDbHint": "Vlevo ve stromu vyberte databázi a potom tabulku. Můžete procházet data, prohlédnout si strukturu nebo otevřít SQL konzoli.",
     "tablesCount": "{count} tabulek",
     "refreshTables": "Obnovit tabulky",
     "importSql": "Import SQL",
@@ -1031,10 +1031,22 @@
       "clearSql": "Vyčistit SQL",
       "history": "Historie ({count})",
       "clearHistory": "Vymazat historii",
-      "runHint": "Napiš SQL nahoře a stiskni Ctrl+Enter pro spuštění. Více příkazů odděluj středníkem.",
+      "runHint": "Napište SQL nahoře a spusťte ho klávesami Ctrl+Enter. Více příkazů oddělte středníkem.",
       "affected": "{count} řádků ovlivněno",
       "tabAffected": "#{n}: ovlivněno ({count})",
-      "tabRows": "#{n}: řádky ({count})"
+      "tabRows": "#{n}: řádky ({count})",
+      "run": "Spustit dotaz"
+    },
+    "diag": {
+      "notInstalledTitle": "MySQL zatím není nainstalovaný",
+      "notInstalledHint": "Bez MySQL tu databáze spravovat nejde. Nainstalujte ho v Binárkách, stačí jedna verze.",
+      "installMysql": "Nainstalovat MySQL",
+      "createNeedsMysql": "Nejdřív nainstalujte MySQL",
+      "notRunning": "MySQL je nainstalovaný, ale neběží.",
+      "startMysql": "Spustit MySQL",
+      "startFailed": "MySQL se nepodařilo spustit: {err}",
+      "portConflictTitle": "Port {port} odmítl heslo roota WDC.",
+      "portConflictHint": "Na tomto portu nejspíš běží jiný MySQL server (MAMP, XAMPP nebo systémová služba). Přepněte WDC na volný port, nebo heslo roota obnovte."
     }
   },
   "binaries": {

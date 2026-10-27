@@ -80,4 +80,19 @@ test.describe('Tool pages — source contract', () => {
     }
     expect(vue).toContain(':disabled="!apiTokenInput"')
   })
+
+  test('databases page turns daemon reasons into a next step', () => {
+    const endpoint = daemon('Data/DatabaseEndpoints.cs')
+    for (const reason of ['mysql_not_installed', 'mysql_not_running', 'port_conflict']) {
+      expect(endpoint).toContain(`"${reason}"`)
+    }
+    const vue = page('Databases.vue')
+    expect(vue).toContain(`v-if="reason === 'mysql_not_installed'"`)
+    expect(vue).toContain(`query: { app: 'mysql' }`)
+    expect(vue).toContain(`:disabled="reason === 'mysql_not_installed'"`)
+    expect(vue).toContain('startMysql')
+    // el-alert's default slot hides `description`, so the hint must live in the slot.
+    expect(vue).not.toContain(':description="errorHint"')
+    expect(vue).not.toContain('accent-glow')
+  })
 })
