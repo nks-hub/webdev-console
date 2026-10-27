@@ -32,7 +32,9 @@ extraResources:
       - "icon-tray-*.png"
       - "icon.png"
 
-artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
+# No spaces in artifact names: latest*.yml names the file with dashes, while
+# a GitHub release upload turns spaces into dots, so the updater got a 404.
+artifactName: "NKS-WebDev-Console-${version}-${os}-${arch}.${ext}"
 
 win:
   target:
@@ -55,10 +57,10 @@ nsis:
   allowToChangeInstallationDirectory: true
   deleteAppDataOnUninstall: false
   shortcutName: NKS WebDev Console
-  artifactName: "${productName}-${version}-setup-${arch}.${ext}"
+  artifactName: "NKS-WebDev-Console-${version}-setup-${arch}.${ext}"
 
 portable:
-  artifactName: "${productName}-${version}-portable-${arch}.${ext}"
+  artifactName: "NKS-WebDev-Console-${version}-portable-${arch}.${ext}"
 
 mac:
   target:

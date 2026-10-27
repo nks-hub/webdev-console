@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { existsSync, readdirSync, statSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import { basename, join, resolve } from 'node:path'
 
 function parseArgs(argv) {
   const options = { dir: null, target: null }
@@ -85,6 +85,18 @@ function main() {
   assert(pluginDlls.length >= 5,
     `Expected ≥5 plugin DLLs inside daemon/plugins/, found ${pluginDlls.length}. ` +
     `This means stage-plugins.mjs didn't stage any plugins — the packaged app will be broken.`)
+
+  // The updater downloads the file a latest*.yml names. Its name must be
+  // exactly what ends up on the release; a space there becomes a dot on
+  // GitHub while the yml says a dash, and every update 404s.
+  for (const yml of files.filter((file) => /latest(-mac|-linux)?\.yml$/.test(file))) {
+    for (const m of readFileSync(yml, 'utf-8').matchAll(/^\s*(?:-\s*url|path):\s*(.+)$/gm)) {
+      const name = m[1].trim()
+      assert(!/\s/.test(name), `${basename(yml)} names '${name}', which contains whitespace`)
+      assert(includesFile(files, (file) => basename(file) === name),
+        `${basename(yml)} names '${name}', but no such artifact was built`)
+    }
+  }
 
   const totalBytes = files.reduce((sum, file) => sum + statSync(file).size, 0)
   console.log(`[verify-electron-release] OK target=${target} files=${files.length} bytes=${totalBytes}`)
