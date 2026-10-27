@@ -89,7 +89,8 @@ test.describe('Tool pages — source contract', () => {
     const vue = page('Databases.vue')
     expect(vue).toContain(`v-if="reason === 'mysql_not_installed'"`)
     expect(vue).toContain(`query: { app: 'mysql' }`)
-    expect(vue).toContain(`:disabled="reason === 'mysql_not_installed'"`)
+    expect(vue).toContain(`:disabled="mysqlUnavailable"`)
+    expect(vue).toContain(`reason.value === 'mysql_not_installed' || reason.value === 'mysql_not_running'`)
     expect(vue).toContain('startMysql')
     // el-alert's default slot hides `description`, so the hint must live in the slot.
     expect(vue).not.toContain(':description="errorHint"')

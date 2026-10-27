@@ -25,7 +25,10 @@ export const test = base.extend<{
   daemonAuth: { port: number; token: string }
   authedRequest: import('playwright/test').APIRequestContext
 }>({
-  daemonAuth: async ({}, use) => {
+  daemonAuth: async ({}, use, testInfo) => {
+    // These specs create sites and flip settings on whatever daemon owns the
+    // port file, so they only run when asked for, never against a real install.
+    testInfo.skip(!process.env.WDC_E2E_LIVE, 'live daemon specs run only with WDC_E2E_LIVE=1')
     await use(readDaemonToken())
   },
   authedRequest: async ({ playwright, daemonAuth }, use) => {
