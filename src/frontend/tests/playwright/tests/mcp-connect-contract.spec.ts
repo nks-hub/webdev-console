@@ -1,6 +1,13 @@
 import { test, expect } from './_fixtures'
 import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import {
+  appLaunch,
+  claudeCodeCommand,
+  mcpServerEntryJson,
+  mcpServersJson,
+  nodeLaunch,
+} from '../../../src/utils/mcpConnect'
 
 // Source-level contract for "Connect an AI client":
 //  - the MCP server bundle is staged and shipped as an extraResource;
@@ -38,11 +45,43 @@ test.describe('MCP connect contract', () => {
   })
 
   test('connect snippets use the verified claude mcp add syntax and mcpServers JSON', () => {
-    const util = readFileSync(join(srcRoot, 'utils', 'mcpConnect.ts'), 'utf-8')
+    const server = 'C:\\Program Files\\NKS WebDev Console\\resources\\mcp-server\\index.js'
     // Options before the server name, `--` before the server command.
-    expect(util).toContain('`claude mcp add --scope user ${MCP_SERVER_NAME} -- node ${quoteArg(serverPath)}`')
-    expect(util).toContain("export const MCP_SERVER_NAME = 'nks-wdc'")
-    expect(util).toMatch(/mcpServers: \{ \[MCP_SERVER_NAME\]: \{ command: 'node', args: \[serverPath\] \} \}/)
+    expect(claudeCodeCommand(nodeLaunch(server)))
+      .toBe(`claude mcp add --scope user nks-wdc -- node "${server}"`)
+    expect(JSON.parse(mcpServersJson(nodeLaunch(server))))
+      .toEqual({ mcpServers: { 'nks-wdc': { command: 'node', args: [server] } } })
+    // The entry alone pastes into an existing mcpServers object.
+    expect(JSON.parse(`{${mcpServerEntryJson(nodeLaunch(server))}}`))
+      .toEqual({ 'nks-wdc': { command: 'node', args: [server] } })
+  })
+
+  test('without Node.js the snippets start the server with the WDC binary', () => {
+    const exe = 'C:\\Program Files\\NKS WebDev Console\\NKS WebDev Console.exe'
+    const server = 'C:\\Program Files\\NKS WebDev Console\\resources\\mcp-server\\index.js'
+    const win = appLaunch(exe, server, 'win32')
+    // The Windows binary is requireAdministrator; RunAsInvoker lets an AI
+    // client start it without elevation.
+    expect(win.env).toEqual({ ELECTRON_RUN_AS_NODE: '1', __COMPAT_LAYER: 'RunAsInvoker' })
+    expect(appLaunch('/Applications/WDC.app/Contents/MacOS/WDC', '/x/index.js', 'darwin').env)
+      .toEqual({ ELECTRON_RUN_AS_NODE: '1' })
+    // -e is variadic: it must not sit right before the name (checked with
+    // claude 2.1: "-e K=V nks-wdc" reads nks-wdc as a variable).
+    expect(claudeCodeCommand(win)).toBe(
+      `claude mcp add -e ELECTRON_RUN_AS_NODE=1 -e __COMPAT_LAYER=RunAsInvoker --scope user nks-wdc -- "${exe}" "${server}"`)
+    expect(JSON.parse(mcpServersJson(win)).mcpServers['nks-wdc'])
+      .toEqual({ command: exe, args: [server], env: { ELECTRON_RUN_AS_NODE: '1', __COMPAT_LAYER: 'RunAsInvoker' } })
+
+    // The connection test in main uses the same environment and only lets
+    // the renderer choose the runtime, never the command.
+    const main = read('electron', 'main.ts')
+    expect(main).toMatch(/function mcpAppRuntimeEnv[\s\S]*?ELECTRON_RUN_AS_NODE: '1'[\s\S]*?__COMPAT_LAYER = 'RunAsInvoker'/)
+    expect(main).toMatch(/ipcMain\.handle\('mcp-server-selftest', async \(_event, runtime: unknown\)/)
+    expect(main).toMatch(/ipcMain\.handle\('mcp-server-info'[\s\S]*?nodeVersion: await detectNodeVersion\(\)/)
+    expect(read('electron', 'preload.ts')).toMatch(/testMcpServer: \([\s\S]*?ipcRenderer\.invoke\('mcp-server-selftest', runtime\)/)
+    const card = readFileSync(join(srcRoot, 'components', 'mcp', 'McpConnectCard.vue'), 'utf-8')
+    expect(card).toContain('window.electronAPI.testMcpServer(runtime.value)')
+    expect(card).toContain("runtime.value = serverInfo.value.nodeVersion ? 'node' : 'app'")
   })
 
   test('MCP hub mounts the card with enable switch and live status', () => {
@@ -65,6 +104,9 @@ test.describe('MCP connect contract', () => {
       expect(c.title, `${locale} title`).toBeTruthy()
       expect(c.enableLabel).toBeTruthy()
       expect(c.status.lastCall).toContain('{when}')
+      expect(c.status.nodeFound).toContain('{version}')
+      expect(c.status.nodeMissing).toBeTruthy()
+      expect(c.test.button).toBeTruthy()
       for (const id of ['claudeCode', 'claudeDesktop', 'cursor']) {
         expect(c.clients[id].title).toBeTruthy()
         expect(c.clients[id].where).toBeTruthy()

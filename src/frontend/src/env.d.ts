@@ -26,6 +26,11 @@ interface McpServerInfo {
   packaged: boolean
   /** The daemon wrote nks-wdc-mcp.port (the MCP token the server reads). */
   portFilePresent: boolean
+  /** `node --version` from PATH, null when Node.js is not installed. */
+  nodeVersion: string | null
+  /** WDC's own binary, which runs the server with ELECTRON_RUN_AS_NODE=1 when there is no Node.js. */
+  appRuntimePath: string
+  platform: string
 }
 
 // Global injected by the Electron main process into the renderer window
@@ -90,5 +95,7 @@ interface Window {
     getAppVersion: () => Promise<{ version: string; gitSha: string; full: string }>
     /** Bundled MCP server location + whether the daemon wrote nks-wdc-mcp.port. */
     getMcpServerInfo?: () => Promise<McpServerInfo>
+    /** Starts the MCP server like an AI client and calls wdc_get_status ('mcp-server-selftest'). */
+    testMcpServer?: (runtime: 'node' | 'app') => Promise<{ started: boolean; ok: boolean; message: string }>
   }
 }

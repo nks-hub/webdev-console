@@ -3282,42 +3282,43 @@
   },
   "mcpConnect": {
     "title": "Connect an AI client",
-    "hint": "Register the WDC MCP server with Claude Code, Claude Desktop or Cursor. Destructive operations still need your approval here, unless a rule allows them.",
-    "enableLabel": "MCP enabled",
+    "hint": "Register the WDC MCP server in Claude Code, Claude Desktop or Cursor. You still approve irreversible actions here, unless a rule covers them.",
+    "enableLabel": "Allow AI clients (MCP)",
     "showSetup": "Show setup",
     "hideSetup": "Hide setup",
     "statusAria": "MCP connection status",
     "status": {
       "enabled": "MCP is enabled",
-      "disabled": "MCP is disabled — AI approval requests are refused",
-      "portFile": "MCP token file present",
-      "noPortFile": "MCP token file missing — is the daemon running?",
+      "disabled": "MCP is off – AI clients have no access",
+      "portFile": "The daemon is ready for AI clients",
+      "noPortFile": "The daemon is not running or has not prepared the MCP token",
       "serverFound": "MCP server bundled",
-      "serverMissing": "MCP server not found at the path below",
+      "serverMissing": "The MCP server is missing at this path",
       "lastCall": "Last MCP call {when} ({tool})",
-      "noCalls": "No MCP call seen yet"
+      "noCalls": "No MCP call seen yet",
+      "nodeFound": "Node.js {version} found",
+      "nodeMissing": "Node.js not found, the snippets start the server through WDC"
     },
     "clients": {
       "claudeCode": {
         "title": "Claude Code",
-        "where": "Run once in a terminal; available in every project."
+        "where": "Run once in a terminal. The server is then available in every project."
       },
       "claudeDesktop": {
         "title": "Claude Desktop",
-        "where": "Merge into claude_desktop_config.json (macOS: ~/Library/Application Support/Claude/, Windows: %APPDATA%\\Claude\\), then restart Claude Desktop."
+        "where": "Into claude_desktop_config.json (Windows: %APPDATA%\\Claude\\, macOS: ~/Library/Application Support/Claude/; Claude Desktop also opens it under Settings → Developer → Edit Config). If it already lists other servers, add only the nks-wdc entry to mcpServers. Then restart Claude Desktop."
       },
       "cursor": {
         "title": "Cursor",
-        "where": "Merge into .cursor/mcp.json in your project (or ~/.cursor/mcp.json for all projects)."
+        "where": "Into .cursor/mcp.json in the project, or ~/.cursor/mcp.json for every project. If it already lists other servers, add only the nks-wdc entry to mcpServers."
       }
     },
     "copy": "Copy",
     "copied": "Copied to clipboard",
-    "copyFailed": "Could not copy — select the text and copy it manually",
-    "nodeRequired": "The server runs with Node.js 18 or newer, which must be on PATH.",
+    "copyFailed": "Copy failed, select the text and copy it by hand",
     "pathUnknown": "The real path is shown in the desktop app; this preview uses a placeholder.",
     "enabledToast": "MCP enabled",
-    "disabledToast": "MCP disabled",
+    "disabledToast": "MCP off, the daemon refuses AI clients",
     "toggleFailed": "Could not change MCP setting: {error}",
     "ago": {
       "seconds": "{n} s ago",
@@ -3325,6 +3326,22 @@
       "hours": "{n} h ago",
       "days": "{n} d ago"
     },
-    "openFromSettings": "Connect an AI client"
+    "openFromSettings": "Connect an AI client",
+    "runtime": {
+      "label": "Start the server with",
+      "node": "Node.js",
+      "app": "WDC (no Node.js)",
+      "nodeHint": "Needs Node.js 18 or newer in PATH.",
+      "appHint": "Uses the WDC program, no Node.js needed. If you reinstall WDC elsewhere, copy the snippet again."
+    },
+    "copyFile": "Copy the whole file",
+    "copyEntry": "Copy only the nks-wdc entry",
+    "test": {
+      "button": "Test the connection",
+      "ok": "Works: the server started and the daemon answered.",
+      "notStarted": "The server did not start:",
+      "daemonRefused": "The server runs, but the daemon refused:",
+      "unavailable": "Testing works only in the desktop app with the server installed."
+    }
   }
 }

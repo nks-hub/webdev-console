@@ -9,8 +9,11 @@ MCP (Model Context Protocol) server exposing the **NKS WebDev Console** daemon a
 The WDC installer ships this server as one bundled file,
 `<WDC resources>/mcp-server/index.js`. In the app, **MCP → Connect an AI
 client** shows the exact path for your install with copy buttons, an MCP
-on/off switch and live status (MCP enabled, MCP token file present, last
-MCP call). The server runs with Node.js 18+ from `PATH`.
+on/off switch, live status (MCP enabled, daemon ready, Node.js found, last
+MCP call) and a **Test the connection** button that starts the server the
+way the AI client will and calls `wdc_get_status`. The server runs with
+Node.js 18+ from `PATH`, or without Node.js through the WDC binary itself
+(see [Without Node.js](#without-nodejs)).
 
 Default locations of the bundled server:
 
@@ -51,6 +54,34 @@ restart Claude Desktop:
 
 Merge the same `mcpServers` entry into `.cursor/mcp.json` in your project
 (or `~/.cursor/mcp.json` for every project).
+
+### Without Node.js
+
+The WDC binary runs the server in Node mode when `ELECTRON_RUN_AS_NODE=1`
+is set. On Windows the binary asks for administrator rights, which an AI
+client cannot grant, so `__COMPAT_LAYER=RunAsInvoker` starts it with the
+client's own rights:
+
+```bash
+claude mcp add -e ELECTRON_RUN_AS_NODE=1 -e __COMPAT_LAYER=RunAsInvoker --scope user nks-wdc -- "<WDC>/NKS WebDev Console.exe" "<WDC resources>/mcp-server/index.js"
+```
+
+```json
+{
+  "mcpServers": {
+    "nks-wdc": {
+      "command": "<WDC>/NKS WebDev Console.exe",
+      "args": ["<WDC resources>/mcp-server/index.js"],
+      "env": { "ELECTRON_RUN_AS_NODE": "1", "__COMPAT_LAYER": "RunAsInvoker" }
+    }
+  }
+}
+```
+
+`-e` takes several values, so it goes before another option, never right
+before the server name (it would read the name as one more variable).
+On macOS and Linux leave out `__COMPAT_LAYER`; for an AppImage the command
+is the `.AppImage` file.
 
 ### From a source checkout
 

@@ -3282,42 +3282,43 @@
   },
   "mcpConnect": {
     "title": "Připojit AI klienta",
-    "hint": "Zaregistruj MCP server WDC v Claude Code, Claude Desktop nebo Cursoru. Destruktivní operace i tak musíš schválit tady, pokud je nepovoluje některé pravidlo.",
-    "enableLabel": "MCP zapnuto",
+    "hint": "Zaregistruj MCP server WDC v Claude Code, Claude Desktop nebo Cursoru. Nevratné akce i tak schvaluješ tady, pokud je nepokryje pravidlo.",
+    "enableLabel": "Povolit AI klienty (MCP)",
     "showSetup": "Zobrazit návod",
     "hideSetup": "Skrýt návod",
     "statusAria": "Stav připojení MCP",
     "status": {
       "enabled": "MCP je zapnuté",
-      "disabled": "MCP je vypnuté — žádosti AI o schválení se odmítají",
-      "portFile": "Soubor s MCP tokenem existuje",
-      "noPortFile": "Soubor s MCP tokenem chybí — běží daemon?",
+      "disabled": "MCP je vypnuté – AI klienti nemají přístup",
+      "portFile": "Daemon je připravený pro AI klienty",
+      "noPortFile": "Daemon neběží nebo nepřipravil MCP token",
       "serverFound": "MCP server je součástí instalace",
-      "serverMissing": "MCP server na uvedené cestě nebyl nalezen",
+      "serverMissing": "MCP server na uvedené cestě chybí",
       "lastCall": "Poslední volání MCP {when} ({tool})",
-      "noCalls": "Zatím žádné volání MCP"
+      "noCalls": "Zatím žádné volání MCP",
+      "nodeFound": "Node.js {version} nalezen",
+      "nodeMissing": "Node.js nenalezen, ukázky spouštějí server přes WDC"
     },
     "clients": {
       "claudeCode": {
         "title": "Claude Code",
-        "where": "Spusť jednou v terminálu; server pak bude dostupný ve všech projektech."
+        "where": "Spusť jednou v terminálu. Server pak bude dostupný ve všech projektech."
       },
       "claudeDesktop": {
         "title": "Claude Desktop",
-        "where": "Vlož do claude_desktop_config.json (macOS: ~/Library/Application Support/Claude/, Windows: %APPDATA%\\Claude\\) a restartuj Claude Desktop."
+        "where": "Do claude_desktop_config.json (Windows: %APPDATA%\\Claude\\, macOS: ~/Library/Application Support/Claude/; soubor otevře i Claude Desktop v Nastavení → Developer → Edit Config). Když v něm už jiné servery máš, přidej jen položku nks-wdc do mcpServers. Pak Claude Desktop restartuj."
       },
       "cursor": {
         "title": "Cursor",
-        "where": "Vlož do .cursor/mcp.json v projektu (nebo do ~/.cursor/mcp.json pro všechny projekty)."
+        "where": "Do .cursor/mcp.json v projektu, nebo do ~/.cursor/mcp.json pro všechny projekty. Když v něm už jiné servery máš, přidej jen položku nks-wdc do mcpServers."
       }
     },
     "copy": "Kopírovat",
     "copied": "Zkopírováno do schránky",
-    "copyFailed": "Kopírování selhalo — označ text a zkopíruj ho ručně",
-    "nodeRequired": "Server běží v Node.js 18 nebo novějším, který musí být v PATH.",
+    "copyFailed": "Kopírování se nepodařilo, označ text a zkopíruj ho ručně",
     "pathUnknown": "Skutečnou cestu ukáže desktopová aplikace; tento náhled používá zástupný text.",
     "enabledToast": "MCP zapnuto",
-    "disabledToast": "MCP vypnuto",
+    "disabledToast": "MCP vypnuto, daemon AI klienty odmítá",
     "toggleFailed": "Nastavení MCP se nepodařilo změnit: {error}",
     "ago": {
       "seconds": "před {n} s",
@@ -3325,6 +3326,22 @@
       "hours": "před {n} h",
       "days": "před {n} d"
     },
-    "openFromSettings": "Připojit AI klienta"
+    "openFromSettings": "Připojit AI klienta",
+    "runtime": {
+      "label": "Server spouštět přes",
+      "node": "Node.js",
+      "app": "WDC (bez Node.js)",
+      "nodeHint": "Potřebuje Node.js 18 nebo novější v PATH.",
+      "appHint": "Použije program WDC, Node.js není potřeba. Když WDC přeinstaluješ jinam, ukázku zkopíruj znovu."
+    },
+    "copyFile": "Kopírovat celý soubor",
+    "copyEntry": "Kopírovat jen položku nks-wdc",
+    "test": {
+      "button": "Vyzkoušet připojení",
+      "ok": "Funguje: server se spustil a daemon odpověděl.",
+      "notStarted": "Server se nespustil:",
+      "daemonRefused": "Server běží, ale daemon odmítl:",
+      "unavailable": "Vyzkoušet jde jen v desktopové aplikaci s nainstalovaným serverem."
+    }
   }
 }
