@@ -72,7 +72,7 @@ const NEXT_STEPS: Record<string, string> = {
   nonce_mismatch: 'The intentToken is not valid; request a new confirmation and pass its intentToken unchanged.',
   malformed_token: 'The intentToken is not valid; request a new confirmation and pass its intentToken unchanged.',
   signature_mismatch: 'The intentToken is not valid; request a new confirmation and pass its intentToken unchanged.',
-  mcp_disabled: 'MCP is turned off in WDC; ask the user to enable MCP in WDC → Settings.',
+  mcp_disabled: 'MCP is turned off in WDC; ask the user to enable MCP in WDC → Settings → AI clients (MCP).',
   mcp_forbidden: 'The MCP token may not do this; the user has to do it in the WDC app.',
   mcp_capability_disabled:
     'This capability is turned off for MCP in WDC; ask the user to enable it in WDC → Settings → AI clients (MCP) if they want you to do this.',

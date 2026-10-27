@@ -25,6 +25,7 @@ internal readonly record struct BodyProperty(string Name, JsonValueKind Kind, st
 ///
 /// Answers:
 /// <list type="bullet">
+///   <item>403 <c>{ error: "mcp_disabled", detail, hint }</c> for every route while <c>mcp.enabled</c> is off.</item>
 ///   <item>403 <c>{ error: "mcp_forbidden", detail }</c> for the trust root.</item>
 ///   <item>403 <c>{ error: "mcp_capability_disabled", capability, settingKey, detail, hint }</c>
 ///   when the capability covering the route or body field is off.</item>
@@ -101,17 +102,20 @@ public static class McpTokenPolicy
     }
 
     /// <summary>
-    /// Production entry point: capability switches come from SettingsStore
-    /// (<c>mcp.capabilities.&lt;id&gt;</c>), intents are checked with the
-    /// daemon's IDeployIntentValidator, the current site config for
-    /// PUT /api/sites/{domain} comes from SiteManager.
+    /// Production entry point: <c>mcp.enabled</c> and the capability switches
+    /// (<c>mcp.capabilities.&lt;id&gt;</c>) come from SettingsStore, intents
+    /// are checked with the daemon's IDeployIntentValidator, the current site
+    /// config for PUT /api/sites/{domain} comes from SiteManager.
     /// </summary>
     public static Task<McpDenial?> EvaluateAsync(HttpContext ctx)
     {
         var settings = ctx.RequestServices.GetService<SettingsStore>();
-        Func<string, bool> isEnabled = settings is null
-            ? id => McpCapabilities.Get(id).DefaultEnabled
-            : id => McpCapabilities.IsEnabled(settings, id);
+        // The master switch: with MCP off the token opens nothing, not even
+        // the always-allowed routes. Read per request, so turning MCP off also
+        // cuts an MCP server process that is already running.
+        if (settings is null || !settings.GetBool("mcp", "enabled", defaultValue: false))
+            return Task.FromResult<McpDenial?>(McpOff);
+        Func<string, bool> isEnabled = id => McpCapabilities.IsEnabled(settings, id);
         var sites = ctx.RequestServices.GetService<SiteManager>();
         Func<string, JsonElement?>? currentSite = null;
         if (sites is not null)
@@ -263,6 +267,14 @@ public static class McpTokenPolicy
         return null;
     }
 
+    /// <summary>Answer to every MCP-token request while <c>mcp.enabled</c> is off.</summary>
+    public static readonly McpDenial McpOff = new(StatusCodes.Status403Forbidden, new
+    {
+        error = "mcp_disabled",
+        detail = "MCP is turned off in WDC, so the MCP token is refused on every route.",
+        hint = McpEndpoints.McpDisabledHint,
+    });
+
     private static McpDenial Forbidden(string detail) =>
         new(StatusCodes.Status403Forbidden, new { error = "mcp_forbidden", detail });
 
@@ -274,7 +286,7 @@ public static class McpTokenPolicy
             settingKey = capability.SettingKey,
             detail,
             hint = $"The WDC operator has not allowed \"{capability.Title}\" for AI agents. " +
-                   $"Enable it in WDC → Settings → MCP ({capability.SettingKey}).",
+                   $"Enable it in WDC → Settings → AI clients (MCP) ({capability.SettingKey}).",
         });
 
     /// <summary>Expands an intent target template: <c>{name}</c> route value, <c>{body.name}</c> body field.</summary>

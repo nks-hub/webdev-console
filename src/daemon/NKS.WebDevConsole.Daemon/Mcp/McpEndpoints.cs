@@ -16,9 +16,9 @@ namespace NKS.WebDevConsole.Daemon.Mcp;
 /// </summary>
 public static class McpEndpoints
 {
-    /// <summary>Operator-facing hint returned with every <c>mcp_disabled</c> 404.</summary>
+    /// <summary>Operator-facing hint returned with every <c>mcp_disabled</c> answer.</summary>
     public const string McpDisabledHint =
-        "Enable MCP in WDC → Settings → Advanced → MCP, or with the switch on the MCP page.";
+        "Enable MCP in WDC → Settings → AI clients (MCP), or with the switch on the AI clients (MCP) page.";
 
     // 404 while mcp.enabled is off. The hint tells the agent (and the human
     // reading its error) how to turn the integration on.
@@ -479,12 +479,7 @@ public static class McpEndpoints
             NKS.WebDevConsole.Daemon.Data.Database db,
             NKS.WebDevConsole.Core.Interfaces.IDestructiveOperationKinds kindsRegistry) =>
         {
-            if (!IsMcpEnabled(ctx))
-                return Results.NotFound(new
-                {
-                    error = "mcp_disabled",
-                    hint = "Enable MCP in WDC → Settings → Advanced → MCP, or with the switch on the MCP page.",
-                });
+            if (!IsMcpEnabled(ctx)) return McpDisabled();
             if (string.IsNullOrWhiteSpace(intentId))
                 return Results.BadRequest(new { error = "intentId is required" });
             using var conn = db.CreateConnection();

@@ -6,9 +6,10 @@ namespace NKS.WebDevConsole.Daemon.Config;
 
 /// <summary>
 /// Bearer-token gate for the daemon's /api surface. A request carries either
-/// the GUI token (full access) or the MCP token (limited by
-/// <see cref="McpTokenPolicy"/> and the operator's MCP capabilities). Lifted out of Program.cs so tests can run the
-/// exact production gate against real routing.
+/// the GUI token (full access) or the MCP token (refused outright while
+/// <c>mcp.enabled</c> is off, otherwise limited by <see cref="McpTokenPolicy"/>
+/// and the operator's MCP capabilities). Lifted out of Program.cs so tests can
+/// run the exact production gate against real routing.
 /// </summary>
 internal static class DaemonAuth
 {
