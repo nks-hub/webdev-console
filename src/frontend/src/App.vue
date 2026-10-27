@@ -145,6 +145,11 @@ function startDeploySse(): void {
   if (unsubscribeDeploy) return
   unsubscribeDeploy = subscribeEventsMap({
     'deploy:event': (data) => deployStore.handleSseEvent(data as DeployEventDto),
+    // The built-in local backend emits deploy:phase / deploy:complete instead
+    // of deploy:event; deploy:complete is handled further down together with
+    // the OS notification.
+    'deploy:phase': (data) =>
+      deployStore.handlePhaseEvent(data as { deployId: string; phase: string; message?: string }),
     // Phase 7.5+++ — hook execution feedback. RunHooksAsync emits one
     // event per hook fire so the drawer can show shell/http/php results.
     'deploy:hook': (data) =>
@@ -181,7 +186,11 @@ function startDeploySse(): void {
     // long-running deploy doesn't require the operator to keep the
     // window foregrounded to know when it finished.
     'deploy:complete': (data) => {
-      const evt = data as { deployId?: string; success?: boolean; error?: string }
+      const evt = data as { deployId?: string; success?: boolean; error?: string; kind?: string }
+      if (evt.deployId) {
+        deployStore.handleCompleteEvent({
+          deployId: evt.deployId, success: evt.success === true, error: evt.error, kind: evt.kind })
+      }
       void osNotify({
         title: evt.success
           ? 'NKS WDC — Deploy succeeded'

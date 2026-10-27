@@ -307,9 +307,13 @@ export async function saveDeploySettings(domain: string, settings: DeploySetting
  */
 export async function fetchDeploySnapshots(domain: string): Promise<DeploySnapshotEntry[]> {
   try {
-    return await request<DeploySnapshotEntry[]>(
+    // The daemon answers { domain, count, entries }; older builds returned a
+    // bare array. Accept both so the list never iterates the wrapper's keys.
+    const res = await request<DeploySnapshotEntry[] | { entries?: DeploySnapshotEntry[] }>(
       `${PREFIX}/sites/${encodeURIComponent(domain)}/snapshots`,
     )
+    if (Array.isArray(res)) return res
+    return Array.isArray(res?.entries) ? res.entries : []
   } catch {
     return []
   }

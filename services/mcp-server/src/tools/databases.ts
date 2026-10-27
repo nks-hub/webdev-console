@@ -53,10 +53,71 @@ function hasInnerSemicolon(sql: string): boolean {
   return /;/.test(trimmed)
 }
 
-function isReadOnlySql(sql: string): boolean {
+// Replace quoted strings/identifiers with empty quotes and comments with a
+// space, so keyword checks below only see SQL structure ("delete" inside a
+// string literal or a `delete` column name must not count).
+function stripLiteralsAndComments(sql: string): string {
+  let out = ''
+  let i = 0
+  while (i < sql.length) {
+    const ch = sql[i]!
+    if (ch === "'" || ch === '"' || ch === '`') {
+      let j = i + 1
+      while (j < sql.length) {
+        // Backslash escapes only exist inside string literals; MySQL identifiers
+        // escape a backtick by doubling it.
+        if (ch !== '`' && sql[j] === '\\') { j += 2; continue }
+        if (sql[j] === ch) {
+          if (sql[j + 1] === ch) { j += 2; continue } // doubled quote escape
+          break
+        }
+        j++
+      }
+      out += ch + ch
+      i = j + 1
+      continue
+    }
+    if (ch === '/' && sql[i + 1] === '*') {
+      const end = sql.indexOf('*/', i + 2)
+      out += ' '
+      i = end < 0 ? sql.length : end + 2
+      continue
+    }
+    // MySQL starts a `--` comment only when whitespace follows (`1--1` is
+    // arithmetic), so anything else stays visible to the keyword check.
+    const dashComment = ch === '-' && sql[i + 1] === '-' && (i + 2 >= sql.length || /\s/.test(sql[i + 2]!))
+    if (dashComment || ch === '#') {
+      const nl = sql.indexOf('\n', i)
+      out += ' '
+      i = nl < 0 ? sql.length : nl
+      continue
+    }
+    out += ch
+    i++
+  }
+  return out
+}
+
+// A read-only leading verb can still carry a write: MySQL 8 accepts
+// `WITH x AS (SELECT 1) DELETE FROM t`, `SELECT … INTO OUTFILE` writes a file,
+// and `EXPLAIN ANALYZE` executes the statement it explains. SHOW is exempt
+// (`SHOW CREATE TABLE` is a read).
+const VERBS_NEEDING_BODY_CHECK = /^(SELECT|WITH|EXPLAIN|DESC(RIBE)?)\b/i
+// INSERT() and REPLACE() are also string functions, so they only count when
+// no "(" follows.
+const WRITE_KEYWORDS =
+  /\b(?:(?:INSERT|REPLACE)\b(?!\s*\()|(?:UPDATE|DELETE|MERGE|CREATE|DROP|ALTER|TRUNCATE|RENAME|GRANT|REVOKE|CALL|LOAD|HANDLER|OUTFILE|DUMPFILE)\b)/i
+
+export function isReadOnlySql(sql: string): boolean {
+  // MySQL executes the body of /*! … */ and MariaDB of /*M! … */, so a
+  // "comment" can carry a statement. Never treat those as read-only.
+  if (/\/\*M?!/i.test(sql)) return false
   const normalized = stripLeadingCommentsAndWs(sql)
   if (!READ_ONLY_VERBS.test(normalized)) return false
   if (hasInnerSemicolon(sql)) return false
+  if (VERBS_NEEDING_BODY_CHECK.test(normalized) && WRITE_KEYWORDS.test(stripLiteralsAndComments(normalized))) {
+    return false
+  }
   return true
 }
 

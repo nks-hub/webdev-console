@@ -418,8 +418,13 @@ async function confirmApply() {
       source: r.source,
       comment: r.comment ?? null,
     }))
-    await applyHosts(payload)
+    const res = await applyHosts(payload)
     ElMessage.success(t('hosts.applySuccess'))
+    // The daemon only appends new entries outside the WDC block; edits and
+    // removals of existing external lines are left untouched in the file.
+    if (res?.notApplied) {
+      ElMessage.warning({ message: t('hosts.externalNotApplied', { count: res.notApplied }), duration: 8000, showClose: true })
+    }
     await load()
   } catch (e) {
     const msg: string = errorMessage(e)

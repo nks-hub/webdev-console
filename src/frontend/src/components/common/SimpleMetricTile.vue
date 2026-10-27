@@ -1,13 +1,13 @@
 <template>
   <div
     class="metric-tile"
-    :class="`tile-${variant}`"
-    role="button"
-    tabindex="0"
+    :class="[`tile-${variant}`, { 'tile-static': !interactive }]"
+    :role="interactive ? 'button' : undefined"
+    :tabindex="interactive ? 0 : undefined"
     :aria-label="`${label}: ${value}`"
-    @click="$emit('click')"
-    @keydown.enter.prevent="$emit('click')"
-    @keydown.space.prevent="$emit('click')"
+    @click="interactive && $emit('click')"
+    @keydown.enter.prevent="interactive && $emit('click')"
+    @keydown.space.prevent="interactive && $emit('click')"
   >
     <div class="tile-header">
       <el-icon v-if="iconComponent" class="tile-icon"><component :is="iconComponent" /></el-icon>
@@ -34,9 +34,12 @@ const props = withDefaults(defineProps<{
   value: string | number
   icon?: string
   variant?: 'default' | 'success' | 'warning' | 'danger'
+  /** false renders a read-only tile: no button role, focus stop or click. */
+  interactive?: boolean
 }>(), {
   icon: '',
   variant: 'default',
+  interactive: true,
 })
 
 defineEmits<{ (e: 'click'): void }>()
@@ -65,6 +68,15 @@ const iconComponent = computed(() => {
   box-shadow: var(--wdc-shadow-card);
   border-color: var(--wdc-accent-glow);
 }
+.metric-tile.tile-static {
+  cursor: default;
+}
+.metric-tile.tile-static:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: var(--wdc-border);
+}
+
 .metric-tile:focus-visible {
   outline: 2px solid var(--el-color-primary);
   outline-offset: 2px;

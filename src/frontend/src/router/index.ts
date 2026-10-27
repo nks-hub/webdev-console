@@ -68,6 +68,9 @@ const baseRoutes: RouteRecordRaw[] = [
   { path: '/mcp/kinds',   component: McpHub, meta: { title: 'MCP', titleKey: 'nav.mcp' } },
   { path: '/help', component: Help, meta: { title: 'Help', titleKey: 'nav.help' } },
   { path: '/login', component: Login, meta: { title: 'Sign in', chromeless: true } },
+  // Unknown paths (stale links, removed pages) used to render an empty
+  // shell; send them to the default landing page instead.
+  { path: '/:pathMatch(.*)*', redirect: '/sites' },
 ]
 
 export const router = createRouter({

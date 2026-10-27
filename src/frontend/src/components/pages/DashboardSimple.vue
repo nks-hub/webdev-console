@@ -27,7 +27,7 @@
         :value="`${runningServices}/${totalServices}`"
         icon="Monitor"
         :variant="runningServices < totalServices ? 'warning' : 'success'"
-        @click="router.push('/services')"
+        :interactive="false"
       />
       <SimpleMetricTile
         :label="t('dashboard.simple.tiles.hits')"
@@ -98,7 +98,7 @@
       <el-button size="large" @click="openMailpit">
         {{ t('dashboard.simple.quickActions.mailpit') }}
       </el-button>
-      <el-button size="large" @click="router.push('/settings?tab=backup')">
+      <el-button size="large" @click="router.push('/backups')">
         {{ t('dashboard.simple.quickActions.backup') }}
       </el-button>
     </div>

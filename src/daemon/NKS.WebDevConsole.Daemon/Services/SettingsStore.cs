@@ -83,13 +83,25 @@ public sealed class SettingsStore : IWdcSettings
             // v0.2.3 — treat any loopback entry as stale and fall through
             // to the public default so Binaries pages stop showing an
             // empty 3-release fixture to end users.
-            if (!string.IsNullOrWhiteSpace(stored) && !IsLoopbackCatalogUrl(stored))
+            if (!string.IsNullOrWhiteSpace(stored) && !IsLoopbackCatalogUrl(stored) && IsAcceptableCatalogUrl(stored))
                 return stored;
             var env = Environment.GetEnvironmentVariable("NKS_WDC_CATALOG_URL");
-            if (!string.IsNullOrWhiteSpace(env) && !IsLoopbackCatalogUrl(env))
+            if (!string.IsNullOrWhiteSpace(env) && !IsLoopbackCatalogUrl(env) && IsAcceptableCatalogUrl(env))
                 return env;
             return "https://wdc.nks-hub.cz";
         }
+    }
+
+    /// <summary>
+    /// The catalog decides which archives get downloaded and, through their
+    /// SHA-256 fields, how they are verified, so it must come over HTTPS. Plain
+    /// HTTP is accepted only for a loopback catalog-api during development.
+    /// </summary>
+    internal static bool IsAcceptableCatalogUrl(string url)
+    {
+        if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri)) return false;
+        if (uri.Scheme == Uri.UriSchemeHttps) return true;
+        return uri.Scheme == Uri.UriSchemeHttp && uri.IsLoopback;
     }
 
     private static bool IsLoopbackCatalogUrl(string url)

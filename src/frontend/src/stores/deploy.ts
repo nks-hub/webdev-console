@@ -117,6 +117,45 @@ export const useDeployStore = defineStore('deploy', () => {
   }
 
   /**
+   * The built-in LocalDeployBackend broadcasts `deploy:phase`
+   * ({ deployId, phase, message }) and `deploy:complete`
+   * ({ deployId, success, error?, kind? }) instead of `deploy:event`.
+   * Without these adapters the drawer never left "Queued".
+   */
+  const PAST_PONR_PHASES = new Set(['Switching', 'Switched', 'HealthCheck', 'AwaitingSoak'])
+
+  function handlePhaseEvent(evt: { deployId: string; phase: string; message?: string }): void {
+    const phase = (evt.phase === 'Switching' ? 'Switched' : evt.phase) as DeployEventDto['phase']
+    handleSseEvent({
+      deployId: evt.deployId,
+      phase,
+      step: '',
+      message: evt.message ?? '',
+      timestamp: new Date().toISOString(),
+      isTerminal: false,
+      isPastPonr: PAST_PONR_PHASES.has(evt.phase),
+    })
+  }
+
+  function handleCompleteEvent(evt: {
+    deployId: string; success: boolean; error?: string | null; kind?: string
+  }): void {
+    let phase: DeployEventDto['phase']
+    if (evt.kind === 'rollback') phase = evt.success ? 'RolledBack' : 'Failed'
+    else if (evt.success) phase = 'Done'
+    else phase = evt.error === 'cancelled' ? 'Cancelled' : 'Failed'
+    handleSseEvent({
+      deployId: evt.deployId,
+      phase,
+      step: '',
+      message: evt.error ?? '',
+      timestamp: new Date().toISOString(),
+      isTerminal: true,
+      isPastPonr: runs.value.get(evt.deployId)?.isPastPonr ?? false,
+    })
+  }
+
+  /**
    * Phase 7.5+++ — record a `deploy:hook` SSE event onto the matching
    * run state. App.vue's subscribeEventsMap routes 'deploy:hook' here.
    * Tolerates the run not yet existing (rare race where a hook fires
@@ -259,6 +298,8 @@ export const useDeployStore = defineStore('deploy', () => {
     historyByDomain,
     startDeploy,
     handleSseEvent,
+    handlePhaseEvent,
+    handleCompleteEvent,
     handleHookEvent,
     refreshStatus,
     refreshHistory,

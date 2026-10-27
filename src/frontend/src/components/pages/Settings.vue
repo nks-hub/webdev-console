@@ -1491,7 +1491,11 @@ const phpFpmBasePort = ref(9000)
 const telemetryEnabled = ref(false)
 const telemetryCrashReports = ref(false)
 const backupDir = ref('')
-const backupScheduleHours = ref(0)
+// Matches BackupScheduler.DefaultScheduleHours; 0 means "off", so a 0
+// default silently disabled scheduled backups on the first Save.
+const backupScheduleHours = ref(24)
+// Save writes every key; never let it run on top of a failed load.
+const settingsLoaded = ref(false)
 
 // Backup management
 import { fetchBackups, createBackup, downloadBackup, listMcpKinds, type BackupEntry } from '../../api/daemon'
@@ -1885,6 +1889,7 @@ async function loadMcpKindOptions(): Promise<void> {
 async function loadSettings() {
   try {
     const data = await fetchSettings()
+    settingsLoaded.value = true
     if (data['ports.http'])        ports.http = parseInt(data['ports.http'])
     if (data['ports.https'])       ports.https = parseInt(data['ports.https'])
     // Phase 6.23 — mcp.enabled flag. Stored as string in SQLite settings;
@@ -2780,6 +2785,10 @@ onBeforeUnmount(() => {
 })
 
 async function save() {
+  if (!settingsLoaded.value) {
+    ElMessage.error(t('settings.loadFailedSaveBlocked'))
+    return
+  }
   saving.value = true
   try {
     const payload: Record<string, string> = {

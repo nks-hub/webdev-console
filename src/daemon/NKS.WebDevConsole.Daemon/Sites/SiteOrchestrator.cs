@@ -18,6 +18,9 @@ public sealed class SiteOrchestrator
 {
     internal const string HostsBlockBegin = "# BEGIN NKS WebDev Console";
     internal const string HostsBlockEnd = "# END NKS WebDev Console";
+    // UTF-8 without BOM: ASCII rewrote non-ASCII text in the user's own hosts
+    // lines (comments in Czech, IDN notes) as '?'.
+    private static readonly Encoding HostsFileEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
 
     private readonly ILogger<SiteOrchestrator> _logger;
     private readonly IServiceProvider _sp;
@@ -820,7 +823,7 @@ ipconfig /flushdns | Out-Null
         var newContent = RewriteManagedHostsContent(content, allDomains);
 
         RotateHostsBackups(hostsPath);
-        await File.WriteAllTextAsync(hostsPath, newContent, Encoding.ASCII, ct);
+        await File.WriteAllTextAsync(hostsPath, newContent, HostsFileEncoding, ct);
         await FlushDnsCacheAsync(ct);
 
         _logger.LogInformation("[hosts] wrote {Count} entries directly to {Path}: {List}",
@@ -857,7 +860,7 @@ ipconfig /flushdns | Out-Null
                 return false;
             }
 
-            await File.WriteAllTextAsync(tmp, newContent, Encoding.ASCII, ct);
+            await File.WriteAllTextAsync(tmp, newContent, HostsFileEncoding, ct);
 
             if (OperatingSystem.IsMacOS())
             {
