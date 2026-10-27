@@ -2588,6 +2588,15 @@
       "app": "Aplikace",
       "environment": "Prostředí",
       "integration": "Integrace"
+    },
+    "unsaved": {
+      "label": "{n} neuložená změna | {n} neuložené změny | {n} neuložených změn",
+      "save": "Uložit nastavení",
+      "discard": "Zahodit změny",
+      "leaveTitle": "Neuložené změny",
+      "leaveMessage": "V Nastavení máte neuložené změny. Když stránku opustíte, zahodí se.",
+      "leave": "Zahodit a odejít",
+      "stay": "Zůstat"
     }
   },
   "mcpGrants": {

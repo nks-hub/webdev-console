@@ -221,11 +221,10 @@
           </div>
         </SettingsPanel>
 
-        <div class="settings-footer simple-settings-footer">
-          <el-button type="primary" size="small" :loading="saving" @click="save">
-            {{ $t('common.save') }} {{ $t('common.settings') }}
-          </el-button>
-          <el-button size="small" @click="loadSettings">{{ $t('common.reset') }}</el-button>
+        <div v-if="isDirty" class="settings-footer simple-settings-footer">
+          <span class="footer-unsaved">{{ $t('settings.unsaved.label', changedCount) }}</span>
+          <el-button type="primary" size="small" :loading="saving" @click="save">{{ $t('settings.unsaved.save') }}</el-button>
+          <el-button size="small" @click="discardChanges">{{ $t('settings.unsaved.discard') }}</el-button>
         </div>
       </div>
 
@@ -1160,12 +1159,12 @@
             </div>
           </div>
         </section>
-        <!-- Save button (not shown on About, Update, MCP or Notifications; those save on change) -->
-        <template v-if="activeTab !== 'about' && activeTab !== 'update' && activeTab !== 'mcp' && activeTab !== 'notifications'" #footer>
-          <el-button type="primary" size="small" :loading="saving" @click="save">
-            {{ $t('common.save') }} {{ $t('common.settings') }}
-          </el-button>
-          <el-button size="small" @click="loadSettings">{{ $t('common.reset') }}</el-button>
+        <!-- Only while something is unsaved. Switches and buttons that act on
+             their own (MCP, notifications, account, sync actions) never set it. -->
+        <template v-if="isDirty && activeTab !== 'mcp'" #footer>
+          <span class="footer-unsaved">{{ $t('settings.unsaved.label', changedCount) }}</span>
+          <el-button type="primary" size="small" :loading="saving" @click="save">{{ $t('settings.unsaved.save') }}</el-button>
+          <el-button size="small" @click="discardChanges">{{ $t('settings.unsaved.discard') }}</el-button>
         </template>
       </SettingsShell>
 
@@ -1174,8 +1173,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, onActivated, watch } from 'vue'
+import { useRoute, onBeforeRouteLeave } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import SettingsShell, { type SettingsSection } from '../settings/SettingsShell.vue'
 import McpCapabilitiesSettings from '../settings/McpCapabilitiesSettings.vue'
@@ -1914,57 +1913,126 @@ async function loadMcpKindOptions(): Promise<void> {
   }
 }
 
+const intOr = (raw: string | undefined, fallback: number): number => {
+  const n = parseInt(raw ?? '')
+  return Number.isFinite(n) ? n : fallback
+}
+const boolOn = (raw: string | undefined): boolean => raw === 'true' || raw === '1'
+// deploy.* default to on; only an explicit "false"/"0" turns them off.
+const boolDefaultOn = (raw: string | undefined): boolean => !(raw === 'false' || raw === '0')
+
+/** Puts daemon settings (flat "category.key" strings) into the form. */
+function applyValues(data: Record<string, string>): void {
+  ports.http = intOr(data['ports.http'], 80)
+  ports.https = intOr(data['ports.https'], 443)
+  ports.mysql = intOr(data['ports.mysql'], 3306)
+  ports.redis = intOr(data['ports.redis'], 6379)
+  ports.mailpitSmtp = intOr(data['ports.mailpitSmtp'], 1025)
+  ports.mailpitHttp = intOr(data['ports.mailpitHttp'], 8025)
+  phpFpmBasePort.value = intOr(data['ports.phpFpmBase'], 9000)
+  mcpEnabled.value = boolOn(data['mcp.enabled'])
+  mcpStrictKinds.value = boolOn(data['mcp.strict_kinds'])
+  mcpAlwaysConfirmKinds.value = data['mcp.always_confirm_kinds'] ?? ''
+  // Retention defaults match GrantSweeperService (1 d / 30 d) and the
+  // tool-call sweeper (30 d); 0 disables the grant sweeps.
+  mcpExpiredRetentionDays.value = Math.max(0, intOr(data['mcp.grant_expired_retention_days'], 1))
+  mcpRevokedRetentionDays.value = Math.max(0, intOr(data['mcp.grant_revoked_retention_days'], 30))
+  mcpToolCallRetentionDays.value = Math.max(1, intOr(data['mcp.toolCallRetentionDays'], 30))
+  deployEnabled.value = boolDefaultOn(data['deploy.enabled'])
+  deployUseLegacyHostHandlers.value = boolDefaultOn(data['deploy.useLegacyHostHandlers'])
+  runOnStartup.value = data['general.runOnStartup'] === 'true'
+  paths.apache = data['paths.apache'] ?? ''
+  paths.mysql = data['paths.mysql'] ?? ''
+  paths.php = data['paths.php'] ?? ''
+  paths.redis = data['paths.redis'] ?? ''
+  paths.sitesDir = data['paths.sitesDir'] ?? ''
+  paths.hostsFile = data['paths.hostsFile'] ?? ''
+  catalogUrl.value = data['daemon.catalogUrl'] ?? ''
+  pluginAutoSync.value = data['plugins.autoSyncEnabled'] === 'true'
+  telemetryEnabled.value = data['telemetry.enabled'] === 'true'
+  telemetryCrashReports.value = data['telemetry.crashReports'] === 'true'
+  backupDir.value = data['backup.dir'] ?? ''
+  backupScheduleHours.value = intOr(data['backup.scheduleHours'], 24)
+  deviceName.value = data['sync.deviceName'] ?? ''
+}
+
+/** The form as the daemon stores it — the counterpart of applyValues(). */
+function formValues(): Record<string, string> {
+  return {
+    'ports.http': String(ports.http),
+    'ports.https': String(ports.https),
+    'ports.mysql': String(ports.mysql),
+    'ports.redis': String(ports.redis),
+    'ports.mailpitSmtp': String(ports.mailpitSmtp),
+    'ports.mailpitHttp': String(ports.mailpitHttp),
+    'ports.phpFpmBase': String(phpFpmBasePort.value),
+    'mcp.enabled': String(mcpEnabled.value),
+    'mcp.strict_kinds': String(mcpStrictKinds.value),
+    'mcp.always_confirm_kinds': mcpAlwaysConfirmKinds.value,
+    'mcp.grant_expired_retention_days': String(mcpExpiredRetentionDays.value),
+    'mcp.grant_revoked_retention_days': String(mcpRevokedRetentionDays.value),
+    'mcp.toolCallRetentionDays': String(mcpToolCallRetentionDays.value),
+    'deploy.enabled': String(deployEnabled.value),
+    'deploy.useLegacyHostHandlers': String(deployUseLegacyHostHandlers.value),
+    'general.runOnStartup': String(runOnStartup.value),
+    'paths.apache': paths.apache,
+    'paths.mysql': paths.mysql,
+    'paths.php': paths.php,
+    'paths.redis': paths.redis,
+    'paths.sitesDir': paths.sitesDir,
+    'paths.hostsFile': paths.hostsFile,
+    'daemon.catalogUrl': catalogUrl.value,
+    'plugins.autoSyncEnabled': String(pluginAutoSync.value),
+    'telemetry.enabled': String(telemetryEnabled.value),
+    'telemetry.crashReports': String(telemetryCrashReports.value),
+    'backup.dir': backupDir.value,
+    'backup.scheduleHours': String(backupScheduleHours.value),
+    'sync.deviceName': deviceName.value,
+  }
+}
+
+// What the daemon held when the form was last loaded or saved. Save sends
+// only the keys that differ from it: every port key in a batch used to make
+// the daemon regenerate vhosts and reload services, and this page stays
+// alive in the background, so re-sending everything also wrote back stale
+// values changed elsewhere meanwhile — mcp.enabled from the MCP page.
+const loadedValues = ref<Record<string, string>>({})
+const changedValues = computed<Record<string, string>>(() =>
+  Object.fromEntries(Object.entries(formValues()).filter(([key, value]) => loadedValues.value[key] !== value)))
+const changedCount = computed(() => Object.keys(changedValues.value).length)
+const isDirty = computed(() => settingsLoaded.value && changedCount.value > 0)
+
+onBeforeRouteLeave(async () => {
+  if (!isDirty.value) return true
+  try {
+    await ElMessageBox.confirm(t('settings.unsaved.leaveMessage'), t('settings.unsaved.leaveTitle'), {
+      type: 'warning',
+      confirmButtonText: t('settings.unsaved.leave'),
+      cancelButtonText: t('settings.unsaved.stay'),
+    })
+  } catch {
+    return false
+  }
+  discardChanges()
+  return true
+})
+
+// The page is kept alive between visits; refresh what other pages may have
+// changed meanwhile, unless the user is in the middle of editing.
+onActivated(() => {
+  if (settingsLoaded.value && !isDirty.value) void loadSettings()
+})
+
 async function loadSettings() {
   try {
-    const data = await fetchSettings()
+    applyValues(await fetchSettings())
+    loadedValues.value = formValues()
     settingsLoaded.value = true
-    if (data['ports.http'])        ports.http = parseInt(data['ports.http'])
-    if (data['ports.https'])       ports.https = parseInt(data['ports.https'])
-    // Phase 6.23 — mcp.enabled flag. Stored as string in SQLite settings;
-    // accept "true"/"1" as truthy, default false when missing.
-    mcpEnabled.value = data['mcp.enabled'] === 'true' || data['mcp.enabled'] === '1'
-    // Phase 7.4e — strict_kinds (default false: lenient).
-    mcpStrictKinds.value = data['mcp.strict_kinds'] === 'true' || data['mcp.strict_kinds'] === '1'
-    // Phase 7.5+++ — always-confirm kinds (comma-separated).
-    mcpAlwaysConfirmKinds.value = data['mcp.always_confirm_kinds'] ?? ''
-    // Phase 7.5+++ — janitor retention windows. parseInt yields NaN on
-    // missing/empty; coalesce to defaults (1d/30d) so the inputs land
-    // on sensible numbers when settings haven't been touched.
-    {
-      const exp = parseInt(data['mcp.grant_expired_retention_days'] ?? '')
-      mcpExpiredRetentionDays.value = Number.isFinite(exp) && exp >= 0 ? exp : 1
-      const rev = parseInt(data['mcp.grant_revoked_retention_days'] ?? '')
-      mcpRevokedRetentionDays.value = Number.isFinite(rev) && rev >= 0 ? rev : 30
-      // Phase 8 — mcp_tool_calls audit retention.
-      const tc = parseInt(data['mcp.toolCallRetentionDays'] ?? '')
-      mcpToolCallRetentionDays.value = Number.isFinite(tc) && tc >= 1 ? tc : 30
-    }
-    // Phase 7.1a — deploy.enabled flag. Default TRUE; only false when explicitly
-    // set to "false"/"0". Mirrors daemon's IsDeployEnabled() helper.
-    deployEnabled.value = !(data['deploy.enabled'] === 'false' || data['deploy.enabled'] === '0')
-    // Phase 7.4 #109-D1 — same boolean parsing convention as deploy.enabled.
-    // Default TRUE means current host-native behaviour stays in effect.
-    deployUseLegacyHostHandlers.value = !(data['deploy.useLegacyHostHandlers'] === 'false'
-      || data['deploy.useLegacyHostHandlers'] === '0')
-    if (data['ports.mysql'])       ports.mysql = parseInt(data['ports.mysql'])
-    if (data['ports.redis'])       ports.redis = parseInt(data['ports.redis'])
-    if (data['ports.mailpitSmtp']) ports.mailpitSmtp = parseInt(data['ports.mailpitSmtp'])
-    if (data['ports.mailpitHttp']) ports.mailpitHttp = parseInt(data['ports.mailpitHttp'])
-    if (data['general.runOnStartup']) runOnStartup.value = data['general.runOnStartup'] === 'true'
-    if (data['paths.apache'])    paths.apache = data['paths.apache']
-    if (data['paths.mysql'])     paths.mysql = data['paths.mysql']
-    if (data['paths.php'])       paths.php = data['paths.php']
-    if (data['paths.redis'])     paths.redis = data['paths.redis']
-    if (data['paths.sitesDir'])  paths.sitesDir = data['paths.sitesDir']
-    if (data['paths.hostsFile']) paths.hostsFile = data['paths.hostsFile']
-    if (data['ports.phpFpmBase']) phpFpmBasePort.value = parseInt(data['ports.phpFpmBase'])
-    if (data['daemon.catalogUrl']) catalogUrl.value = data['daemon.catalogUrl']
-    if (data['plugins.autoSyncEnabled']) pluginAutoSync.value = data['plugins.autoSyncEnabled'] === 'true'
-    if (data['telemetry.enabled']) telemetryEnabled.value = data['telemetry.enabled'] === 'true'
-    if (data['telemetry.crashReports']) telemetryCrashReports.value = data['telemetry.crashReports'] === 'true'
-    if (data['backup.dir']) backupDir.value = data['backup.dir']
-    if (data['backup.scheduleHours']) backupScheduleHours.value = parseInt(data['backup.scheduleHours'])
-  } catch { /* daemon not reachable — keep defaults */ }
+  } catch { /* daemon not reachable — keep defaults, saving stays blocked */ }
+}
+
+function discardChanges(): void {
+  applyValues(loadedValues.value)
 }
 
 async function syncPluginsNow() {
@@ -2000,6 +2068,7 @@ async function refreshCatalog() {
     // trigger a manual refresh so the new source takes effect without
     // restarting the daemon.
     await saveSettings({ 'daemon.catalogUrl': catalogUrl.value || '' })
+    loadedValues.value = { ...loadedValues.value, 'daemon.catalogUrl': catalogUrl.value || '' }
     const r = await fetch(`${daemonBaseUrl()}/api/binaries/catalog/refresh`, {
       method: 'POST',
       headers: authHeaders(),
@@ -2325,7 +2394,6 @@ async function loadDeviceId() {
       deviceId.value = id
       await saveSettings({ 'sync.deviceId': id })
     }
-    if (data['sync.deviceName']) deviceName.value = data['sync.deviceName']
     if (data['sync.lastSyncTime']) lastSyncTime.value = data['sync.lastSyncTime']
   } catch { /* daemon not reachable */ }
 }
@@ -2387,6 +2455,7 @@ async function pushToCloud() {
       'sync.deviceName': deviceName.value,
       'sync.lastSyncTime': new Date().toISOString(),
     })
+    loadedValues.value = { ...loadedValues.value, 'sync.deviceName': deviceName.value }
 
     const payload = await buildSyncPayload()
     // Task 33: route through daemon proxy so catalog JWT stays server-side
@@ -2784,41 +2853,13 @@ async function save() {
     ElMessage.error(t('settings.loadFailedSaveBlocked'))
     return
   }
+  const patch = changedValues.value
+  if (Object.keys(patch).length === 0) return
   saving.value = true
   try {
-    const payload: Record<string, string> = {
-      'ports.http':          String(ports.http),
-      'ports.https':         String(ports.https),
-      'ports.mysql':         String(ports.mysql),
-      'ports.redis':         String(ports.redis),
-      'ports.mailpitSmtp':   String(ports.mailpitSmtp),
-      'mcp.enabled':         String(mcpEnabled.value),
-      'mcp.strict_kinds':    String(mcpStrictKinds.value),
-      'mcp.always_confirm_kinds': mcpAlwaysConfirmKinds.value,
-      'mcp.grant_expired_retention_days': String(mcpExpiredRetentionDays.value),
-      'mcp.grant_revoked_retention_days': String(mcpRevokedRetentionDays.value),
-      'mcp.toolCallRetentionDays': String(mcpToolCallRetentionDays.value),
-      'deploy.enabled':      String(deployEnabled.value),
-      'deploy.useLegacyHostHandlers': String(deployUseLegacyHostHandlers.value),
-      'ports.mailpitHttp':   String(ports.mailpitHttp),
-      'general.runOnStartup': String(runOnStartup.value),
-      'paths.apache':   paths.apache,
-      'paths.mysql':    paths.mysql,
-      'paths.php':      paths.php,
-      'paths.redis':    paths.redis,
-      'paths.sitesDir': paths.sitesDir,
-      'paths.hostsFile': paths.hostsFile,
-      'ports.phpFpmBase': String(phpFpmBasePort.value),
-      'daemon.catalogUrl': catalogUrl.value,
-      'plugins.autoSyncEnabled': String(pluginAutoSync.value),
-      'telemetry.enabled': String(telemetryEnabled.value),
-      'telemetry.crashReports': String(telemetryCrashReports.value),
-      'backup.dir': backupDir.value,
-      'backup.scheduleHours': String(backupScheduleHours.value),
-    }
-    // saveSettings throws on non-ok with the daemon's error message extracted,
-    // giving better feedback than the previous raw-HTTP-status fallback.
-    await saveSettings(payload)
+    // saveSettings throws on non-ok with the daemon's error message extracted.
+    await saveSettings(patch)
+    loadedValues.value = { ...loadedValues.value, ...patch }
     ElMessage.success(t('settingsToast.settingsSaved'))
   } catch (e) {
     ElMessage.error(t('settingsToast.failedToSave', { err: errorMessage(e) }))
@@ -2994,6 +3035,13 @@ async function save() {
   border-top: 1px solid var(--el-border-color);
   display: flex;
   gap: var(--wdc-space-2);
+}
+
+.footer-unsaved {
+  align-self: center;
+  margin-right: auto;
+  font-size: 0.85rem;
+  color: var(--wdc-text-2);
 }
 
 @media (max-width: 980px) {

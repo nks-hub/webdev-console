@@ -2588,6 +2588,15 @@
       "app": "Application",
       "environment": "Environment",
       "integration": "Integrations"
+    },
+    "unsaved": {
+      "label": "{n} unsaved change | {n} unsaved changes",
+      "save": "Save settings",
+      "discard": "Discard changes",
+      "leaveTitle": "Unsaved changes",
+      "leaveMessage": "You have unsaved changes in Settings. Leaving the page discards them.",
+      "leave": "Discard and leave",
+      "stay": "Stay"
     }
   },
   "mcpGrants": {

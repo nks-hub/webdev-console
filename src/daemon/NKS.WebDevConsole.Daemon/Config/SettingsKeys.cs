@@ -16,6 +16,18 @@ internal static class SettingsKeys
     };
 
     /// <summary>
+    /// Names from <paramref name="incoming"/> that are new or carry a value
+    /// different from <paramref name="stored"/>. Side effects of a save (vhost
+    /// regeneration, service reloads) key off this, not off what was sent.
+    /// </summary>
+    public static HashSet<string> Changed(
+        IReadOnlyDictionary<string, string> stored, IReadOnlyDictionary<string, string> incoming) =>
+        incoming
+            .Where(kv => !stored.TryGetValue(kv.Key, out var old) || old != kv.Value)
+            .Select(kv => kv.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Splits <c>backup.content.ssl</c> into <c>backup</c> + <c>content.ssl</c>.
     /// Returns false for names without a category or without a key, which used
     /// to land under <c>general.*</c> and silently save nothing the caller meant.

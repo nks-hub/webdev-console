@@ -14,6 +14,22 @@ public sealed class SettingsKeysTests
         Assert.Equal(key, k);
     }
 
+    [Fact]
+    public void Changed_IgnoresValuesThatMatchTheStoredOnes()
+    {
+        var stored = new Dictionary<string, string> { ["ports.http"] = "80", ["ports.https"] = "443" };
+        var incoming = new Dictionary<string, string>
+        {
+            ["ports.http"] = "80",        // re-sent, unchanged
+            ["ports.https"] = "8443",     // changed
+            ["ports.redis"] = "6379",     // first save
+        };
+
+        var changed = SettingsKeys.Changed(stored, incoming);
+
+        Assert.Equal(new[] { "ports.https", "ports.redis" }, changed.OrderBy(k => k));
+    }
+
     [Theory]
     [InlineData("sync.accountToken")]
     [InlineData("SYNC.ACCOUNTTOKEN")]

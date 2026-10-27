@@ -93,8 +93,14 @@ internal static class SettingsEndpoints
             // settings table with a half-applied snapshot where some keys are
             // from the new device and others are stale.
             using var tx = conn.BeginTransaction();
+            HashSet<string> changed;
             try
             {
+                var stored = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var row in await conn.QueryAsync<dynamic>("SELECT category, key, value FROM settings", transaction: tx))
+                    stored[$"{row.category}.{row.key}"] = (string)row.value;
+                changed = SettingsKeys.Changed(stored, settings);
+
                 foreach (var (compositeKey, value) in settings)
                 {
                     SettingsKeys.TrySplit(compositeKey, out var category, out var key);
@@ -141,14 +147,14 @@ internal static class SettingsEndpoints
             // its config (regenerate httpd.conf etc). Reflection is used because
             // IServiceModule lives in Core but each plugin's module type is
             // cross-ALC — we only need the ReloadAsync method to be callable.
-            var changedCategories = settings.Keys
-                .Select(k => k.Split('.', 2)[0])
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-            if (changedCategories.Contains("ports"))
+            // Only ports whose value actually changed count: a save that
+            // re-sends the current ports must not regenerate every vhost and
+            // reload Apache, MySQL, Redis and Mailpit.
+            var portKeys = changed.Where(k => k.StartsWith("ports.", StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (portKeys.Length > 0)
             {
                 var sp = ctx.RequestServices;
                 var modules = sp.GetServices<IServiceModule>().ToArray();
-                var portKeys = settings.Keys.Where(k => k.StartsWith("ports.", StringComparison.OrdinalIgnoreCase)).ToArray();
                 foreach (var module in modules)
                 {
                     // Heuristic: match `ports.<serviceId>` or any port key that
