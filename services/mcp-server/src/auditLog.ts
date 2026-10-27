@@ -46,6 +46,18 @@ const DANGER_OVERRIDES: Record<string, 'read' | 'mutate' | 'destructive'> = {
   wdc_set_mysql_user_password: 'mutate',
   wdc_grant_mysql_user_database: 'mutate',
   wdc_change_mysql_root_password: 'mutate',
+  wdc_update_site: 'mutate',
+  wdc_apply_site: 'mutate',
+  wdc_reapply_all_sites: 'mutate',
+  wdc_detect_framework: 'mutate',
+  wdc_duplicate_site: 'mutate',
+  wdc_validate_config: 'mutate',
+  wdc_export_database: 'mutate',
+  wdc_composer_install: 'mutate',
+  wdc_composer_require: 'mutate',
+  wdc_start_node_site: 'mutate',
+  wdc_restart_node_site: 'mutate',
+  wdc_flush_dns: 'mutate',
 
   // Destructive — irreversible or affects production
   wdc_delete_site: 'destructive',
@@ -64,6 +76,15 @@ const DANGER_OVERRIDES: Record<string, 'read' | 'mutate' | 'destructive'> = {
   wdc_deploy_group_start: 'destructive',
   wdc_execute: 'destructive',
   wdc_query: 'destructive',
+  wdc_site_rollback: 'destructive',
+  wdc_restart_service: 'destructive',
+  wdc_update_service_config: 'destructive',
+  wdc_import_database: 'destructive',
+  wdc_uninstall_plugin: 'destructive',
+  wdc_delete_backup: 'destructive',
+  wdc_restore_backup_by_id: 'destructive',
+  wdc_composer_remove: 'destructive',
+  wdc_stop_node_site: 'destructive',
 }
 
 function classify(toolName: string): 'read' | 'mutate' | 'destructive' {

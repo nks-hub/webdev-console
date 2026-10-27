@@ -93,7 +93,7 @@ export function registerSslTools(server: McpServer, opts: RegisterOptions): void
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
-        idempotentHint: true,
+        idempotentHint: false,
         openWorldHint: false,
       },
     },

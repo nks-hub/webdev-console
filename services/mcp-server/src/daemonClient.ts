@@ -27,6 +27,14 @@ interface PortFile {
   scopes: string[]
 }
 
+/** A request body sent as-is instead of as JSON (e.g. a SQL dump). */
+export class RawBody {
+  constructor(
+    readonly text: string,
+    readonly contentType: string,
+  ) {}
+}
+
 class DaemonNotRunningError extends Error {
   constructor() {
     super(
@@ -65,7 +73,7 @@ const NEXT_STEPS: Record<string, string> = {
   mcp_disabled: 'MCP is turned off in WDC; ask the user to enable MCP in WDC → Settings.',
   mcp_forbidden: 'The MCP token may not do this; the user has to do it in the WDC app.',
   mcp_capability_disabled:
-    'This capability is turned off for MCP in WDC; ask the user to enable it in WDC → Settings if they want you to do this.',
+    'This capability is turned off for MCP in WDC; ask the user to enable it in WDC → Settings → AI clients (MCP) if they want you to do this.',
 }
 
 function str(v: unknown): string | undefined {
@@ -256,12 +264,13 @@ export class DaemonClient {
     const headers: Record<string, string> = {
       Authorization: `Bearer ${token}`,
     }
-    if (body !== undefined) headers['Content-Type'] = 'application/json'
+    if (body instanceof RawBody) headers['Content-Type'] = body.contentType
+    else if (body !== undefined) headers['Content-Type'] = 'application/json'
     if (extraHeaders) Object.assign(headers, extraHeaders)
     return {
       method,
       headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: body instanceof RawBody ? body.text : body !== undefined ? JSON.stringify(body) : undefined,
     }
   }
 
@@ -312,6 +321,10 @@ export class DaemonClient {
   }
   post<T = unknown>(path: string, body?: unknown, extraHeaders?: Record<string, string>): Promise<T> {
     return this.request('POST', path, body, extraHeaders) as Promise<T>
+  }
+  /** POST a non-JSON body (e.g. a SQL dump as text/plain). */
+  postText<T = unknown>(path: string, text: string, contentType: string, extraHeaders?: Record<string, string>): Promise<T> {
+    return this.request('POST', path, new RawBody(text, contentType), extraHeaders) as Promise<T>
   }
   put<T = unknown>(path: string, body?: unknown, extraHeaders?: Record<string, string>): Promise<T> {
     return this.request('PUT', path, body, extraHeaders) as Promise<T>

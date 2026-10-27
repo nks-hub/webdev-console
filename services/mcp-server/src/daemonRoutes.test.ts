@@ -2,7 +2,7 @@
  * Keeps daemon-routes.json in sync with the daemon calls the tools make.
  *
  * The daemon gives the MCP token an allow-list of routes
- * (McpTokenPolicy.AllowedRoutes in the daemon). McpTokenPolicyTests checks
+ * (McpCapabilities.AlwaysAllowed in the daemon). McpTokenPolicyTests checks
  * that list against daemon-routes.json; this test checks daemon-routes.json
  * against every daemonClient call in src/*.ts and src/tools/*.ts. A tool that starts
  * calling a new route fails here until the route is added to both lists.
@@ -17,8 +17,11 @@ const here = dirname(fileURLToPath(import.meta.url))
 const sourceDirs = [here, join(here, 'tools')]
 const fixturePath = join(here, '..', 'daemon-routes.json')
 
-const CALL = /daemonClient\s*\.(get|post|put|delete)\s*(?:<[^>]*>)?\s*\(\s*(['`])([^'`]*)\2/g
-const ANY_CALL = /daemonClient\s*\.(get|post|put|delete)\s*(?:<[^>]*>)?\s*\(/g
+// Type arguments may nest one level (`post<Array<{ steps?: Step[] }>>(`).
+const TYPE_ARGS = String.raw`(?:<(?:[^<>]|<[^<>]*>)*>)?`
+const CALL = new RegExp(String.raw`daemonClient\s*\.(get|post|postText|put|delete)\s*${TYPE_ARGS}\s*\(\s*(['\`])([^'\`]*)\2`, 'g')
+const ANY_CALL = new RegExp(String.raw`daemonClient\s*\.(get|post|postText|put|delete)\s*${TYPE_ARGS}\s*\(`, 'g')
+const METHOD: Record<string, string> = { get: 'GET', post: 'POST', postText: 'POST', put: 'PUT', delete: 'DELETE' }
 
 function canonical(path: string): string {
   return path
@@ -41,9 +44,11 @@ function routesCalledByTools(): { routes: Set<string>; unparsed: string[] } {
     const calls = [...src.matchAll(CALL)]
     if (calls.length !== total) unparsed.push(`${file}: ${total - calls.length} call(s) without a literal path`)
     for (const m of calls) {
+      // A path built by a helper (`${sitePath(d)}/x`) hides its route.
+      if (m[3]!.startsWith('${')) unparsed.push(`${file}: ${m[3]} does not start with a literal path`)
       // Only /api routes are subject to the MCP token policy (/healthz is public).
       if (!m[3]!.startsWith('/api')) continue
-      routes.add(`${m[1]!.toUpperCase()} ${canonical(m[3]!)}`)
+      routes.add(`${METHOD[m[1]!]} ${canonical(m[3]!)}`)
     }
   }
   return { routes, unparsed }

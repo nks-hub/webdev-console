@@ -55,3 +55,12 @@ export const ConfirmYesSchema = z
       'The assistant MUST show the user exactly what will be affected and ' +
       'receive explicit user confirmation before passing this value.',
   )
+
+/**
+ * Description sentence for a tool (or argument) the daemon only allows when
+ * the operator has enabled a capability group for AI clients; the title is
+ * the group's title in WDC (McpCapabilities in the daemon).
+ */
+export function capabilityNote(title: string): string {
+  return `Needs the "${title}" capability enabled in WDC → Settings → AI clients (MCP).`
+}

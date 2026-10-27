@@ -510,7 +510,8 @@
       "daemon_admin": "Restartovat, vypnout, resetovat nebo odinstalovat démona",
       "mysql_root_reset": "Resetovat heslo uživatele root v MySQL",
       "mysql_user_drop": "Smazat uživatelský účet MySQL",
-      "postgres_root_reset": "Resetovat heslo superuživatele PostgreSQL"
+      "postgres_root_reset": "Resetovat heslo superuživatele PostgreSQL",
+      "backup_delete": "Smazat zálohu WDC"
     },
     "empty": "Žádné druhy nejsou registrované",
     "col": {

@@ -24,19 +24,22 @@ export const CONFIRMABLE_OPERATIONS = {
   database_import: { kind: 'database_import', host: '*db*', describe: 'import a dump into database' },
   site_delete: { kind: 'site_delete', host: '*site*', describe: 'delete site' },
   service_stop: { kind: 'service_restart', host: '*svc*', describe: 'stop service' },
+  service_restart: { kind: 'service_restart', host: '*svc*', describe: 'restart service' },
+  service_config_write: { kind: 'service_config_write', host: '*svc*', describe: 'overwrite a configuration file of service' },
   ssl_cert_delete: { kind: 'ssl_cert_delete', host: '*ssl*', describe: 'revoke the certificate of' },
   dns_record_delete: { kind: 'dns_record_delete', host: '*dns*', describe: 'delete a DNS record in zone' },
   binary_install: { kind: 'binary_install', host: '*binary*', describe: 'install binary' },
   plugin_install: { kind: 'plugin_install', host: '*plugin*', describe: 'install plugin' },
   plugin_uninstall: { kind: 'plugin_uninstall', host: '*plugin*', describe: 'uninstall plugin' },
   backup_restore: { kind: 'backup_restore', host: '*backup*', describe: 'restore a backup over the current state', fixedDomain: '*backup*' },
+  backup_delete: { kind: 'backup_delete', host: '*backup*', describe: 'delete the backup' },
   mysql_user_drop: { kind: 'mysql_user_drop', host: '*mysql*', describe: 'drop the MySQL account' },
   mysql_root_reset: { kind: 'mysql_root_reset', host: '*mysql*', describe: 'reset the MySQL root password', fixedDomain: 'root' },
-  // Capability groups the operator enables in WDC → Settings → MCP; each
-  // call in them still needs an approved intent (host '*mcp*').
+  // Capability groups the operator enables in WDC → Settings → AI clients
+  // (MCP); each call in them still needs an approved intent (host '*mcp*').
+  // service_config_write (above, '*svc*') and backup_delete are in groups too.
   cloudflare_credentials: { kind: 'cloudflare_credentials', host: '*mcp*', describe: 'change Cloudflare credentials or tunnel routing for' },
   node_process: { kind: 'node_process', host: '*mcp*', describe: 'set or run the Node.js start command of site' },
-  service_config_write: { kind: 'service_config_write', host: '*mcp*', describe: 'rewrite the config file of service' },
   hosts_write: { kind: 'hosts_write', host: '*mcp*', describe: 'rewrite the system hosts file', fixedDomain: 'hosts' },
   daemon_admin: { kind: 'daemon_admin', host: '*mcp*', describe: 'run the daemon admin action' },
   // Deploy routes (target = site domain). A deploy itself is bound to one host,
@@ -343,8 +346,9 @@ export function registerConfirmationTools(server: McpServer, opts: RegisterOptio
       title: 'Ask the user to approve a destructive operation',
       description:
         'Destructive operations (dropping or changing databases, deleting sites, stopping services, ' +
-        'revoking certificates, deleting DNS records, installing binaries or plugins, restoring backups, ' +
-        'dropping MySQL accounts, resetting the MySQL root password) ' +
+        'revoking certificates, deleting DNS records, installing binaries or plugins, restoring or deleting ' +
+        'backups, dropping MySQL accounts, resetting the MySQL root password, importing SQL dumps, ' +
+        'rewriting service config files, starting Node.js site processes) ' +
         'need the user\'s approval in the WDC app. Call this first, tell the user what you want to do and ' +
         'why, wait for them to approve the banner in WDC, then call the operation\'s tool with the ' +
         'returned intentToken. Until it is approved the daemon answers 425 pending_confirmation. ' +
@@ -353,7 +357,8 @@ export function registerConfirmationTools(server: McpServer, opts: RegisterOptio
         '  target: What the operation acts on (database name, site domain, service id, zone id, ' +
         'binary app, plugin id, MySQL account as userName@host for mysql_user_drop, "config" or the ' +
         'tunnel id for cloudflare_credentials, site domain for node_process, service id for ' +
-        'service_config_write, restart/shutdown/reset/uninstall for daemon_admin). ' +
+        'service_config_write, backup file name for backup_delete, restart/shutdown/reset/uninstall for ' +
+        'daemon_admin). ' +
         'Ignored for backup_restore, mysql_root_reset and hosts_write. When the daemon refuses a call ' +
         'with intent_rejected, its intentKind and intentDomain say what to request.\n' +
         '  reason: One sentence shown to the user.\n' +

