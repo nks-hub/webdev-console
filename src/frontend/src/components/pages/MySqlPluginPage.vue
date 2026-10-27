@@ -43,7 +43,7 @@
                   </el-button>
                 </div>
                 <div class="database-toolbar-actions">
-                  <el-tag v-if="databases.length" type="info" effect="plain">{{ databases.length }} {{ $t('mysqlPlugin.databasesCount') }}</el-tag>
+                  <el-tag v-if="databases.length" type="info" effect="plain">{{ t('mysqlPlugin.databasesCount', { n: databases.length }, databases.length) }}</el-tag>
                   <el-button size="small" :loading="databasesLoading" @click="loadDatabases">{{ $t('common.refresh') }}</el-button>
                 </div>
               </div>
@@ -228,7 +228,9 @@
                 </el-table-column>
                 <el-table-column :label="$t('common.actions')" width="260" fixed="right">
                   <template #default="{ row }">
-                    <div class="table-actions">
+                    <!-- MySQL's own accounts; changing or dropping them breaks the server. -->
+                    <span v-if="isSystemUser(row)" class="muted">{{ t('mysqlPlugin.systemAccount') }}</span>
+                    <div v-else class="table-actions">
                       <el-button size="small" text :disabled="isRootUser(row)" @click="openPasswordDialog(row)">
                         {{ $t('mysqlPlugin.setPassword') }}
                       </el-button>
@@ -810,6 +812,10 @@ async function createUser() {
   } finally {
     creatingUser.value = false
   }
+}
+
+function isSystemUser(row: MySqlUser) {
+  return /^(mysql|mariadb)\./i.test(row.userName)
 }
 
 function isRootUser(row: MySqlUser) {

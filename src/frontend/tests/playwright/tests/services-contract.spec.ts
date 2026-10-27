@@ -113,6 +113,16 @@ test.describe('Services UI contract', () => {
     expect(page).toMatch(/id: 'all' as const, label: t\('servicesPage\.filter\.all'\), count: services\.value\.length/)
   })
 
+  test('MySQL system accounts offer no password, grant or delete actions', () => {
+    const page = read('components', 'pages', 'MySqlPluginPage.vue')
+    expect(page).toMatch(/v-if="isSystemUser\(row\)"[\s\S]*?v-else class="table-actions"/)
+    expect(page).toMatch(/\^\(mysql\|mariadb\)\\./)
+  })
+
+  test('a missing binary is shown as "not installed", not as a failed start', () => {
+    expect(read('components', 'shared', 'ServiceErrorNote.vue')).toMatch(/installed === false \? '' : service\.value\?\.startError/)
+  })
+
   test('/service/:id opens the Services page with that service selected', () => {
     expect(read('router', 'index.ts')).toMatch(/path: '\/service\/:id', redirect: to => \(\{ path: '\/services', query: \{ service:/)
   })
