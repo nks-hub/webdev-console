@@ -47,6 +47,18 @@ test.describe('Sites flow contract', () => {
     expect(read('components', 'sites', 'SiteServices.vue')).toMatch(/serviceViewState/)
   })
 
+  test('the web and database service is a visible one, running first (a switched-off MariaDB plugin must not mask MySQL)', () => {
+    const state = read('stores', 'siteState.ts')
+    expect(state).toMatch(/plugins\.isServiceVisible\(s\.id\)/)
+    expect(state).toMatch(/list\.find\(s => serviceViewState\(s\) === 'running'\)/)
+    expect(state).toMatch(/pickService\(\['mysql', 'mariadb'\]\)/)
+  })
+
+  test('New site dialog offers a tunnel only once the Cloudflare tunnel and default zone are set up', () => {
+    expect(read('stores', 'siteState.ts')).toMatch(/cfg\.tunnelId && cfg\.defaultZoneId/)
+    expect(read('components', 'sites', 'CreateSiteDialog.vue')).toMatch(/:disabled="!siteState\.cloudflareReady"/)
+  })
+
   test('chart y-axis shows whole numbers only', () => {
     expect(read('components', 'sites', 'SiteMetrics.vue')).toMatch(/minInterval: 1/)
   })

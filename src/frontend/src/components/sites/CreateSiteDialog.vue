@@ -125,9 +125,14 @@
 
       <div v-if="siteState.cloudflareActive" class="toggle-item">
         <label class="toggle-line">
-          <el-switch v-model="form.cloudflareTunnel" />
+          <el-switch v-model="form.cloudflareTunnel" :disabled="!siteState.cloudflareReady" />
           <span class="toggle-label">{{ $t('sites.simple.cloudflareTunnel') }}</span>
         </label>
+        <div v-if="!siteState.cloudflareReady" class="inline-callout">
+          <el-icon aria-hidden="true"><WarningFilled /></el-icon>
+          <span>{{ $t('sites.new.tunnelNotReady') }}</span>
+          <el-button size="small" @click="goToCloudflare">{{ $t('siteEdit.openCloudflare') }}</el-button>
+        </div>
       </div>
 
       <div class="toggle-item">
@@ -231,6 +236,7 @@
 <script setup lang="ts">
 import { computed, nextTick, reactive, ref, toRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { Check, FolderOpened, WarningFilled } from '@element-plus/icons-vue'
 import FolderBrowser from '../shared/FolderBrowser.vue'
@@ -376,8 +382,15 @@ async function installHttps() {
 }
 
 // A database can only be created while the database server runs.
+const router = useRouter()
+function goToCloudflare() {
+  open.value = false
+  void router.push('/cloudflare')
+}
+
 const dbBlocked = computed(() => ['missing', 'stopped', 'starting'].includes(siteState.databaseServer))
 watch(dbBlocked, (blocked) => { if (blocked) form.createDb = false })
+watch(() => siteState.cloudflareReady, (ready) => { if (!ready) form.cloudflareTunnel = false })
 
 const dbNameSuggestion = computed(() => {
   const stem = form.domain.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
@@ -524,7 +537,7 @@ async function submit() {
   font-size: 0.87rem;
   line-height: 1.5;
 }
-.create-form :deep(.el-form-item) { margin-bottom: var(--wdc-space-4); }
+.create-form :deep(.el-form-item) { margin-bottom: var(--wdc-space-3-5); }
 .create-form :deep(.el-select),
 .create-form :deep(.el-input) { width: 100%; }
 .create-form :deep(.el-radio-group) { width: auto; }
@@ -576,8 +589,9 @@ async function submit() {
   font-size: 0.82rem;
 }
 .inline-callout .el-icon { color: var(--wdc-status-starting); }
+.inline-callout > span { flex: 1 1 14rem; min-width: 0; }
 .inline-callout .el-button { margin-left: auto; }
-.toggle-item { margin-bottom: var(--wdc-space-3-5); }
+.toggle-item { margin-bottom: var(--wdc-space-3); }
 .toggle-line { display: inline-flex; align-items: center; gap: var(--wdc-space-2-5); cursor: pointer; }
 .toggle-label { color: var(--wdc-text); font-size: 0.93rem; font-weight: 500; }
 .toggle-item .field-note,
@@ -607,5 +621,5 @@ async function submit() {
 
 <style>
 /* The form is longer than a laptop window: the body scrolls, the buttons stay in view. */
-.create-site-dialog .el-dialog__body { max-height: calc(100vh - 220px); overflow-y: auto; }
+.create-site-dialog .el-dialog__body { max-height: calc(100vh - 200px); overflow-y: auto; }
 </style>
