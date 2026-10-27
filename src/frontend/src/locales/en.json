@@ -3528,7 +3528,7 @@
   "overview": {
     "summary": "{running} of {total} services running · {sites} site | {running} of {total} services running · {sites} sites",
     "summaryNoServices": "No services installed yet · {sites} site | No services installed yet · {sites} sites",
-    "summaryCrashed": "{n} service crashed | {n} services crashed",
+    "summaryCrashed": "{n} service has a problem | {n} services have a problem",
     "restarted": "{name} restarted",
     "actionFailed": "{name}: the action failed",
     "attention": {

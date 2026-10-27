@@ -3190,7 +3190,7 @@
     "tunnelTitle": "Tunel Cloudflare běží. Zveřejněné weby jsou dostupné z internetu.",
     "problems": "{n} problém | {n} problémy | {n} problémů",
     "simpleOffline": "Aplikace se nemůže spojit se službou na pozadí",
-    "simpleProblems": "{n} služba nefunguje | {n} služby nefungují | {n} služeb nefunguje",
+    "simpleProblems": "{n} služba má problém | {n} služby mají problém | {n} služeb má problém",
     "simpleAllRunning": "Vše běží"
   },
   "help": {
@@ -3528,7 +3528,7 @@
   "overview": {
     "summary": "Běží {running} z {total} služeb · {sites} web | Běží {running} z {total} služeb · {sites} weby | Běží {running} z {total} služeb · {sites} webů",
     "summaryNoServices": "Zatím žádná nainstalovaná služba · {sites} web | Zatím žádná nainstalovaná služba · {sites} weby | Zatím žádná nainstalovaná služba · {sites} webů",
-    "summaryCrashed": "{n} služba spadla | {n} služby spadly | {n} služeb spadlo",
+    "summaryCrashed": "{n} služba má problém | {n} služby mají problém | {n} služeb má problém",
     "restarted": "{name} restartováno",
     "actionFailed": "{name}: akce se nezdařila",
     "attention": {
