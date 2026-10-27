@@ -51,6 +51,10 @@ internal static class OnboardingEndpoints
                 "mkcert");
             var mkcertCaInstalled = File.Exists(Path.Combine(mkcertRoot, "rootCA.pem"));
 
+            // ListInstalled is newest-first per app, so FirstOrDefault is the latest version.
+            string? VersionOf(string app) =>
+                installed.FirstOrDefault(b => b.App.Equals(app, StringComparison.OrdinalIgnoreCase))?.Version;
+
             return Results.Ok(new
             {
                 completed = File.Exists(flagFile),
@@ -61,6 +65,13 @@ internal static class OnboardingEndpoints
                     mysqlInstalled = hasMysql,
                     mkcertBinaryInstalled = hasMkcert,
                     mkcertCaInstalled,
+                },
+                versions = new
+                {
+                    apache = VersionOf("apache"),
+                    php = VersionOf("php"),
+                    mysql = VersionOf("mysql"),
+                    mkcert = VersionOf("mkcert"),
                 }
             });
         });

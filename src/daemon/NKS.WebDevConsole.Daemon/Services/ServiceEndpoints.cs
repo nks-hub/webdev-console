@@ -31,7 +31,7 @@ internal static class ServiceEndpoints
     public static void MapServiceEndpoints(this WebApplication app)
     {
         // Service management endpoints — query real plugin modules
-        app.MapGet("/api/services", async (IServiceProvider sp) =>
+        app.MapGet("/api/services", async (IServiceProvider sp, BinaryManager bm, ServiceRunTracker tracker) =>
         {
             // Fan out status probes concurrently — same rationale as /api/system
             // (commit 9cf5d53). This endpoint is hit by every AppSidebar poll (5s
@@ -40,20 +40,20 @@ internal static class ServiceEndpoints
             var modules = sp.GetServices<IServiceModule>().ToArray();
             var statuses = await Task.WhenAll(
                 modules.Select(m => m.GetStatusAsync(CancellationToken.None)));
-            return Results.Ok(statuses);
+            return Results.Ok(ServiceInfoProjection.BuildAll(statuses, bm.ListInstalled(), tracker));
         });
 
-        app.MapGet("/api/services/{id}", async (string id, IServiceProvider sp) =>
+        app.MapGet("/api/services/{id}", async (string id, IServiceProvider sp, BinaryManager bm, ServiceRunTracker tracker) =>
         {
             var modules = sp.GetServices<IServiceModule>();
             var module = modules.FirstOrDefault(m => m.ServiceId.Equals(id, StringComparison.OrdinalIgnoreCase)
                 || m.Type.ToString().Equals(id, StringComparison.OrdinalIgnoreCase));
             if (module == null) return Results.NotFound();
             var status = await module.GetStatusAsync(CancellationToken.None);
-            return Results.Ok(status);
+            return Results.Ok(ServiceInfoProjection.Build(status, bm.ListInstalled(), tracker));
         });
 
-        app.MapPost("/api/services/{id}/start", async (string id, IServiceProvider sp, ILoggerFactory lf) =>
+        app.MapPost("/api/services/{id}/start", async (string id, IServiceProvider sp, ILoggerFactory lf, BinaryManager bm, ServiceRunTracker tracker) =>
         {
             var modules = sp.GetServices<IServiceModule>();
             var module = modules.FirstOrDefault(m => m.ServiceId.Equals(id, StringComparison.OrdinalIgnoreCase)
@@ -62,9 +62,10 @@ internal static class ServiceEndpoints
 
             try
             {
+                tracker.MarkStartRequested(module.ServiceId);
                 await module.StartAsync(CancellationToken.None);
                 var status = await module.GetStatusAsync(CancellationToken.None);
-                return Results.Ok(status);
+                return Results.Ok(ServiceInfoProjection.Build(status, bm.ListInstalled(), tracker));
             }
             catch (Exception ex)
             {
@@ -87,6 +88,8 @@ internal static class ServiceEndpoints
             ILoggerFactory lf,
             NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
             HttpContext ctx,
+            BinaryManager bm,
+            ServiceRunTracker tracker,
             CancellationToken ct) =>
         {
             var stopIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
@@ -112,7 +115,7 @@ internal static class ServiceEndpoints
             {
                 await module.StopAsync(CancellationToken.None);
                 var status = await module.GetStatusAsync(CancellationToken.None);
-                return Results.Ok(status);
+                return Results.Ok(ServiceInfoProjection.Build(status, bm.ListInstalled(), tracker));
             }
             catch (Exception ex)
             {
@@ -132,6 +135,8 @@ internal static class ServiceEndpoints
             ILoggerFactory lf,
             NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
             HttpContext ctx,
+            BinaryManager bm,
+            ServiceRunTracker tracker,
             CancellationToken ct) =>
         {
             var rstIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
@@ -156,9 +161,10 @@ internal static class ServiceEndpoints
             try
             {
                 await module.StopAsync(CancellationToken.None);
+                tracker.MarkStartRequested(module.ServiceId);
                 await module.StartAsync(CancellationToken.None);
                 var status = await module.GetStatusAsync(CancellationToken.None);
-                return Results.Ok(status);
+                return Results.Ok(ServiceInfoProjection.Build(status, bm.ListInstalled(), tracker));
             }
             catch (Exception ex)
             {
