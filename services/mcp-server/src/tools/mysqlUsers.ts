@@ -55,7 +55,7 @@ const MySqlPrivilegePresetSchema = z
 // Creating or granting with the admin preset or for a non-local host.
 const ADMIN_ACCOUNT_NOTE =
   "With the MCP token, the 'admin' preset or a host other than localhost / 127.0.0.1 / ::1 needs the " +
-  'operator\'s database_admin capability (WDC → Settings → MCP) and the user\'s approval: call ' +
+  'operator\'s database_admin capability (WDC → Settings → AI clients (MCP)) and the user\'s approval: call ' +
   'wdc_request_confirmation with operation "mysql_user_admin" and target "userName@host", then pass the ' +
   'returned intentToken. read / readWrite for a local account need neither.'
 
@@ -235,7 +235,7 @@ export function registerMysqlUsersTools(server: McpServer, opts: RegisterOptions
         "Change the MySQL root password. Requires the current password and " +
         'applies ALTER USER to root@localhost and root@127.0.0.1, then verifies connectivity ' +
         'with the new password before persisting it to the WDC settings.\n\n' +
-        "With the MCP token this needs the operator's database_admin capability (WDC → Settings → MCP) " +
+        "With the MCP token this needs the operator's database_admin capability (WDC → Settings → AI clients (MCP)) " +
         'and the user\'s approval: call wdc_request_confirmation with operation "mysql_root_reset" first.\n\n' +
         'Args:\n  currentPwd: Current root password (use empty string for passwordless).\n' +
         '  newPwd: New password to set.\n  intentToken: Approved intent from wdc_request_confirmation.',
