@@ -876,7 +876,17 @@
               @copy="copyDeviceId"
             />
 
-            <!-- Cloud sync -->
+            <!-- Cloud sync needs the catalog account; without it every call fails. -->
+            <el-alert
+              v-if="!accountToken"
+              type="info"
+              :closable="false"
+              show-icon
+              :title="$t('settings.sync.signInFirst')"
+              class="sync-sign-in"
+            >
+              <el-button size="small" type="primary" @click="activeTab = 'account'">{{ $t('settings.sync.goToAccount') }}</el-button>
+            </el-alert>
             <SyncCloudCard
               :t="$t"
               :sync-status="syncStatus"
@@ -885,7 +895,7 @@
               :syncing="syncing"
               :pulling="pulling"
               :checking-cloud="checkingCloud"
-              :disabled="!catalogUrl && !deviceId"
+              :disabled="!accountToken"
               @push="pushToCloud"
               @pull="pullFromCloud"
               @check="checkCloudExists"
@@ -1087,8 +1097,10 @@ async function ssoLogin() {
     // for the user to navigate away and back.
     await authStore.refreshProfile(url)
     ElMessage.success(authStore.displayName
-      ? `Signed in as ${authStore.displayName}`
-      : 'Signed in')
+      ? t('settingsToast.signedInAs', { email: authStore.displayName })
+      : t('settingsToast.signedIn'))
+    // Register this device once, right after signing in (not on every visit).
+    void autoRegisterDeviceAfterLogin()
   } catch (err) {
     ElMessage.error(t('settingsToast.ssoFailed', { err: errorMessage(err) }))
   }
@@ -1545,7 +1557,7 @@ const pluginPorts = ref<Array<{
 function formatDate(s: string | number | null | undefined): string {
   if (!s) return '—'
   const d = new Date(s)
-  return isNaN(d.getTime()) ? String(s) : d.toLocaleString()
+  return isNaN(d.getTime()) ? String(s) : d.toLocaleString(locale.value)
 }
 
 interface SyncSnapshot {
@@ -1579,9 +1591,9 @@ async function loadSnapshots() {
 async function restoreSnapshot(row: SyncSnapshot) {
   try {
     await ElMessageBox.confirm(
-      `Restore settings from snapshot taken ${formatDate(row.created_at)}? Local changes that haven't been pushed will be overwritten.`,
-      'Restore snapshot',
-      { type: 'warning', confirmButtonText: 'Restore', cancelButtonText: 'Cancel' },
+      t('settings.sync.snapshotRestoreConfirm', { date: formatDate(row.created_at) }),
+      t('settings.sync.snapshotRestoreTitle'),
+      { type: 'warning', confirmButtonText: t('common.restore'), cancelButtonText: t('common.cancel') },
     )
   } catch { return /* cancelled */ }
   snapshotAction.value = row.id
@@ -1611,9 +1623,9 @@ async function restoreSnapshot(row: SyncSnapshot) {
 async function deleteSnapshot(row: SyncSnapshot) {
   try {
     await ElMessageBox.confirm(
-      `Delete this snapshot? This cannot be undone.`,
-      'Delete snapshot',
-      { type: 'warning', confirmButtonText: 'Delete', cancelButtonText: 'Cancel' },
+      t('settings.sync.snapshotDeleteConfirm', { date: formatDate(row.created_at) }),
+      t('settings.sync.snapshotDeleteTitle'),
+      { type: 'warning', confirmButtonText: t('common.delete'), cancelButtonText: t('common.cancel') },
     )
   } catch { return }
   snapshotAction.value = row.id
@@ -1684,9 +1696,12 @@ async function discoverMamp() {
       return
     }
     const confirmed = await ElMessageBox.confirm(
-      `Found ${data.count} MAMP site(s): ${(data.sites ?? []).map(s => s.domain || s.Domain).join(', ')}. Import them?`,
-      'MAMP Migration',
-      { confirmButtonText: 'Import', cancelButtonText: 'Cancel', type: 'info' },
+      t('settings.general.mampConfirm', {
+        count: data.count,
+        sites: (data.sites ?? []).map(s => s.domain || s.Domain).join(', '),
+      }),
+      t('settings.general.mampImport'),
+      { confirmButtonText: t('settings.general.mampImportButton'), cancelButtonText: t('common.cancel'), type: 'info' },
     )
     if (confirmed) {
       const ir = await fetch(`${daemonBaseUrl()}/api/sites/migrate-mamp`, { method: 'POST', headers: authHeaders() })
@@ -2017,9 +2032,9 @@ const editingDeviceName = ref<string | null>(null)
 async function unlinkDevice(row: CatalogDeviceInfo) {
   try {
     await ElMessageBox.confirm(
-      `Unlink ${row.name || row.device_id.slice(0, 12)} from your account? That device will need to sign in again to sync.`,
-      'Unlink device',
-      { type: 'warning', confirmButtonText: 'Unlink', cancelButtonText: 'Cancel' },
+      t('settings.devices.unlinkConfirm', { name: row.name || row.device_id.slice(0, 12) }),
+      t('settings.devices.unlinkTitle'),
+      { type: 'warning', confirmButtonText: t('settings.devices.unlink'), cancelButtonText: t('common.cancel') },
     )
   } catch { return /* user cancelled */ }
 
@@ -2205,6 +2220,14 @@ async function loadDevicesAccount() {
 
 async function pushMyConfigTo(targetDeviceId: string) {
   if (!accountToken.value || !deviceId.value) return
+  const target = accountDevices.value.find(d => d.device_id === targetDeviceId)
+  try {
+    await ElMessageBox.confirm(
+      t('settings.devices.pushConfirm', { name: target?.name || targetDeviceId.slice(0, 12) }),
+      t('settings.devices.pushTitle'),
+      { type: 'warning', confirmButtonText: t('settings.devices.pushHere'), cancelButtonText: t('common.cancel') },
+    )
+  } catch { return }
   pushingTo.value = targetDeviceId
   try {
     await pushConfigToDevice(getCatalogUrl(), accountToken.value, targetDeviceId, deviceId.value)
@@ -2326,11 +2349,11 @@ async function pushToCloud() {
       throw new Error(text || `HTTP ${r.status}`)
     }
     lastSyncTime.value = new Date().toISOString()
-    syncStatus.value = { ok: true, message: 'Pushed successfully' }
+    syncStatus.value = { ok: true, message: t('settings.sync.status.pushed') }
     ElMessage.success(t('settingsToast.configPushedToCloud'))
   } catch (e) {
     const msg = errorMessage(e)
-    syncStatus.value = { ok: false, message: `Push failed: ${msg}` }
+    syncStatus.value = { ok: false, message: t('settingsToast.pushFailed', { err: msg }) }
     ElMessage.error(t('settingsToast.pushFailed', { err: msg }))
   } finally {
     syncing.value = false
@@ -2348,6 +2371,13 @@ const SITE_SYNC_FIELDS = new Set([
 // excluded by iterating SITE_SYNC_FIELDS only — no need for a second set.
 
 async function pullFromCloud() {
+  try {
+    await ElMessageBox.confirm(t('settings.sync.pullConfirm'), t('settings.sync.pullFromCloud'), {
+      type: 'warning',
+      confirmButtonText: t('settings.sync.pullFromCloud'),
+      cancelButtonText: t('common.cancel'),
+    })
+  } catch { return }
   pulling.value = true
   syncStatus.value = null
   try {
@@ -2362,7 +2392,7 @@ async function pullFromCloud() {
     })
     if (!r.ok) {
       if (r.status === 404) {
-        syncStatus.value = { ok: false, message: 'No cloud snapshot found for this device' }
+        syncStatus.value = { ok: false, message: t('settings.sync.status.noSnapshot') }
         ElMessage.info(t('settingsToast.noCloudSnapshot'))
         return
       }
@@ -2438,12 +2468,12 @@ async function pullFromCloud() {
       }
     }
 
-    syncStatus.value = { ok: true, message: `Pulled from cloud (${data.updated_at ?? 'unknown'})` }
+    syncStatus.value = { ok: true, message: t('settings.sync.status.pulled', { date: formatDate(data.updated_at) }) }
     ElMessage.success(t('settingsToast.configSynced'))
     await loadSettings()
   } catch (e) {
     const msg = errorMessage(e)
-    syncStatus.value = { ok: false, message: `Pull failed: ${msg}` }
+    syncStatus.value = { ok: false, message: t('settingsToast.pullFailed', { err: msg }) }
     ElMessage.error(t('settingsToast.pullFailed', { err: msg }))
   } finally {
     pulling.value = false
@@ -2469,11 +2499,11 @@ async function checkCloudExists() {
     syncStatus.value = {
       ok: data.has_config,
       message: data.has_config
-        ? `Cloud snapshot exists (updated ${data.updated_at ?? 'unknown'})`
-        : 'No cloud snapshot for this device',
+        ? t('settings.sync.status.exists', { date: formatDate(data.updated_at) })
+        : t('settings.sync.status.noSnapshot'),
     }
   } catch (e) {
-    syncStatus.value = { ok: false, message: `Check failed: ${errorMessage(e)}` }
+    syncStatus.value = { ok: false, message: t('settings.sync.status.checkFailed', { err: errorMessage(e) }) }
   } finally {
     checkingCloud.value = false
   }
@@ -2649,23 +2679,7 @@ onMounted(async () => {
   })
   void loadMysqlRootStatus()
   void loadSnapshots()
-  if (accountToken.value) {
-    void loadDevicesAccount()
-    // Mirror the renderer's accountToken into daemon SettingsStore so
-    // CatalogHeartbeatService can see it. Needed for sessions where the
-    // token was set in a previous Electron run (stored in localStorage)
-    // and the daemon was restarted since — its SettingsStore never saw
-    // the login. Silent fail — if daemon is unreachable we'll retry on
-    // next Settings page mount.
-    void (async () => {
-      try {
-        await saveSettings({ 'sync.accountToken': accountToken.value })
-        // Kick off an immediate device push so the cloud admin UI shows
-        // this device as online without waiting for the 60 s heartbeat.
-        void autoRegisterDeviceAfterLogin()
-      } catch { /* no-op */ }
-    })()
-  }
+  if (accountToken.value) void loadDevicesAccount()
   try {
     const r = await fetch(`${daemonBaseUrl()}/api/system`, { headers: authHeaders() })
     if (r.ok) systemInfo.value = await r.json()
@@ -3032,6 +3046,8 @@ async function save() {
 .about-sso-status { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--el-text-color-secondary); }
 
 .paths-backup-actions { display: flex; gap: var(--wdc-space-2); flex-wrap: wrap; }
+.sync-sign-in { margin-bottom: var(--wdc-space-3); }
+.sync-sign-in :deep(.el-alert__description) { margin-top: var(--wdc-space-2); }
 
 /* Sync tab */
 .settings-card {
