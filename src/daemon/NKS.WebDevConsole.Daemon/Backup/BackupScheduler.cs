@@ -7,15 +7,17 @@ namespace NKS.WebDevConsole.Daemon.Backup;
 /// Runs automatic backups on a timer based on the
 /// <c>backup.scheduleHours</c> setting from <see cref="SettingsStore"/>.
 ///
-/// When the setting is 0 (default), the scheduler is dormant — no timer,
-/// no CPU. When it's &gt; 0, a <see cref="Timer"/> fires every N hours
-/// and calls <see cref="BackupManager"/> to produce a timestamped zip.
+/// When the setting is 0 or negative, the scheduler is dormant. When it's
+/// &gt; 0 (default 24), a check every 10 minutes calls
+/// <see cref="BackupManager"/> to produce a timestamped
+/// <c>wdc-scheduled-*.zip</c> once N hours have passed since the newest backup.
 ///
 /// Re-reads the setting on every tick so the user can change the interval
 /// from the Settings page without restarting the daemon. The scheduler
-/// also prunes old backups, keeping the <see cref="DefaultRetainCount"/>
+/// also prunes its own old backups, keeping the <see cref="DefaultRetainCount"/>
 /// most recent by default — override via the <c>backup.retainCount</c>
-/// setting (1…100, clamped).
+/// setting (1…100, clamped). Manual backups and restore safety backups are
+/// never pruned.
 /// </summary>
 public sealed class BackupScheduler : IDisposable
 {
@@ -57,7 +59,10 @@ public sealed class BackupScheduler : IDisposable
         _logger.LogInformation("Backup scheduler started (checks every 10 min)");
     }
 
-    private void OnTick(object? state)
+    private void OnTick(object? state) => RunTick();
+
+    /// <summary>One scheduler check: create a backup when due, then prune.</summary>
+    internal void RunTick()
     {
         if (Interlocked.Exchange(ref _running, 1) != 0) return;
         try
@@ -67,8 +72,8 @@ public sealed class BackupScheduler : IDisposable
             if (!string.IsNullOrWhiteSpace(hoursRaw) && int.TryParse(hoursRaw, out var parsedHours))
                 scheduleHours = parsedHours;
 
-            if (scheduleHours == 0)
-                return; // disabled (explicit 0 means off)
+            if (scheduleHours <= 0)
+                return; // disabled: 0 means off, and a negative value must not mean "every tick"
 
             // Check if enough time has passed since the last backup
             var backups = _backupManager.ListBackups();
@@ -85,7 +90,7 @@ public sealed class BackupScheduler : IDisposable
             (string Path, int FileCount, long SizeBytes, BackupContentFlags Flags) result;
             try
             {
-                result = _backupManager.CreateBackup(flags: flags);
+                result = _backupManager.CreateBackup(_backupManager.ScheduledBackupPath(), flags);
             }
             catch (Exception ex)
             {
@@ -113,22 +118,9 @@ public sealed class BackupScheduler : IDisposable
             if (!string.IsNullOrWhiteSpace(retainRaw) && int.TryParse(retainRaw, out var r))
                 retain = Math.Clamp(r, MinRetainCount, MaxRetainCount);
 
-            var all = _backupManager.ListBackups();
-            if (all.Count > retain)
-            {
-                foreach (var old in all.Skip(retain))
-                {
-                    try
-                    {
-                        File.Delete(old.Path);
-                        _logger.LogDebug("Pruned old backup: {Path}", old.Path);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning("Failed to prune backup {Path}: {Error}", old.Path, ex.Message);
-                    }
-                }
-            }
+            // Only scheduler-created archives are pruned; manual backups and
+            // auto-pre-restore safety copies are left for the user to manage.
+            _backupManager.PruneScheduledBackups(retain);
         }
         catch (Exception ex)
         {

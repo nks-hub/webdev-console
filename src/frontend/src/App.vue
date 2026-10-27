@@ -1,16 +1,9 @@
 <template>
   <div class="app-root">
-    <div class="app-backdrop" />
-    <AppHeader />
-
     <div class="app-body">
-      <!-- Sidebar: always visible at >=960px; hidden below that breakpoint -->
+      <!-- Sidebar runs the full height on the left; at <960px it moves
+           into a drawer opened from the header's menu button. -->
       <AppSidebar class="sidebar-desktop" @navigate="drawerOpen = false" />
-
-      <!-- Hamburger button — only rendered at <960px -->
-      <button class="hamburger-btn" aria-label="Open menu" @click="drawerOpen = true">
-        <span /><span /><span />
-      </button>
 
       <!-- Mobile drawer sidebar -->
       <el-drawer
@@ -23,7 +16,9 @@
         <AppSidebar @navigate="drawerOpen = false" />
       </el-drawer>
 
-      <main class="content-area">
+      <div class="app-main">
+      <AppHeader @open-menu="drawerOpen = true" />
+      <main id="main" class="content-area" tabindex="-1">
         <!-- keep-alive caches mounted page components so clicking a nav
              item doesn't re-mount the whole tree AND re-run onMounted's
              fetch cascade every time. This is the biggest win for the
@@ -37,6 +32,7 @@
           </keep-alive>
         </router-view>
       </main>
+      </div>
     </div>
 
     <AppStatusBar />
@@ -73,13 +69,13 @@
                of polling forever. -->
           <template v-if="daemonStore.bootFailed">
             <div class="splash-error-icon" aria-hidden="true">⚠</div>
-            <div class="splash-status splash-status--error">Daemon se nepodařilo spustit</div>
+            <div class="splash-status splash-status--error">{{ t('splash.failedTitle') }}</div>
             <div class="splash-hint">{{ splashFailHint }}</div>
             <div class="splash-actions">
-              <button class="splash-btn splash-btn--primary" @click="daemonStore.retryBoot()">Zkusit znovu</button>
-              <button class="splash-btn" @click="reloadApp">Restartovat aplikaci</button>
+              <button class="splash-btn splash-btn--primary" @click="daemonStore.retryBoot()">{{ t('splash.retry') }}</button>
+              <button class="splash-btn" @click="reloadApp">{{ t('splash.restartApp') }}</button>
             </div>
-            <div class="splash-loghint">Log daemona: ~/.wdc/logs/daemon</div>
+            <div class="splash-loghint">{{ t('splash.logHint', { path: '~/.wdc/logs/daemon' }) }}</div>
           </template>
           <template v-else>
             <div class="splash-spinner" :class="{ 'splash-spinner--warn': splashWarn }" aria-hidden="true"></div>
@@ -99,6 +95,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import AppHeader from './components/layout/AppHeader.vue'
 import AppSidebar from './components/layout/AppSidebar.vue'
 import AppStatusBar from './components/layout/AppStatusBar.vue'
@@ -117,6 +114,7 @@ import { useMcpConfirmStore } from './stores/mcpConfirm'
 import { useFeatureFlagsStore } from './stores/featureFlags'
 import { useUiModeStore } from './stores/uiMode'
 import { fetchSettings, subscribeEventsMap } from './api/daemon'
+import { OPEN_COMMAND_PALETTE_EVENT } from './utils/commandPalette'
 import type { DeployEventDto } from './api/deploy'
 import type { SiteApplyResultDto } from './api/daemon'
 import { useSiteApplyStore } from './stores/siteApply'
@@ -128,7 +126,9 @@ import {
   type BackupEvent, type ServiceStateEvent,
 } from './services/osNotificationEvents'
 import { showMcpConfirmToast, closeMcpConfirmToast } from './utils/mcpConfirmToast'
+import { mcpKindLabel } from './utils/mcpKindLabel'
 
+const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const daemonStore = useDaemonStore()
@@ -198,13 +198,16 @@ function startDeploySse(): void {
       void showMcpConfirmToast(evt)
       // #147 — fire OS notification so the operator sees the request
       // even when the WDC window is in the background. Click → MCP intents.
-      notifyMcpConfirm(evt)
+      notifyMcpConfirm({ ...evt, kindLabel: mcpKindLabel(evt) })
     },
-    // Auto-dismiss the toast when the intent is resolved through the
-    // banner or another surface (used_at / revoked / matched grant).
+    // The intent was settled somewhere (banner, toast, Intents page, a
+    // trust grant, the agent consuming it, expiry): close its toast and
+    // drop its banner so nothing stale stays on screen.
     'mcp:intent-changed': (data) => {
-      const evt = data as { intentId?: string }
-      if (evt.intentId) closeMcpConfirmToast(evt.intentId)
+      const evt = data as { intentId?: string; change?: string }
+      if (!evt.intentId) return
+      closeMcpConfirmToast(evt.intentId)
+      mcpConfirmStore.handleIntentChanged(evt)
     },
     // #147 — surface deploy completion in OS notification center so a
     // long-running deploy doesn't require the operator to keep the
@@ -278,35 +281,35 @@ const splashElapsedSec = computed(() => {
 const splashElapsed = computed(() => `${splashElapsedSec.value}s`)
 
 const splashStatus = computed(() => {
-  if (!daemonStore.bootStartedAt) return 'Spouštím frontend…'
+  if (!daemonStore.bootStartedAt) return t('splash.status.mounting')
   const fails = daemonStore.consecutiveFailures
   const kind = daemonStore.lastErrorKind
   // After the daemon has bound HTTP at least once but shutters down (daemon
   // restart) we flip back to connecting state. Cover both flows here.
-  if (fails === 0 && daemonStore.pollAttempts === 1) return 'Connecting to backend…'
+  if (fails === 0 && daemonStore.pollAttempts === 1) return t('splash.status.connecting')
   if (kind === 'network') {
     // Daemon process not listening yet — port file may still be missing
     // or the socket is not bound. Normal during first few seconds of boot.
-    if (splashElapsedSec.value < 8) return 'Daemon se spouští…'
-    if (splashElapsedSec.value < 20) return 'Daemon startuje pluginy…'
-    if (splashElapsedSec.value < 45) return 'Daemon stále odpovídá pomalu…'
-    return 'Daemon dlouho nereaguje — chystám diagnostiku…'
+    if (splashElapsedSec.value < 8) return t('splash.status.daemonStarting')
+    if (splashElapsedSec.value < 20) return t('splash.status.pluginsStarting')
+    if (splashElapsedSec.value < 45) return t('splash.status.slow')
+    return t('splash.status.unresponsive')
   }
-  if (kind === 'auth') return 'Daemon běží, synchronizuji token…'
-  if (kind === 'server') return 'Daemon hlásí chybu — opakuji…'
-  if (kind === 'unknown' && fails > 0) return 'Čekám na backend…'
-  return 'Connecting to backend…'
+  if (kind === 'auth') return t('splash.status.auth')
+  if (kind === 'server') return t('splash.status.server')
+  if (kind === 'unknown' && fails > 0) return t('splash.status.waiting')
+  return t('splash.status.connecting')
 })
 
 const splashHint = computed(() => {
   const kind = daemonStore.lastErrorKind
   const n = daemonStore.pollAttempts
-  if (!daemonStore.bootStartedAt) return 'mount fáze'
-  if (kind === 'network') return `pokus ${n} · port file / socket`
-  if (kind === 'auth') return `pokus ${n} · rotace tokenu`
-  if (kind === 'server') return `pokus ${n} · 5xx odpověď`
-  if (n <= 1) return 'první pokus'
-  return `pokus ${n}`
+  if (!daemonStore.bootStartedAt) return t('splash.hint.mount')
+  if (kind === 'network') return t('splash.hint.network', { n })
+  if (kind === 'auth') return t('splash.hint.auth', { n })
+  if (kind === 'server') return t('splash.hint.server', { n })
+  if (n <= 1) return t('splash.hint.first')
+  return t('splash.hint.attempt', { n })
 })
 
 // Over ~15s of network errors we visually escalate the spinner (amber tint)
@@ -321,14 +324,19 @@ const splashFailHint = computed(() => {
   const kind = daemonStore.lastErrorKind
   const n = daemonStore.pollAttempts
   const s = splashElapsedSec.value
-  if (kind === 'network') return `Daemon neodpovídá (port file / socket) — ${n} pokusů za ${s}s.`
-  if (kind === 'auth') return `Daemon běží, ale token se nepodařilo sesynchronizovat — ${n} pokusů.`
-  if (kind === 'server') return `Daemon vrací chybu (5xx) — ${n} pokusů za ${s}s.`
-  return `Backend se neozval za ${s}s (${n} pokusů).`
+  const attempts = t('splash.attempts', { n }, n)
+  if (kind === 'network') return t('splash.fail.network', { attempts, s })
+  if (kind === 'auth') return t('splash.fail.auth', { attempts })
+  if (kind === 'server') return t('splash.fail.server', { attempts, s })
+  return t('splash.fail.unknown', { attempts, s })
 })
 
 function reloadApp() {
   window.location.reload()
+}
+
+function openCommandPalette() {
+  commandPalette.value?.open()
 }
 
 function handleKeydown(e: KeyboardEvent) {
@@ -394,6 +402,10 @@ onMounted(() => {
   // the moment the backend is up instead of staying empty until manual reload.
   unsubscribeConnect = daemonStore.onConnect(() => {
     void featureFlagsStore.load()
+    // Reload MCP requests still waiting for approval — the SSE event for
+    // one that arrived while WDC was closed or the daemon was restarting
+    // was never seen, and without this it could not be approved at all.
+    void mcpConfirmStore.loadPending()
     void pluginsStore.loadAll()
     void sitesStore.load()
     // Retry token mirror on every daemon (re)connect — covers the case
@@ -421,6 +433,7 @@ onMounted(() => {
   startNotificationNavigation()
 
   window.addEventListener('keydown', handleKeydown)
+  window.addEventListener(OPEN_COMMAND_PALETTE_EVENT, openCommandPalette)
 })
 
 onUnmounted(() => {
@@ -431,16 +444,12 @@ onUnmounted(() => {
   unsubscribeNavigate = null
   if (splashTimer) { clearInterval(splashTimer); splashTimer = null }
   window.removeEventListener('keydown', handleKeydown)
+  window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, openCommandPalette)
 })
 </script>
 
 <style>
-/*
-  Shell — base bg + radial gradient mesh. Two soft light sources
-  (accent + secondary) bake an ambient warmth into the chrome so it
-  doesn't read as a flat dark block. Mesh sits on top of the bg via
-  a fixed pseudo-element so it doesn't scroll with content.
-*/
+/* Shell: full-height sidebar | (header over content), status bar below. */
 .app-root {
   display: flex;
   flex-direction: column;
@@ -451,28 +460,18 @@ onUnmounted(() => {
   background: var(--wdc-bg);
 }
 
-.app-root::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: var(--wdc-mesh-bg);
-  z-index: 0;
-}
-
-.app-backdrop { display: none; }
-
-/* Lift app shell above the mesh */
-.app-header,
-.app-body,
-.app-status-bar { position: relative; z-index: 1; }
-
 .app-body {
   display: flex;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
-  position: relative;
-  z-index: 1;
+}
+
+.app-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
 }
 
 .content-area {
@@ -480,9 +479,9 @@ onUnmounted(() => {
   overflow-y: auto;
   overflow-x: hidden;
   background: var(--wdc-bg);
-  scroll-behavior: smooth;
   padding: 0;
 }
+.content-area:focus { outline: none; }
 
 /* ═══ Splash overlay — shown until backend first connects ════════════════ */
 .splash-overlay {
@@ -492,7 +491,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at 50% 40%, rgba(86, 194, 255, 0.08), var(--wdc-bg) 60%);
+  background: var(--wdc-bg);
   backdrop-filter: blur(4px);
 }
 
@@ -505,7 +504,7 @@ onUnmounted(() => {
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border-strong);
   border-radius: var(--wdc-radius-md);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+  box-shadow: var(--wdc-shadow-pop);
   min-width: 360px;
 }
 
@@ -610,45 +609,22 @@ onUnmounted(() => {
 }
 
 /* ═══ Mobile sidebar drawer ═══════════════════════════════════════════════ */
-.hamburger-btn {
-  display: none;
-  position: fixed;
-  top: 12px;
-  left: 12px;
-  z-index: 200;
-  flex-direction: column;
-  gap: var(--wdc-space-1);
-  padding: var(--wdc-space-2);
-  background: var(--wdc-surface-2);
-  border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius-sm);
-  cursor: pointer;
-}
-.hamburger-btn span {
-  display: block;
-  width: 20px;
-  height: 2px;
-  background: var(--wdc-text);
-  border-radius: var(--wdc-radius-2xs);
-}
-
-.sidebar-drawer :deep(.el-drawer__body) {
-  padding: 0;
+.sidebar-drawer .el-drawer__body {
+  padding: 0 !important;
   overflow: hidden;
 }
-.sidebar-drawer :deep(.el-drawer) {
-  background: var(--wdc-surface);
+.sidebar-drawer.el-drawer {
+  background: var(--wdc-chrome) !important;
+}
+.sidebar-drawer .sidebar {
+  width: 100%;
+  min-width: 0;
+  border-right: 0;
 }
 
 @media (max-width: 959px) {
   .app-body > .sidebar-desktop {
     display: none !important;
-  }
-  .hamburger-btn {
-    display: flex;
-  }
-  .content-area {
-    padding-left: 0;
   }
 }
 </style>

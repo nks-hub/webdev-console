@@ -35,7 +35,7 @@
       :closable="true"
       @close="pageLoadError = ''"
       show-icon
-      style="margin: 0 var(--wdc-space-5) var(--wdc-space-4)"
+      style="margin: 0 0 var(--wdc-space-4)"
     />
 
     <!-- Status strip -->
@@ -859,16 +859,15 @@ async function autoVerifyToken() {
 .cf-page {
   min-height: 100%;
   background: var(--wdc-bg);
-  padding: 0;
 }
 
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--wdc-space-4-5) var(--wdc-space-5);
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  padding: 0 0 var(--wdc-space-4);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
 }
 .header-left { display: flex; flex-direction: column; gap: 2px; }
 .page-title {

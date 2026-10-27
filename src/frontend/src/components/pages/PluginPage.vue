@@ -206,7 +206,6 @@ onMounted(async () => {
 
 <style scoped>
 .plugin-page {
-  padding: 0;
   display: flex;
   flex-direction: column;
   gap: var(--wdc-space-4-5);
@@ -218,12 +217,10 @@ onMounted(async () => {
   justify-content: space-between;
   gap: var(--wdc-space-4);
   flex-wrap: wrap;
-  padding: var(--wdc-space-4-5) var(--wdc-space-5);
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  padding: 0 0 var(--wdc-space-4);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
 }
-.plugin-page > *:not(.plugin-page-header) { padding: 0 24px; }
-.plugin-page > *:last-child { padding-bottom: 24px; }
 
 .plugin-page-identity {
   display: flex;
@@ -256,12 +253,11 @@ onMounted(async () => {
   padding: var(--wdc-space-4-5) var(--wdc-space-5);
 }
 .plugin-desc-title {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-text-3);
   margin-bottom: var(--wdc-space-2-5);
+  font-family: var(--wdc-font-display);
 }
 .plugin-desc-body {
   margin: 0 0 var(--wdc-space-3-5) 0;
@@ -283,11 +279,10 @@ onMounted(async () => {
   font-size: 0.8rem;
 }
 .meta-label {
-  text-transform: uppercase;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-text-3);
+  font-family: var(--wdc-font-display);
 }
 .meta-val {
   color: var(--wdc-text-2);

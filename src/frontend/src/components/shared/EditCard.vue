@@ -57,11 +57,10 @@ defineProps<{
   gap: var(--wdc-space-3);
 }
 .edit-card-title {
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 0.82rem;
+  font-weight: 600;
   color: var(--wdc-text);
+  font-family: var(--wdc-font-display);
 }
 .edit-card-hint {
   font-size: 0.75rem;

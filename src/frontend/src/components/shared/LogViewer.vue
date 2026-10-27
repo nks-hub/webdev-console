@@ -49,6 +49,11 @@ let terminal: Terminal | null = null
 let fitAddon: FitAddon | null = null
 let searchAddon: SearchAddon | null = null
 let closeEventSource: (() => void) | null = null
+let resizeObserver: ResizeObserver | null = null
+// onMounted awaits the history fetch; if the viewer is closed meanwhile,
+// it must not subscribe afterwards (the subscription would leak and keep
+// writing to a disposed terminal).
+let unmounted = false
 
 function clearTerminal() {
   terminal?.clear()
@@ -113,6 +118,9 @@ onMounted(async () => {
   terminal.open(terminalRef.value)
   fitAddon.fit()
 
+  resizeObserver = new ResizeObserver(() => fitAddon?.fit())
+  resizeObserver.observe(terminalRef.value)
+
   // Fetch historical logs from daemon
   if (props.serviceId) {
     try {
@@ -129,6 +137,7 @@ onMounted(async () => {
     } catch {
       // daemon may not be running
     }
+    if (unmounted) return
   }
 
   // Subscribe to SSE log events and append matching lines
@@ -143,14 +152,18 @@ onMounted(async () => {
       },
     })
   }
-
-  const resizeObserver = new ResizeObserver(() => fitAddon?.fit())
-  resizeObserver.observe(terminalRef.value)
 })
 
 onUnmounted(() => {
+  unmounted = true
+  resizeObserver?.disconnect()
+  resizeObserver = null
   closeEventSource?.()
+  closeEventSource = null
   terminal?.dispose()
+  terminal = null
+  fitAddon = null
+  searchAddon = null
 })
 </script>
 

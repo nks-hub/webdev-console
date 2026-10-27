@@ -21,14 +21,17 @@
       <div class="sd-row sd-status-row">
         <div class="sd-label-group">
           <span class="sd-label">{{ $t('sites.detail.simple.serverLabel') }}</span>
-          <HealthStatusDot :level="apacheRunning ? 'ok' : 'err'" />
+          <el-icon :size="14" class="sd-status-icon" :class="apacheRunning ? 'text-running' : 'text-stopped'" aria-hidden="true">
+            <Check v-if="apacheRunning" />
+            <Remove v-else />
+          </el-icon>
           <span class="sd-status-text" :class="apacheRunning ? 'text-running' : 'text-stopped'">
             {{ apacheRunning ? $t('sites.detail.simple.status.running') : $t('sites.detail.simple.status.stopped') }}
           </span>
         </div>
         <el-button
-          size="large"
-          :type="apacheRunning ? 'warning' : 'success'"
+          size="small"
+          :type="apacheRunning ? 'default' : 'primary'"
           :loading="startStopLoading"
           @click="toggleApache"
         >
@@ -78,6 +81,7 @@
         <div class="sd-control-wrap">
           <el-select
             v-model="phpVersion"
+            :aria-label="$t('sites.detail.simple.phpVersion')"
             size="large"
             class="sd-control-medium"
             @change="onPhpChange"
@@ -113,7 +117,7 @@
           <span class="sd-hint">{{ $t('sites.detail.simple.sslHint') }}</span>
         </div>
         <div class="sd-control-wrap">
-          <el-switch v-model="sslEnabled" @change="onSslChange" />
+          <el-switch v-model="sslEnabled" :aria-label="$t('sites.detail.simple.ssl')" @change="onSslChange" />
           <Transition name="flash">
             <span v-if="savedSsl" class="sd-saved">{{ $t('sites.detail.simple.saved') }}</span>
           </Transition>
@@ -132,6 +136,7 @@
         <div class="sd-control-wrap sd-bind-control">
           <el-select
             v-model="bindAddresses"
+            :aria-label="$t('sites.bindIp')"
             class="bind-address-select"
             size="large"
             multiple
@@ -172,7 +177,7 @@
           <span class="sd-hint">{{ $t('sites.detail.simple.tunnelHint') }}</span>
         </div>
         <div class="sd-control-wrap">
-          <el-switch v-model="tunnelEnabled" @change="onTunnelChange" />
+          <el-switch v-model="tunnelEnabled" :aria-label="$t('sites.detail.simple.tunnel')" @change="onTunnelChange" />
           <Transition name="flash">
             <span v-if="savedTunnel" class="sd-saved">{{ $t('sites.detail.simple.saved') }}</span>
           </Transition>
@@ -212,7 +217,7 @@ import SiteApplyPipeline from '../sites/SiteApplyPipeline.vue'
 import HealthStatusDot from '../shared/HealthStatusDot.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { FolderOpened, Cpu, Lock, Connection, Link } from '@element-plus/icons-vue'
+import { FolderOpened, Cpu, Lock, Connection, Link, Check, Remove } from '@element-plus/icons-vue'
 
 const WarningIcon = { render: () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', width: '1em', height: '1em', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [h('path', { d: 'M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z' }), h('line', { x1: '12', y1: '9', x2: '12', y2: '13' }), h('line', { x1: '12', y1: '17', x2: '12.01', y2: '17' })]  ) }
 import { useSitesStore } from '../../stores/sites'
@@ -510,11 +515,10 @@ onMounted(async () => {
 }
 
 .sd-status-row {
-  padding: var(--wdc-space-3-5);
-  border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius);
-  background: var(--wdc-surface-2);
+  padding: var(--wdc-space-2) 0 var(--wdc-space-3);
 }
+.sd-status-row > .el-button { justify-self: end; }
+.sd-status-icon { flex-shrink: 0; }
 
 .sd-label-group {
   display: flex;
@@ -568,9 +572,10 @@ onMounted(async () => {
 }
 
 .text-running {
-  color: var(--el-color-success);
+  color: var(--wdc-text);
   font-weight: 500;
 }
+.sd-status-icon.text-running { color: var(--wdc-status-running); }
 
 .text-stopped {
   color: var(--el-text-color-regular);
@@ -654,7 +659,9 @@ onMounted(async () => {
   border-radius: var(--wdc-radius);
   background: var(--wdc-surface-2);
 }
-.sd-section-title { margin: 0 0 12px; font-size: 14px; font-weight: 600; color: var(--wdc-text-2); text-transform: uppercase; letter-spacing: 0.04em; }
+.sd-section-title { margin: 0 0 12px; font-size: 0.93rem; font-weight: 600; color: var(--wdc-text);
+  font-family: var(--wdc-font-display);
+}
 /* Service-row + dot-transition styles moved to SimpleSiteServicesCard.vue.
    .sd-status-dot + .dot-running/.dot-stopped stay here because the page
    header status row above still uses them for the Apache pill. */

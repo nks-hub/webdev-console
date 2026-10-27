@@ -66,6 +66,9 @@ builder.Services.AddCors(options =>
             .AllowAnyHeader());
 });
 
+// DNS-rebinding defence: answer only Host localhost / 127.0.0.1 / [::1].
+builder.Services.AddDaemonHostFiltering();
+
 // OpenAPI metadata so /openapi/v1.json can be consumed by NSwag/swagger-typescript-api
 // to generate TS types in CI (prevents contract drift between daemon and frontend).
 builder.Services.AddEndpointsApiExplorer();
@@ -151,7 +154,7 @@ builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDestructiveOper
 // kinds registry + a live mcp.strict_kinds setting lookup. The lookup
 // is a delegate (not a captured bool) so flipping the toggle in the
 // settings UI takes effect immediately, without daemon restart.
-builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator>(sp =>
+builder.Services.AddSingleton<NKS.WebDevConsole.Daemon.Mcp.DeployIntentValidator>(sp =>
     new NKS.WebDevConsole.Daemon.Mcp.DeployIntentValidator(
         sp.GetRequiredService<NKS.WebDevConsole.Daemon.Data.Database>(),
         sp.GetRequiredService<NKS.WebDevConsole.Daemon.Mcp.IntentSigner>(),
@@ -172,6 +175,10 @@ builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDeployIntentVal
             }
             return (IReadOnlySet<string>)set;
         }));
+// The concrete type is also resolved directly by the confirm-request route,
+// which uses TryAutoApproveAsync to skip the banner when a grant applies.
+builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator>(sp =>
+    sp.GetRequiredService<NKS.WebDevConsole.Daemon.Mcp.DeployIntentValidator>());
 // Garbage-collects deploy_intents rows: 7-day retention for consumed
 // intents (audit tail), 1-day for unused expired ones. See class docs.
 builder.Services.AddHostedService<NKS.WebDevConsole.Daemon.Mcp.IntentSweeperService>();
@@ -779,46 +786,33 @@ var mcpPortFile = Path.Combine(Path.GetTempPath(), "nks-wdc-mcp.port");
 var mcpToken = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
 
 // Write port file AFTER server starts listening (avoids race condition).
-// Uses atomic temp+rename so readers on Windows never see a half-written file
-// or hit EPERM/EBUSY against the daemon's open write handle — this matters for
-// the packaged-runtime smoke step on GitHub Actions Windows runners, which
-// used to flake on `EPERM: open nks-wdc-daemon.port` right after daemon boot.
+// OwnerOnlyFile writes a randomly named temp file (CreateNew; 0600 on Unix,
+// a current-user-only DACL on Windows) and renames it over the target, so
+// readers never see a half-written file and nobody else can read the token:
+// a fixed `.tmp` name in the shared temp dir could be pre-created by another
+// user, and FileMode.Create would then write the token into their file.
+// The rename retries briefly on Windows, where a reader holding the old file
+// used to make it fail (`EPERM: open nks-wdc-daemon.port` on CI runners).
 app.Lifetime.ApplicationStarted.Register(() =>
 {
     var address = app.Urls.FirstOrDefault() ?? "http://localhost:5000";
     var port = new Uri(address.Replace("+", "localhost")).Port;
-    static void WritePortFile(string path, string content)
+    try
     {
-        var tmpFile = path + ".tmp";
-        if (OperatingSystem.IsWindows())
-        {
-            // %TEMP% on Windows resolves to a per-user directory whose ACL
-            // already restricts read access to the owning user, so the default
-            // File.WriteAllText behaviour is fine here.
-            File.WriteAllText(tmpFile, content);
-        }
-        else
-        {
-            // On Linux/macOS the default umask (022) leaves the port file at
-            // 0644 inside world-readable /tmp. Any local user could then `cat`
-            // the bearer token and impersonate the daemon owner against every
-            // /api/* endpoint (sites, hosts, certs, mysql admin). Force 0600
-            // explicitly so only the WDC user ever sees the token.
-            var opts = new FileStreamOptions
-            {
-                Mode = FileMode.Create,
-                Access = FileAccess.Write,
-                Share = FileShare.None,
-                UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite,
-            };
-            using var stream = new FileStream(tmpFile, opts);
-            using var writer = new StreamWriter(stream);
-            writer.Write(content);
-        }
-        File.Move(tmpFile, path, overwrite: true);
+        OwnerOnlyFile.WriteAllTextAtomic(portFile, $"{port}\n{authToken}");
+        OwnerOnlyFile.WriteAllTextAtomic(mcpPortFile, $"{port}\n{mcpToken}");
     }
-    WritePortFile(portFile, $"{port}\n{authToken}");
-    WritePortFile(mcpPortFile, $"{port}\n{mcpToken}");
+    catch (Exception ex)
+    {
+        // No client can find this daemon, and a stale or foreign port file may
+        // be left in place. Do not keep running unreachable: stop and let the
+        // GUI start a fresh daemon.
+        app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Startup")
+            .LogCritical(ex, "Could not write the port file {PortFile} or {McpPortFile}; stopping the daemon", portFile, mcpPortFile);
+        Console.Error.WriteLine($"[daemon] FATAL: could not write port file: {ex.Message}");
+        app.Lifetime.StopApplication();
+        return;
+    }
     Console.WriteLine($"[daemon] listening on port {port}, port file: {portFile}");
 
     // Banner: one structured line with every piece of state someone
@@ -1111,6 +1105,11 @@ static bool IsLegacyHostHandlers(HttpContext ctx) =>
 // MCP surface (intents / kinds / grants / tool-call audit) lives in
 // Mcp/McpEndpoints.cs — registered here so route order is unchanged.
 app.MapMcpEndpoints();
+// Announce consumed intents over SSE so stale approval banners close.
+if (app.Services.GetRequiredService<NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator>()
+        is NKS.WebDevConsole.Daemon.Mcp.DeployIntentValidator intentValidator)
+    intentValidator.AttachEvents(
+        app.Services.GetRequiredService<NKS.WebDevConsole.Core.Interfaces.IDeployEventBroadcaster>());
 
 // Body record for the POST endpoint. Lives at file scope so the
 // minimal-API binder can deserialise it.
@@ -1202,91 +1201,20 @@ app.Use(async (ctx, next) =>
 // validator without us threading a parameter through the plugin
 // boundary. Slots are cleared automatically when the request scope
 // ends (AsyncLocal copy-on-write semantics).
+// The headers are caller-supplied and are not authentication — the bearer
+// token is. Scoped grants built on them are a convenience boundary only.
 app.Use(async (ctx, next) =>
 {
     if (ctx.Request.Path.StartsWithSegments("/api"))
     {
-        McpCallerContext.SessionId  = ctx.Request.Headers["X-Mcp-Session-Id"].FirstOrDefault();
-        McpCallerContext.ApiKeyId   = ctx.Request.Headers["X-Mcp-Api-Key-Id"].FirstOrDefault();
-        McpCallerContext.InstanceId = ctx.Request.Headers["X-Mcp-Instance-Id"].FirstOrDefault();
+        McpCallerContext.ApplyIdentityHeaders(ctx.Request.Headers);
     }
     await next();
 });
 
-// Auth middleware for /api/* requests.
-// SECURITY: use constant-time comparison to prevent timing attacks that could leak the token.
-var authTokenBytes = System.Text.Encoding.UTF8.GetBytes(authToken);
-var mcpTokenBytes = System.Text.Encoding.UTF8.GetBytes(mcpToken);
-app.Use(async (ctx, next) =>
-{
-    if (ctx.Request.Path.StartsWithSegments("/api"))
-    {
-        // Parse Authorization: Bearer <token> — use prefix check instead of Replace() which
-        // is fragile (multiple occurrences, whitespace) and doesn't handle case variants.
-        var authHeader = ctx.Request.Headers.Authorization.FirstOrDefault();
-        string? provided = null;
-        if (!string.IsNullOrEmpty(authHeader) &&
-            authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-        {
-            provided = authHeader.Substring(7).Trim();
-        }
-        // SSE/WebSocket fallback: browser EventSource/WebSocket APIs cannot set
-        // Authorization headers, so token-via-query is allowed *only* on
-        // those streaming endpoints. Plain /api/* requests must use the header
-        // — a query-string fallback there leaked the bearer into Kestrel
-        // access logs and any log-shipping pipeline (Sentry breadcrumb,
-        // file sink) for the token's full TTL.
-        if (provided is null)
-        {
-            var path = ctx.Request.Path.Value ?? string.Empty;
-            var streamingPath = path.StartsWith("/api/events", StringComparison.OrdinalIgnoreCase)
-                || path.StartsWith("/api/ws", StringComparison.OrdinalIgnoreCase)
-                || path.StartsWith("/api/backup/download", StringComparison.OrdinalIgnoreCase)
-                || path.StartsWith("/api/plugins/", StringComparison.OrdinalIgnoreCase)
-                && path.EndsWith("/icon", StringComparison.OrdinalIgnoreCase);
-            if (streamingPath)
-            {
-                provided = ctx.Request.Query["token"].FirstOrDefault();
-            }
-        }
-
-        bool ok = false;
-        bool isMcp = false;
-        if (!string.IsNullOrEmpty(provided))
-        {
-            var providedBytes = System.Text.Encoding.UTF8.GetBytes(provided);
-            // FixedTimeEquals requires same length — reject different length fast
-            ok = providedBytes.Length == authTokenBytes.Length
-                 && System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(providedBytes, authTokenBytes);
-            if (!ok)
-            {
-                isMcp = providedBytes.Length == mcpTokenBytes.Length
-                        && System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(providedBytes, mcpTokenBytes);
-                ok = isMcp;
-            }
-        }
-
-        if (!ok)
-        {
-            ctx.Response.StatusCode = 401;
-            await ctx.Response.WriteAsync("Unauthorized");
-            return;
-        }
-
-        McpCallerContext.IsMcpToken = isMcp;
-        if (isMcp)
-        {
-            var denied = await McpTokenPolicy.DenyReasonAsync(ctx);
-            if (denied is not null)
-            {
-                ctx.Response.StatusCode = 403;
-                await ctx.Response.WriteAsJsonAsync(new { error = "mcp_forbidden", detail = denied });
-                return;
-            }
-        }
-    }
-    await next();
-});
+// Auth middleware for /api/* requests: bearer token check (GUI or MCP
+// token) plus the MCP token's route allow-list. Lives in Config/DaemonAuth.cs.
+app.UseDaemonAuth(authToken, mcpToken);
 
 // Daemon status and system information routes. Lives in Services/SystemEndpoints.cs.
 app.MapSystemEndpoints(pluginLoader, daemonVersion, DaemonUptimeSeconds);

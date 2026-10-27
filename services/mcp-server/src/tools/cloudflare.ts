@@ -159,6 +159,9 @@ export function registerCloudflareTools(server: McpServer, opts: RegisterOptions
       description:
         'Update Cloudflare plugin settings. Pass any subset of fields — omitted fields keep ' +
         'current value. Empty strings are rejected to prevent accidental credential wipes. ' +
+        'cloudflaredPath, tunnelToken, apiToken and accountId need the operator to enable ' +
+        '"Cloudflare credentials" in WDC → Settings → MCP, plus an approved intent ' +
+        '(wdc_request_confirmation, operation cloudflare_credentials, target "config"). ' +
         'Returns the new redacted config.',
       inputSchema: {
         cloudflaredPath: NonEmptyString.optional(),
@@ -171,6 +174,7 @@ export function registerCloudflareTools(server: McpServer, opts: RegisterOptions
         subdomainTemplate: NonEmptyString.optional().describe(
           'Template like "{stem}-{hash}". Placeholders: {stem}, {hash}, {user}',
         ),
+        intentToken: IntentTokenSchema,
       },
       annotations: {
         // This is an upsert on plugin config, not a destructive delete.
@@ -183,7 +187,8 @@ export function registerCloudflareTools(server: McpServer, opts: RegisterOptions
         openWorldHint: false,
       },
     },
-    async (args) => safe(() => daemonClient.put('/api/cloudflare/config', args)),
+    async ({ intentToken, ...fields }) =>
+      safe(() => daemonClient.put('/api/cloudflare/config', fields, intentHeaders(intentToken))),
   )
 
   server.registerTool(
@@ -249,7 +254,7 @@ export function registerCloudflareTools(server: McpServer, opts: RegisterOptions
       annotations: {
         readOnlyHint: false,
         destructiveHint: true,
-        idempotentHint: true,
+        idempotentHint: false,
         openWorldHint: true,
       },
     },

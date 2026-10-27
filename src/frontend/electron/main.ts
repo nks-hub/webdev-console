@@ -748,7 +748,9 @@ async function createWindow() {
     webPreferences: {
       preload: join(__dirname, 'preload.js'),
       contextIsolation: true,
-      sandbox: false
+      // The preload only uses contextBridge/ipcRenderer; the daemon port
+      // file is read here in main ('daemon-connection-info').
+      sandbox: true
     }
   })
 
@@ -2016,6 +2018,24 @@ ipcMain.handle('elevate-daemon', async () => {
     const msg = err instanceof Error ? err.message : String(err)
     log.error('[elevate-daemon] failed', msg)
     return { ok: false, error: msg }
+  }
+})
+
+// Daemon port + token for the sandboxed preload (synchronous: the renderer's
+// daemonApi.getPort()/getToken() are sync). Only the main window may ask, and
+// only a trusted port file (see readPortFile) is returned.
+ipcMain.on('daemon-connection-info', (event) => {
+  try {
+    if (!win || event.sender !== win.webContents) {
+      event.returnValue = null
+      return
+    }
+    const info = readPortFile()
+    event.returnValue = info && Number.isInteger(info.port) && info.port > 0 && info.port <= 65535
+      ? { port: info.port, token: info.token.trim() }
+      : null
+  } catch {
+    event.returnValue = null
   }
 })
 

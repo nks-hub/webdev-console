@@ -185,6 +185,7 @@ foreach (var (verb, label, color) in new[] { ("start", "Started", "green"), ("st
         }
         catch (HttpRequestException ex)
         {
+            Environment.ExitCode = 1;
             AnsiConsole.MarkupLine($"[red]Failed:[/] {Markup.Escape(ex.Message)}");
         }
     });
@@ -224,11 +225,10 @@ logsCommand.SetAction(async (parseResult, ct) =>
             var buf = new byte[8192];
             while (ws.State == System.Net.WebSockets.WebSocketState.Open && !cts.IsCancellationRequested)
             {
-                System.Net.WebSockets.WebSocketReceiveResult result2;
-                try { result2 = await ws.ReceiveAsync(new ArraySegment<byte>(buf), cts.Token); }
+                string? msg;
+                try { msg = await WebSocketMessageReader.ReceiveTextAsync(ws, buf, cts.Token); }
                 catch (OperationCanceledException) { break; }
-                if (result2.MessageType == System.Net.WebSockets.WebSocketMessageType.Close) break;
-                var msg = System.Text.Encoding.UTF8.GetString(buf, 0, result2.Count);
+                if (msg is null) break;
                 try
                 {
                     using var parsed = System.Text.Json.JsonDocument.Parse(msg);
@@ -395,6 +395,7 @@ deleteSiteCmd.SetAction(async (parseResult, ct) =>
     }
     catch (HttpRequestException ex)
     {
+        Environment.ExitCode = 1;
         AnsiConsole.MarkupLine($"[red]Failed to delete {Markup.Escape(domain)}:[/] {Markup.Escape(ex.Message)}");
     }
 });
@@ -420,7 +421,7 @@ var siteTemplates = new Dictionary<string, (string php, bool ssl, string? framew
     ["static"]    = ("none", false, null),
     ["node"]      = ("none", false, null),
 };
-var templateOpt = new Option<string?>("--template", $"Site blueprint: {string.Join(", ", siteTemplates.Keys)}");
+var templateOpt = new Option<string?>("--template") { Description = $"Site blueprint: {string.Join(", ", siteTemplates.Keys)}" };
 var createNodePortOpt = new Option<int?>("--node-port") { Description = "Node.js upstream port (enables reverse-proxy mode)" };
 var createSiteCmd = new Command("create", "Create a new site") { domainOpt, docrootOpt, phpOpt, sslOpt, aliasesOpt, templateOpt, createNodePortOpt };
 createSiteCmd.SetAction(async (parseResult, ct) =>
@@ -473,6 +474,7 @@ createSiteCmd.SetAction(async (parseResult, ct) =>
     }
     catch (HttpRequestException ex)
     {
+        Environment.ExitCode = 1;
         AnsiConsole.MarkupLine($"[red]Failed to create site:[/] {Markup.Escape(ex.Message)}");
     }
 });
@@ -498,6 +500,7 @@ detectCmd.SetAction(async (parseResult, ct) =>
     }
     catch (HttpRequestException ex)
     {
+        Environment.ExitCode = 1;
         AnsiConsole.MarkupLine($"[red]Detection failed:[/] {Markup.Escape(ex.Message)}");
     }
 });
@@ -520,11 +523,13 @@ reapplyCmd.SetAction(async (parseResult, ct) =>
                 var domain = r.GetProperty("domain").GetString() ?? "?";
                 var ok = r.TryGetProperty("ok", out var o) && o.GetBoolean();
                 AnsiConsole.MarkupLine(ok ? $"[green]✓[/] {Markup.Escape(domain)}" : $"[red]✗[/] {Markup.Escape(domain)}");
+                if (!ok) Environment.ExitCode = 1;
             }
         }
     }
     catch (HttpRequestException ex)
     {
+        Environment.ExitCode = 1;
         AnsiConsole.MarkupLine($"[red]Reapply failed:[/] {Markup.Escape(ex.Message)}");
     }
 });
@@ -572,6 +577,7 @@ updateSiteCmd.SetAction(async (parseResult, ct) =>
     }
     catch (HttpRequestException ex)
     {
+        Environment.ExitCode = 1;
         AnsiConsole.MarkupLine($"[red]Failed to update {Markup.Escape(domain)}:[/] {Markup.Escape(ex.Message)}");
     }
 });
@@ -630,6 +636,7 @@ rollbackCmd.SetAction(async (parseResult, ct) =>
     }
     catch (HttpRequestException ex)
     {
+        Environment.ExitCode = 1;
         AnsiConsole.MarkupLine($"[red]Rollback failed:[/] {Markup.Escape(ex.Message)}");
     }
 });
@@ -788,6 +795,7 @@ createDbCmd.SetAction(async (parseResult, ct) =>
     }
     catch (HttpRequestException ex)
     {
+        Environment.ExitCode = 1;
         AnsiConsole.MarkupLine($"[red]Failed to create database:[/] {Markup.Escape(ex.Message)}");
     }
 });
@@ -809,6 +817,7 @@ dropDbCmd.SetAction(async (parseResult, ct) =>
     }
     catch (HttpRequestException ex)
     {
+        Environment.ExitCode = 1;
         AnsiConsole.MarkupLine($"[red]Failed to drop database:[/] {Markup.Escape(ex.Message)}");
     }
 });
@@ -822,7 +831,7 @@ importDbCmd.SetAction(async (parseResult, ct) =>
 {
     var name = parseResult.GetValue(importDbNameArg)!;
     var file = parseResult.GetValue(importFileArg)!;
-    if (!File.Exists(file)) { AnsiConsole.MarkupLine($"[red]File not found:[/] {Markup.Escape(file)}"); return; }
+    if (!File.Exists(file)) { AnsiConsole.MarkupLine($"[red]File not found:[/] {Markup.Escape(file)}"); Environment.ExitCode = 1; return; }
 
     using var client = new DaemonClient();
     if (!EnsureConnected(client)) return;
@@ -838,7 +847,7 @@ importDbCmd.SetAction(async (parseResult, ct) =>
             if (dir != null) mysqlCli = Path.Combine(dir, "mysql.exe");
         }
     }
-    if (mysqlCli == null || !File.Exists(mysqlCli)) { AnsiConsole.MarkupLine("[red]MySQL client not found[/]"); return; }
+    if (mysqlCli == null || !File.Exists(mysqlCli)) { AnsiConsole.MarkupLine("[red]MySQL client not found[/]"); Environment.ExitCode = 1; return; }
 
     AnsiConsole.MarkupLine($"Importing [blue]{Markup.Escape(file)}[/] into [blue]{Markup.Escape(name)}[/]...");
     var psi = new System.Diagnostics.ProcessStartInfo
@@ -859,7 +868,11 @@ importDbCmd.SetAction(async (parseResult, ct) =>
         await proc.WaitForExitAsync();
         var stderr = await errTask;
         if (proc.ExitCode == 0) AnsiConsole.MarkupLine("[green]Import complete[/]");
-        else AnsiConsole.MarkupLine($"[red]Import failed:[/] {Markup.Escape(stderr.Trim().Length > 0 ? stderr.Trim() : $"exit code {proc.ExitCode}")}");
+        else
+        {
+            AnsiConsole.MarkupLine($"[red]Import failed:[/] {Markup.Escape(stderr.Trim().Length > 0 ? stderr.Trim() : $"exit code {proc.ExitCode}")}");
+            Environment.ExitCode = 1;
+        }
     }
 });
 dbCommand.Add(importDbCmd);
@@ -885,7 +898,7 @@ exportDbCmd.SetAction(async (parseResult, ct) =>
             if (dir != null) mysqldump = Path.Combine(dir, "mysqldump.exe");
         }
     }
-    if (mysqldump == null || !File.Exists(mysqldump)) { AnsiConsole.MarkupLine("[red]mysqldump not found[/]"); return; }
+    if (mysqldump == null || !File.Exists(mysqldump)) { AnsiConsole.MarkupLine("[red]mysqldump not found[/]"); Environment.ExitCode = 1; return; }
 
     AnsiConsole.MarkupLine($"Exporting [blue]{Markup.Escape(name)}[/] to [blue]{Markup.Escape(file)}[/]...");
     var psi = new System.Diagnostics.ProcessStartInfo
@@ -910,7 +923,11 @@ exportDbCmd.SetAction(async (parseResult, ct) =>
             await File.WriteAllTextAsync(file, sql);
             AnsiConsole.MarkupLine($"[green]Exported[/] ({new FileInfo(file).Length} bytes)");
         }
-        else AnsiConsole.MarkupLine($"[red]Export failed:[/] {Markup.Escape(stderr.Trim().Length > 0 ? stderr.Trim() : $"exit code {proc.ExitCode}")}");
+        else
+        {
+            AnsiConsole.MarkupLine($"[red]Export failed:[/] {Markup.Escape(stderr.Trim().Length > 0 ? stderr.Trim() : $"exit code {proc.ExitCode}")}");
+            Environment.ExitCode = 1;
+        }
     }
 });
 dbCommand.Add(exportDbCmd);
@@ -935,7 +952,7 @@ tablesCmd.SetAction(async (parseResult, ct) =>
             if (dir != null) mysqlCli = Path.Combine(dir, "mysql.exe");
         }
     }
-    if (mysqlCli == null) { AnsiConsole.MarkupLine("[red]MySQL client not found[/]"); return; }
+    if (mysqlCli == null) { AnsiConsole.MarkupLine("[red]MySQL client not found[/]"); Environment.ExitCode = 1; return; }
 
     var psi = new System.Diagnostics.ProcessStartInfo
     {
@@ -996,7 +1013,7 @@ queryCmd.SetAction(async (parseResult, ct) =>
             if (dir != null) mysqlCli = Path.Combine(dir, "mysql.exe");
         }
     }
-    if (mysqlCli == null) { AnsiConsole.MarkupLine("[red]MySQL client not found[/]"); return; }
+    if (mysqlCli == null) { AnsiConsole.MarkupLine("[red]MySQL client not found[/]"); Environment.ExitCode = 1; return; }
 
     var args = json ? $"-h 127.0.0.1 -P 3306 -u root -N -e \"{sql}\" {name}" : $"-h 127.0.0.1 -P 3306 -u root -t -e \"{sql}\" {name}";
     var psi = new System.Diagnostics.ProcessStartInfo
@@ -1010,7 +1027,7 @@ queryCmd.SetAction(async (parseResult, ct) =>
     var output = await proc.StandardOutput.ReadToEndAsync();
     var err = await proc.StandardError.ReadToEndAsync();
     await proc.WaitForExitAsync();
-    if (proc.ExitCode != 0) { AnsiConsole.MarkupLine($"[red]{Markup.Escape(err.Trim())}[/]"); return; }
+    if (proc.ExitCode != 0) { AnsiConsole.MarkupLine($"[red]{Markup.Escape(err.Trim())}[/]"); Environment.ExitCode = 1; return; }
     AnsiConsole.WriteLine(output);
 });
 dbCommand.Add(queryCmd);
@@ -1033,7 +1050,7 @@ sizeCmd.SetAction(async (parseResult, ct) =>
             if (dir != null) mysqlCli = Path.Combine(dir, "mysql.exe");
         }
     }
-    if (mysqlCli == null) { AnsiConsole.MarkupLine("[red]MySQL client not found[/]"); return; }
+    if (mysqlCli == null) { AnsiConsole.MarkupLine("[red]MySQL client not found[/]"); Environment.ExitCode = 1; return; }
 
     var sql = "SELECT table_schema AS db, ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS size_mb FROM information_schema.tables WHERE table_schema NOT IN ('information_schema','performance_schema','mysql','sys') GROUP BY table_schema ORDER BY size_mb DESC";
     var psi = new System.Diagnostics.ProcessStartInfo
@@ -1118,6 +1135,7 @@ catalogCmd.SetAction(async (parseResult, ct) =>
         if (full.ValueKind != System.Text.Json.JsonValueKind.Array)
         {
             AnsiConsole.MarkupLine("[red]Unexpected catalog shape from daemon[/]");
+            Environment.ExitCode = 1;
             return;
         }
         var grouped = new Dictionary<string, (HashSet<string> versions, int downloads)>();
@@ -1220,11 +1238,8 @@ catalogUrlCmd.SetAction(async (parseResult, ct) =>
             AnsiConsole.MarkupLine($"[red]Invalid URL:[/] {Markup.Escape(newUrl)}");
             AnsiConsole.MarkupLine("[dim]Expected absolute http:// or https:// URL. Use `reset` to clear the override.[/]");
             // Environment.Exit terminates the process immediately with the
-            // given code. We intentionally bypass System.CommandLine's
-            // InvokeAsync return value here — its async Task handler
-            // overload always returns 0 on success, so setting
-            // Environment.ExitCode alone would be silently overwritten
-            // by the `return await ... InvokeAsync()` line at bottom-of-file.
+            // given code. Setting Environment.ExitCode and returning would
+            // also work now that the entry point honours it.
             Environment.Exit(1);
             return;
         }
@@ -1256,9 +1271,7 @@ catalogUrlCmd.SetAction(async (parseResult, ct) =>
     {
         AnsiConsole.MarkupLine("[yellow]Warning:[/] refresh returned 0 releases — the new URL may be unreachable");
         AnsiConsole.MarkupLine("[dim]Check that catalog-api is running at the configured URL and try again.[/]");
-        // See rationale in the validation branch above — Environment.Exit
-        // is the only reliable way to propagate a non-zero exit code out
-        // of a System.CommandLine async Task handler.
+        // Exit code 2 distinguishes "saved but unreachable" from invalid input.
         Environment.Exit(2);
     }
     else
@@ -1287,6 +1300,7 @@ installBinCmd.SetAction(async (parseResult, ct) =>
     }
     catch (HttpRequestException ex)
     {
+        Environment.ExitCode = 1;
         AnsiConsole.MarkupLine($"[red]Install failed:[/] {Markup.Escape(ex.Message)}");
     }
 });
@@ -1311,6 +1325,7 @@ removeBinCmd.SetAction(async (parseResult, ct) =>
     }
     catch (HttpRequestException ex)
     {
+        Environment.ExitCode = 1;
         AnsiConsole.MarkupLine($"[red]Remove failed:[/] {Markup.Escape(ex.Message)}");
     }
 });
@@ -1332,6 +1347,7 @@ refreshCmd.SetAction(async (parseResult, ct) =>
     }
     catch (HttpRequestException ex)
     {
+        Environment.ExitCode = 1;
         AnsiConsole.MarkupLine($"[red]Catalog refresh failed:[/] {Markup.Escape(ex.Message)}");
     }
 });
@@ -1509,7 +1525,7 @@ phpSwitchCmd.SetAction(async (parseResult, ct) =>
         if (mm == ver || (v.TryGetProperty("version", out var fv) && fv.GetString()?.StartsWith(ver) == true))
         { found = true; break; }
     }
-    if (!found) { AnsiConsole.MarkupLine($"[red]PHP {Markup.Escape(ver)} not installed[/]"); return; }
+    if (!found) { AnsiConsole.MarkupLine($"[red]PHP {Markup.Escape(ver)} not installed[/]"); Environment.ExitCode = 1; return; }
     if (json) PrintJson(new { activeVersion = ver });
     else AnsiConsole.MarkupLine($"[green]Default PHP set to {Markup.Escape(ver)}[/]");
 });
@@ -1533,6 +1549,7 @@ phpInstCmd.SetAction(async (parseResult, ct) =>
     }
     catch (HttpRequestException ex)
     {
+        Environment.ExitCode = 1;
         AnsiConsole.MarkupLine($"[red]PHP install failed:[/] {Markup.Escape(ex.Message)}");
     }
 });
@@ -1662,7 +1679,7 @@ configListCmd.SetAction(async (parseResult, ct) =>
 {
     var json = parseResult.GetValue(jsonOption);
     using var client = new DaemonClient();
-    if (!client.Connect()) { AnsiConsole.MarkupLine("[red]Daemon is not running.[/]"); return; }
+    if (!client.Connect()) { AnsiConsole.MarkupLine("[red]Daemon is not running.[/]"); Environment.ExitCode = 1; return; }
     try
     {
         var settings = await client.GetJsonAsync("/api/settings");
@@ -1684,6 +1701,7 @@ configListCmd.SetAction(async (parseResult, ct) =>
     }
     catch (HttpRequestException ex)
     {
+        Environment.ExitCode = 1;
         AnsiConsole.MarkupLine($"[red]Failed to list settings:[/] {Markup.Escape(ex.Message)}");
     }
 });
@@ -1697,7 +1715,7 @@ configGetCmd.SetAction(async (parseResult, ct) =>
     var key = parseResult.GetValue(configGetKeyArg)!;
     var json = parseResult.GetValue(jsonOption);
     using var client = new DaemonClient();
-    if (!client.Connect()) { AnsiConsole.MarkupLine("[red]Daemon is not running.[/]"); return; }
+    if (!client.Connect()) { AnsiConsole.MarkupLine("[red]Daemon is not running.[/]"); Environment.ExitCode = 1; return; }
     try
     {
         var settings = await client.GetJsonAsync("/api/settings");
@@ -1716,6 +1734,7 @@ configGetCmd.SetAction(async (parseResult, ct) =>
     }
     catch (HttpRequestException ex)
     {
+        Environment.ExitCode = 1;
         if (json) { PrintJson(new { key, error = ex.Message }); return; }
         AnsiConsole.MarkupLine($"[red]Failed to get setting:[/] {Markup.Escape(ex.Message)}");
     }
@@ -1732,7 +1751,7 @@ configSetCmd.SetAction(async (parseResult, ct) =>
     var value = parseResult.GetValue(configSetValueArg)!;
     var json = parseResult.GetValue(jsonOption);
     using var client = new DaemonClient();
-    if (!client.Connect()) { AnsiConsole.MarkupLine("[red]Daemon is not running.[/]"); return; }
+    if (!client.Connect()) { AnsiConsole.MarkupLine("[red]Daemon is not running.[/]"); Environment.ExitCode = 1; return; }
     try
     {
         var body = JsonContent.Create(new Dictionary<string, string> { [key] = value });
@@ -1742,6 +1761,7 @@ configSetCmd.SetAction(async (parseResult, ct) =>
     }
     catch (HttpRequestException ex)
     {
+        Environment.ExitCode = 1;
         if (json) { PrintJson(new { key, value, ok = false, error = ex.Message }); return; }
         AnsiConsole.MarkupLine($"[red]Failed to set {Markup.Escape(key)}:[/] {Markup.Escape(ex.Message)}");
     }
@@ -1947,7 +1967,7 @@ startAllCmd.SetAction(async (parseResult, ct) =>
         {
             var id = s.GetProperty("id").GetString()!;
             try { await client.PostAsync($"/api/services/{id}/start"); AnsiConsole.MarkupLine($"[green]Started[/] {id}"); }
-            catch { AnsiConsole.MarkupLine($"[red]Failed[/] {id}"); }
+            catch { AnsiConsole.MarkupLine($"[red]Failed[/] {id}"); Environment.ExitCode = 1; }
         }
     }
 });
@@ -1964,7 +1984,7 @@ stopAllCmd.SetAction(async (parseResult, ct) =>
         {
             var id = s.GetProperty("id").GetString()!;
             try { await client.PostAsync($"/api/services/{id}/stop"); AnsiConsole.MarkupLine($"[yellow]Stopped[/] {id}"); }
-            catch { AnsiConsole.MarkupLine($"[red]Failed[/] {id}"); }
+            catch { AnsiConsole.MarkupLine($"[red]Failed[/] {id}"); Environment.ExitCode = 1; }
         }
     }
 });
@@ -1981,7 +2001,7 @@ restartAllCmd.SetAction(async (parseResult, ct) =>
         {
             var id = s.GetProperty("id").GetString()!;
             try { await client.PostAsync($"/api/services/{id}/restart"); AnsiConsole.MarkupLine($"[blue]Restarted[/] {id}"); }
-            catch { AnsiConsole.MarkupLine($"[red]Failed[/] {id}"); }
+            catch { AnsiConsole.MarkupLine($"[red]Failed[/] {id}"); Environment.ExitCode = 1; }
         }
     }
 });
@@ -2083,7 +2103,7 @@ infoCommand.SetAction(async (parseResult, ct) =>
         catch { /* optional — metrics endpoint may not exist */ }
         AnsiConsole.Write(table);
     }
-    catch { AnsiConsole.MarkupLine($"[red]Site {Markup.Escape(domain)} not found[/]"); }
+    catch { AnsiConsole.MarkupLine($"[red]Site {Markup.Escape(domain)} not found[/]"); Environment.ExitCode = 1; }
 });
 
 // --- wdc system ---
@@ -2181,6 +2201,7 @@ newCommand.SetAction(async (parseResult, ct) =>
     }
     catch (HttpRequestException ex)
     {
+        Environment.ExitCode = 1;
         AnsiConsole.MarkupLine($"[red]Failed to create {Markup.Escape(domain)}:[/] {Markup.Escape(ex.Message)}");
     }
 });
@@ -2223,7 +2244,7 @@ hostsCmd.SetAction((parseResult, ct) =>
 {
     var json = parseResult.GetValue(jsonOption);
     var hostsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "drivers", "etc", "hosts");
-    if (!File.Exists(hostsPath)) { AnsiConsole.MarkupLine("[red]Hosts file not found[/]"); return Task.CompletedTask; }
+    if (!File.Exists(hostsPath)) { AnsiConsole.MarkupLine("[red]Hosts file not found[/]"); Environment.ExitCode = 1; return Task.CompletedTask; }
 
     var content = File.ReadAllText(hostsPath);
     var beginIdx = content.IndexOf("# BEGIN NKS WebDev Console");
@@ -2321,10 +2342,15 @@ sslGenerateCmd.SetAction(async (parseResult, ct) =>
         var ok = result.TryGetProperty("ok", out var okVal) && okVal.GetBoolean();
         var msg = result.TryGetProperty("message", out var m) ? m.GetString() ?? "" : "";
         if (ok) AnsiConsole.MarkupLine($"[green]✓[/] {Markup.Escape(msg)}");
-        else AnsiConsole.MarkupLine($"[red]✗[/] {Markup.Escape(msg)}");
+        else
+        {
+            AnsiConsole.MarkupLine($"[red]✗[/] {Markup.Escape(msg)}");
+            Environment.ExitCode = 1;
+        }
     }
     catch (HttpRequestException ex)
     {
+        Environment.ExitCode = 1;
         AnsiConsole.MarkupLine($"[red]SSL generate failed:[/] {Markup.Escape(ex.Message)}");
     }
 });
@@ -2341,10 +2367,15 @@ sslInstallCaCmd.SetAction(async (parseResult, ct) =>
         var ok = result.TryGetProperty("ok", out var okVal) && okVal.GetBoolean();
         var msg = result.TryGetProperty("message", out var m) ? m.GetString() ?? "" : "";
         if (ok) AnsiConsole.MarkupLine($"[green]✓[/] {Markup.Escape(msg)}");
-        else AnsiConsole.MarkupLine($"[red]✗[/] {Markup.Escape(msg)}");
+        else
+        {
+            AnsiConsole.MarkupLine($"[red]✗[/] {Markup.Escape(msg)}");
+            Environment.ExitCode = 1;
+        }
     }
     catch (HttpRequestException ex)
     {
+        Environment.ExitCode = 1;
         AnsiConsole.MarkupLine($"[red]CA install failed:[/] {Markup.Escape(ex.Message)}");
     }
 });
@@ -2364,6 +2395,7 @@ sslRevokeCmd.SetAction(async (parseResult, ct) =>
     }
     catch (HttpRequestException ex)
     {
+        Environment.ExitCode = 1;
         AnsiConsole.MarkupLine($"[red]Revoke failed:[/] {Markup.Escape(ex.Message)}");
     }
 });
@@ -2726,6 +2758,7 @@ migrateCommand.SetAction(async (parseResult, ct) =>
     if (!string.Equals(from, "mamp", StringComparison.OrdinalIgnoreCase))
     {
         AnsiConsole.MarkupLine($"[red]Unsupported source:[/] {Markup.Escape(from ?? "<none>")} — only 'mamp' is supported");
+        Environment.ExitCode = 1;
         return;
     }
 
@@ -2792,6 +2825,7 @@ backupCommand.SetAction(async (parseResult, ct) =>
     }
     catch (HttpRequestException ex)
     {
+        Environment.ExitCode = 1;
         AnsiConsole.MarkupLine($"[red]Backup failed:[/] {Markup.Escape(ex.Message)}");
     }
 });
@@ -2850,6 +2884,7 @@ restoreCommand.SetAction(async (parseResult, ct) =>
     if (string.IsNullOrWhiteSpace(from) || !System.IO.File.Exists(from))
     {
         AnsiConsole.MarkupLine($"[red]Backup file not found:[/] {Markup.Escape(from ?? "<none>")}");
+        Environment.ExitCode = 1;
         return;
     }
 
@@ -2882,6 +2917,7 @@ restoreCommand.SetAction(async (parseResult, ct) =>
     }
     catch (HttpRequestException ex)
     {
+        Environment.ExitCode = 1;
         AnsiConsole.MarkupLine($"[red]Restore failed:[/] {Markup.Escape(ex.Message)}");
     }
 });
@@ -2947,6 +2983,7 @@ uninstallCommand.SetAction(async (parseResult, ct) =>
     }
     catch (HttpRequestException ex)
     {
+        Environment.ExitCode = 1;
         AnsiConsole.MarkupLine($"[red]Uninstall failed:[/] {Markup.Escape(ex.Message)}");
     }
 });
@@ -3108,6 +3145,7 @@ cfSyncCmd.SetAction(async (parseResult, ct) =>
     }
     catch (HttpRequestException ex)
     {
+        Environment.ExitCode = 1;
         AnsiConsole.MarkupLine($"[red]Cloudflare sync failed:[/] {Markup.Escape(ex.Message)}");
     }
 });
@@ -3146,6 +3184,7 @@ cfZonesCmd.SetAction(async (parseResult, ct) =>
     }
     catch (HttpRequestException ex)
     {
+        Environment.ExitCode = 1;
         AnsiConsole.MarkupLine($"[red]Failed to list zones:[/] {Markup.Escape(ex.Message)}");
     }
 });
@@ -3468,7 +3507,12 @@ syncCommand.Add(syncImportCmd);
 
 rootCommand.Add(syncCommand);
 
-return await rootCommand.Parse(args).InvokeAsync();
+// Handlers report failure through Environment.ExitCode (see EnsureConnected
+// and the HttpRequestException handlers). InvokeAsync returns 0 for a handler
+// that completes normally, so fall back to Environment.ExitCode unless parsing
+// or the handler itself already produced a non-zero code.
+var invokeExitCode = await rootCommand.Parse(args).InvokeAsync();
+return invokeExitCode != 0 ? invokeExitCode : Environment.ExitCode;
 
 // --- Helpers ---
 // Centralised reader for the CLI assembly version. Three sites previously
@@ -3484,6 +3528,7 @@ static bool EnsureConnected(DaemonClient client)
 {
     if (client.Connect()) return true;
     AnsiConsole.MarkupLine("[red]Daemon is not running.[/] Start it or check %TEMP%/nks-wdc-daemon.port");
+    Environment.ExitCode = 1;
     return false;
 }
 

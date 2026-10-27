@@ -15,7 +15,8 @@
         v-for="profile in profiles"
         :key="profile.id"
         class="profile-card"
-        :class="{ pending: pending === profile.id, recommended: profile.id === 'balanced' }"
+        :class="{ pending: pending === profile.id, recommended: profile.id === DEFAULT_PROFILE }"
+        :data-profile="profile.id"
         role="button"
         tabindex="0"
         :aria-label="t(`mcpOnboarding.profiles.${profile.id}.name`) + ' — ' + t(`mcpOnboarding.profiles.${profile.id}.desc`)"
@@ -26,8 +27,8 @@
         <div class="profile-icon">{{ profile.icon }}</div>
         <div class="profile-name">
           {{ t(`mcpOnboarding.profiles.${profile.id}.name`) }}
-          <el-tag v-if="profile.id === 'balanced'" type="success" size="small" effect="plain" class="recommended-tag">
-            {{ t('mcpOnboarding.recommended') }}
+          <el-tag v-if="profile.id === DEFAULT_PROFILE" type="success" size="small" effect="plain" class="recommended-tag">
+            {{ t('mcpOnboarding.default') }}
           </el-tag>
         </div>
         <div class="profile-desc muted">
@@ -38,7 +39,7 @@
         </ul>
         <el-button
           size="small"
-          :type="profile.id === 'balanced' ? 'primary' : 'default'"
+          :type="profile.id === DEFAULT_PROFILE ? 'primary' : 'default'"
           :loading="pending === profile.id"
           :disabled="pending !== null && pending !== profile.id"
           class="profile-cta"
@@ -56,7 +57,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { createMcpGrant, listMcpGrants, subscribeEventsMap, type McpGrantCreateBody } from '../../api/daemon'
 
-const { t } = useI18n()
+const { t, tm, rt } = useI18n()
 
 const dismissed = ref(false)
 const grantsCount = ref<number | null>(null)
@@ -65,10 +66,27 @@ const pending = ref<string | null>(null)
 const ONBOARDING_KEY = 'mcp.onboarding.dismissed.v1'
 
 interface ProfileDefinition {
-  id: 'minimal' | 'balanced' | 'permissive' | 'custom'
+  id: 'minimal' | 'balanced' | 'localDev' | 'permissive' | 'custom'
   icon: string
   grants: McpGrantCreateBody[]
 }
+
+// Strict is the default: with no grants every destructive request needs the
+// operator's approval. Every other profile is an explicit opt-in.
+const DEFAULT_PROFILE: ProfileDefinition['id'] = 'minimal'
+
+// Local development: services can be restarted and databases whose name
+// ends in _dev can be dropped, queried or re-imported without a banner.
+// Grant targets accept a '*' wildcard (matched case-insensitively).
+const DEV_DATABASE_PATTERN = '*_dev'
+const localDevDatabaseGrant = (kind: string, what: string): McpGrantCreateBody => ({
+  scopeType: 'always',
+  scopeValue: null,
+  kindPattern: kind,
+  targetPattern: DEV_DATABASE_PATTERN,
+  grantedBy: 'onboarding-local-dev',
+  note: `Auto-approve ${what} on ${DEV_DATABASE_PATTERN} databases (local development)`,
+})
 
 const profiles: ProfileDefinition[] = [
   {
@@ -101,6 +119,23 @@ const profiles: ProfileDefinition[] = [
     ],
   },
   {
+    id: 'localDev',
+    icon: '🧪',
+    grants: [
+      {
+        scopeType: 'always',
+        scopeValue: null,
+        kindPattern: 'service_restart',
+        targetPattern: '*',
+        grantedBy: 'onboarding-local-dev',
+        note: 'Auto-approve stopping/restarting local services (local development)',
+      },
+      localDevDatabaseGrant('database_drop', 'drop'),
+      localDevDatabaseGrant('database_query', 'data-changing SQL'),
+      localDevDatabaseGrant('database_import', 'dump import'),
+    ],
+  },
+  {
     id: 'permissive',
     icon: '🚀',
     grants: [
@@ -121,9 +156,12 @@ const profiles: ProfileDefinition[] = [
   },
 ]
 
+// Bullets are an array in the locale files: t() cannot return arrays, so
+// read the raw messages with tm() and render each with rt().
 function tBullets(id: string): string[] {
-  const raw = t(`mcpOnboarding.profiles.${id}.bullets`)
-  return Array.isArray(raw) ? (raw as unknown as string[]) : []
+  const raw: unknown = tm(`mcpOnboarding.profiles.${id}.bullets`)
+  if (!Array.isArray(raw)) return []
+  return raw.map((m) => (typeof m === 'string' ? m : rt(m as Parameters<typeof rt>[0])))
 }
 
 const visible = computed(() => {
@@ -202,7 +240,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .mcp-onboarding-panel {
   border: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(135deg, var(--wdc-accent-dim), var(--wdc-surface));
+  background: var(--wdc-surface);
   border-radius: var(--wdc-radius-lg);
   padding: var(--wdc-space-4-5) var(--wdc-space-5);
   margin-bottom: var(--wdc-space-4);

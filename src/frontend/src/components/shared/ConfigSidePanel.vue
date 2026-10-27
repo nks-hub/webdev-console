@@ -377,11 +377,10 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   gap: var(--wdc-space-0-5);
 }
 .csp-eyebrow {
-  font-size: 0.66rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-text-3);
+  font-family: var(--wdc-font-display);
 }
 .csp-title {
   font-size: 1rem;

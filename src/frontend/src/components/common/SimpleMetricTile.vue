@@ -90,9 +90,8 @@ const iconComponent = computed(() => {
 .tile-icon { font-size: 16px; }
 .tile-label {
   font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   font-weight: 500;
+  font-family: var(--wdc-font-display);
 }
 .tile-value {
   font-size: 28px;

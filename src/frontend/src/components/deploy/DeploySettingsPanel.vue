@@ -1729,8 +1729,8 @@ defineExpose({ saveSettings })
   align-items: center;
   justify-content: space-between;
   padding: var(--wdc-space-3-5) var(--wdc-space-4-5);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), var(--wdc-surface));
-  border-bottom: 1px solid var(--wdc-accent-glow);
+  background: var(--wdc-surface);
+  border-bottom: 1px solid var(--wdc-border);
   margin-bottom: var(--wdc-space-4);
   gap: var(--wdc-space-3);
   backdrop-filter: blur(12px) saturate(1.2);

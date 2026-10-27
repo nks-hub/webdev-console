@@ -277,12 +277,11 @@ function formatUptime(seconds: number): string {
 }
 
 .metric-label {
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   color: var(--wdc-text-2);
   width: 32px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   flex-shrink: 0;
+  font-family: var(--wdc-font-display);
 }
 
 .metric-bar-wrap {
@@ -332,10 +331,9 @@ function formatUptime(seconds: number): string {
 }
 
 .meta-label {
-  font-size: 0.68rem;
+  font-size: 0.82rem;
   color: var(--el-text-color-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-family: var(--wdc-font-display);
 }
 
 .meta-val {

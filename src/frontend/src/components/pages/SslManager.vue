@@ -290,7 +290,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--wdc-space-5) var(--wdc-space-5) 0;
+  padding: 0 0 var(--wdc-space-4);
   margin-bottom: var(--wdc-space-4-5);
 }
 
@@ -308,7 +308,7 @@ onMounted(() => {
 
 .header-actions { display: flex; align-items: center; gap: 8px; }
 
-.page-body { padding: 0 24px 24px; }
+.page-body { padding: 0 0 24px; }
 
 .cert-list {
   display: flex;

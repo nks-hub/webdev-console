@@ -55,6 +55,7 @@
             <template #default="{ row }">
               <el-switch
                 :model-value="row.enabled"
+                :aria-label="$t('hosts.enableEntryAria', { hostname: row.hostname })"
                 size="small"
                 @change="(v: boolean) => toggleEnabled(row, v)"
               />
@@ -576,9 +577,9 @@ onMounted(async () => {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: var(--wdc-space-4-5) var(--wdc-space-5);
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  padding: 0 0 var(--wdc-space-4);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
   flex-shrink: 0;
   gap: var(--wdc-space-3);
   flex-wrap: wrap;
@@ -631,7 +632,7 @@ onMounted(async () => {
 .page-body {
   flex: 1;
   overflow-y: auto;
-  padding: var(--wdc-space-4-5) var(--wdc-space-5);
+  padding: var(--wdc-space-4-5) 0;
   display: flex;
   flex-direction: column;
   gap: var(--wdc-space-3);

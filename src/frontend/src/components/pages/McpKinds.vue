@@ -327,9 +327,9 @@ async function refresh(): Promise<void> {
   align-items: center;
   justify-content: space-between;
   gap: var(--wdc-space-3);
-  padding: var(--wdc-space-4-5) var(--wdc-space-5);
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  padding: 0 0 var(--wdc-space-4);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
 }
 .page-header h2 {
   margin: 0;
@@ -338,7 +338,6 @@ async function refresh(): Promise<void> {
   letter-spacing: -0.02em;
   color: var(--wdc-text);
 }
-.page > *:not(.page-header) { padding: 0 24px; }
 .page > .page-header + * { padding-top: 16px; }
 .header-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .lock-count-badge {
