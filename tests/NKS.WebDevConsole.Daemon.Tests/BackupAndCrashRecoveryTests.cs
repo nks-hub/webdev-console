@@ -52,7 +52,7 @@ public class BackupAndCrashRecoveryTests : IDisposable
         File.WriteAllText(Path.Combine(_wdcDir, "ssl", "sites", "demo.loc", "cert.pem"), "fake");
 
         var bm = CreateBackupManagerForRoot();
-        var outZip = Path.Combine(_tempRoot, "backup.zip");
+        var outZip = Path.Combine(_wdcDir, "backups", "backup.zip");
 
         // Act
         var result = bm.CreateBackup(outZip);
@@ -80,7 +80,7 @@ public class BackupAndCrashRecoveryTests : IDisposable
         File.WriteAllText(Path.Combine(_wdcDir, "sites", "roundtrip.loc.toml"), originalToml);
 
         var bm = CreateBackupManagerForRoot();
-        var outZip = Path.Combine(_tempRoot, "roundtrip.zip");
+        var outZip = Path.Combine(_wdcDir, "backups", "roundtrip.zip");
         bm.CreateBackup(outZip);
 
         // Wipe sites and restore
@@ -172,19 +172,87 @@ public class BackupAndCrashRecoveryTests : IDisposable
     }
 
     [Fact]
-    public void CreateBackup_CreatesMissingOutputDirectory()
+    public void CreateBackup_RecreatesAMissingBackupFolder()
     {
         Directory.CreateDirectory(Path.Combine(_wdcDir, "sites"));
         File.WriteAllText(Path.Combine(_wdcDir, "sites", "x.toml"), "domain = \"x.loc\"");
 
         var bm = CreateBackupManagerForRoot();
-        var nestedOutput = Path.Combine(_tempRoot, "missing", "nested", "dir", "backup.zip");
-        Assert.False(Directory.Exists(Path.GetDirectoryName(nestedOutput)!));
+        Directory.Delete(bm.BackupRoot, recursive: true);
 
-        var result = bm.CreateBackup(nestedOutput);
+        var result = bm.CreateBackup("backup.zip");
 
-        Assert.True(File.Exists(nestedOutput));
-        Assert.Equal(nestedOutput, result.Path);
+        Assert.Equal(Path.Combine(_wdcDir, "backups", "backup.zip"), result.Path);
+        Assert.True(File.Exists(result.Path));
+    }
+
+    // ── `out` path containment ───────────────────────────────────────────────
+
+    [Theory]
+    [InlineData("/etc/cron.d/wdc.zip")]
+    [InlineData("../escape.zip")]
+    [InlineData("../../.bashrc.zip")]
+    [InlineData("sub/nested.zip")]
+    [InlineData("backup.tar")]
+    [InlineData("backup.zip/..")]
+    public void CreateBackup_RefusesAPathOutsideTheBackupFolder(string outPath)
+    {
+        var bm = CreateBackupManagerForRoot();
+        Assert.Throws<ArgumentException>(() => bm.CreateBackup(outPath));
+        Assert.Empty(Directory.GetFiles(_tempRoot, "*.zip", SearchOption.AllDirectories));
+    }
+
+    [Fact]
+    public void CreateBackup_RefusesASiblingFolderSharingThePrefix()
+    {
+        var bm = CreateBackupManagerForRoot();
+        var sibling = Path.Combine(_wdcDir, "backups-old", "x.zip");
+        Assert.Throws<ArgumentException>(() => bm.CreateBackup(sibling));
+        Assert.False(File.Exists(sibling));
+    }
+
+    [Fact]
+    public void CreateBackup_NeverOverwritesAnExistingFile()
+    {
+        var bm = CreateBackupManagerForRoot();
+        var existing = Path.Combine(bm.BackupRoot, "keep.zip");
+        File.WriteAllText(existing, "precious");
+
+        Assert.Throws<BackupTargetExistsException>(() => bm.CreateBackup(existing));
+        Assert.Equal("precious", File.ReadAllText(existing));
+    }
+
+    [Fact]
+    public void CreateBackup_DoesNotFollowALinkAtTheTargetPath()
+    {
+        if (OperatingSystem.IsWindows()) return; // symlinks need extra rights on Windows
+        var bm = CreateBackupManagerForRoot();
+        var victim = Path.Combine(_tempRoot, "victim.txt");
+        File.WriteAllText(victim, "untouched");
+        File.CreateSymbolicLink(Path.Combine(bm.BackupRoot, "link.zip"), victim);
+
+        Assert.Throws<BackupTargetExistsException>(() => bm.CreateBackup("link.zip"));
+        Assert.Equal("untouched", File.ReadAllText(victim));
+    }
+
+    [Fact]
+    public void CreateBackup_ArchiveIsOwnerOnlyOnUnix()
+    {
+        if (OperatingSystem.IsWindows()) return;
+        var bm = CreateBackupManagerForRoot();
+        var result = bm.CreateBackup();
+        Assert.Equal(UnixFileMode.UserRead | UnixFileMode.UserWrite, File.GetUnixFileMode(result.Path));
+    }
+
+    [Fact]
+    public void CreateBackup_TwoDefaultBackupsInTheSameSecondGetDistinctFiles()
+    {
+        var bm = CreateBackupManagerForRoot();
+        var first = bm.CreateBackup().Path;
+        var second = bm.CreateBackup().Path;
+        Assert.NotEqual(first, second);
+        Assert.True(File.Exists(first));
+        Assert.True(File.Exists(second));
     }
 
     [Fact]

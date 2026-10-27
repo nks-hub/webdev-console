@@ -32,6 +32,13 @@ internal static class BackupEndpoints
     {
         // ── Backup helper functions ───────────────────────────────────────────────
 
+        // A failed broadcast must never turn a finished backup into an error response.
+        async Task BroadcastBackupEventAsync(SseService sse, string eventType, object payload)
+        {
+            try { await sse.BroadcastAsync(eventType, payload); }
+            catch { /* SSE is best-effort */ }
+        }
+
         BackupContentFlags ReadContentFlagsFromSettings(SettingsStore s)
         {
             var flags = BackupContentFlags.None;
@@ -73,7 +80,7 @@ internal static class BackupEndpoints
             return Results.Ok(new { count = backups.Count, totalSize, lastCreatedUtc = lastCreated });
         });
 
-        app.MapPost("/api/backup", async (BackupManager bm, SettingsStore settings, HttpContext ctx) =>
+        app.MapPost("/api/backup", async (BackupManager bm, SettingsStore settings, SseService sse, HttpContext ctx) =>
         {
             try
             {
@@ -98,11 +105,28 @@ internal static class BackupEndpoints
                     flags = ReadContentFlagsFromSettings(settings);
                 }
 
+                // `out` may only name a new .zip in the backup folder: the
+                // archive carries state.db and TLS private keys.
                 var (path, files, size, resultFlags) = bm.CreateBackup(outPath, flags);
+                // backup:completed / backup:failed — the desktop app shows an OS
+                // notification (backup channel); same payload as BackupScheduler.
+                await BroadcastBackupEventAsync(sse, "backup:completed", new
+                {
+                    trigger = "manual", path, files, size, contentFlags = resultFlags.ToString(),
+                });
                 return Results.Ok(new { path, files, size, contentFlags = resultFlags.ToString() });
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+            catch (BackupTargetExistsException ex)
+            {
+                return Results.Conflict(new { error = ex.Message });
             }
             catch (Exception ex)
             {
+                await BroadcastBackupEventAsync(sse, "backup:failed", new { trigger = "manual", error = ex.Message });
                 return Results.Problem($"Backup failed: {ex.Message}");
             }
         });

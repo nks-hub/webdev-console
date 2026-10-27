@@ -228,9 +228,9 @@ onBeforeUnmount(() => {
   display: flex; align-items: center; gap: 8px;
   font-size: 11px;
   margin-bottom: var(--wdc-space-1-5);
-  text-transform: uppercase;
   letter-spacing: 0.5px;
   flex: 0 0 auto;
+  font-family: var(--wdc-font-display);
 }
 .empty-note { color: var(--el-text-color-disabled); }
 .chart-svg {

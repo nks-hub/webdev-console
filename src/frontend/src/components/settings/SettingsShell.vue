@@ -109,12 +109,11 @@ function onKey(e: KeyboardEvent, current: string) {
 }
 .shell-group { display: flex; flex-direction: column; gap: var(--wdc-space-1); }
 .shell-group-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-text-3);
   padding: 0 var(--wdc-space-3);
+  font-family: var(--wdc-font-display);
 }
 .shell-tablist { display: flex; flex-direction: column; gap: 2px; }
 .shell-tab {

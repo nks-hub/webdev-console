@@ -1,74 +1,53 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { readFileSync, existsSync, statSync } from 'fs'
-import { join } from 'path'
-import { tmpdir } from 'os'
 
-const portFilePath = join(tmpdir(), 'nks-wdc-daemon.port')
+// The renderer runs with `sandbox: true`, so this preload has no fs/os/path
+// access. Main reads and validates the daemon port file (it trusts only a
+// file this user owns with no group/other access; see 'daemon-connection-info'
+// in main.ts) and hands back { port, token }. getPort()/getToken() stay
+// synchronous for callers, so this uses sendSync, throttled so a burst of
+// fetches costs one round trip. A daemon restart (new port/token) is picked
+// up on the next call after the throttle window.
+const REFRESH_MS = 250
 
-let cachedPort = 0
-let cachedToken = ''
-let lastMtimeMs = 0
-
-/**
- * Reads the port file and updates the cache — but only if the file's mtime
- * changed since the last read. This makes getPort()/getToken() effectively
- * live-refreshing: when the daemon restarts it rewrites the port file with a
- * new token, preload picks up the change on the next call without any manual
- * reload. Previous implementation cached once at startup and never refreshed,
- * which left the renderer with a stale token after every daemon restart.
- */
 // Base64 token shape check — the daemon emits a 32-byte random token encoded
-// as base64 (44 chars ending in =). We validate the shape before caching so
-// a corrupted or hand-edited port file can't inject arbitrary strings into
+// as base64 (44 chars ending in =). Validate the shape before caching so a
+// corrupted or hand-edited port file can't inject arbitrary strings into
 // the renderer's Authorization header.
 const TOKEN_SHAPE = /^[A-Za-z0-9+/=]{16,512}$/
 
-// The port file sits in the shared temp dir on Linux. Another local user can
-// create it first and point the GUI at their own listener (which would then
-// receive our MySQL and Cloudflare credentials), so on Unix only trust a file
-// that we own and that nobody else can read or write; the daemon creates it 0600.
-function isTrustedPortFile(st: { uid: number; mode: number }): boolean {
-  if (process.platform === 'win32' || typeof process.getuid !== 'function') return true
-  return st.uid === process.getuid() && (st.mode & 0o077) === 0
-}
+let cachedPort = 0
+let cachedToken = ''
+let lastRefresh = 0
 
-function refreshFromPortFile(): void {
+function refreshConnectionInfo(): void {
+  const now = Date.now()
+  if (cachedPort > 0 && now - lastRefresh < REFRESH_MS) return
+  lastRefresh = now
   try {
-    if (!existsSync(portFilePath)) return
-    const st = statSync(portFilePath)
-    if (!isTrustedPortFile(st)) return
-    const mtime = st.mtimeMs
-    if (mtime === lastMtimeMs && cachedPort > 0) return // unchanged
-    const lines = readFileSync(portFilePath, 'utf-8').split('\n').filter(Boolean)
-    if (lines.length >= 2) {
-      const p = parseInt(lines[0], 10)
-      // Port must be a valid 16-bit TCP port (1..65535); anything outside
-      // is a corrupted file and must not be trusted.
-      if (!isNaN(p) && p > 0 && p <= 65535) cachedPort = p
-      // Token must match the base64 shape we expect; reject anything else
-      // so a tampered file can't smuggle spaces, control chars, or CRLF
-      // injection into the Authorization header the renderer later uses.
-      const candidate = lines[1].trim()
-      if (TOKEN_SHAPE.test(candidate)) {
-        cachedToken = candidate
-      }
-      lastMtimeMs = mtime
+    const info = ipcRenderer.sendSync('daemon-connection-info') as { port?: unknown; token?: unknown } | null
+    if (!info) return
+    // Port must be a valid 16-bit TCP port (1..65535).
+    if (typeof info.port === 'number' && Number.isInteger(info.port) && info.port > 0 && info.port <= 65535) {
+      cachedPort = info.port
+    }
+    if (typeof info.token === 'string' && TOKEN_SHAPE.test(info.token)) {
+      cachedToken = info.token
     }
   } catch {
-    // ignore transient read errors
+    // main not ready or transient failure — keep the cached values
   }
 }
 
-// Initial read so the first getPort() call has a value even before any change
-refreshFromPortFile()
+// Initial read so the first getPort() call has a value
+refreshConnectionInfo()
 
 contextBridge.exposeInMainWorld('daemonApi', {
   getPort: () => {
-    refreshFromPortFile()
+    refreshConnectionInfo()
     return cachedPort
   },
   getToken: () => {
-    refreshFromPortFile()
+    refreshConnectionInfo()
     return cachedToken
   },
 })
@@ -126,15 +105,34 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // #147 — cross-platform OS notifications. Renderer side fires this
   // on important events (deploy completed, MCP confirm requested, etc.)
   // and main hands off to Electron's Notification API which uses the
-  // platform-native mechanism (Win toast, macOS NSUserNotification,
-  // Linux libnotify).
+  // platform-native mechanism (Win toast, macOS notification centre,
+  // Linux libnotify). Main applies the preference gates and resolves to
+  // a status string ('shown', 'disabled', 'focused', 'throttled', …).
   osNotify: (payload: {
-    title?: string
+    title: string
     body?: string
     urgency?: 'low' | 'normal' | 'critical'
     silent?: boolean
-    channel?: string
+    channel: string
+    route?: string
+    key?: string
+    once?: boolean
+    test?: boolean
   }) => ipcRenderer.invoke('os-notify', payload),
+
+  // Notification preferences (master switch, background-only, per-channel
+  // toggles) persisted by main in userData so main-fired toasts honour them.
+  notifyPrefsGet: () => ipcRenderer.invoke('notify-prefs-get'),
+  notifyPrefsSet: (patch: Record<string, unknown>) => ipcRenderer.invoke('notify-prefs-set', patch),
+
+  // Clicking an OS notification focuses the window and main sends the
+  // notification's app route here; the renderer does router.push. Returns
+  // an unsubscribe function, same pattern as onSsoCallback.
+  onNavigate: (handler: (route: string) => void) => {
+    const listener = (_evt: unknown, route: string) => handler(route)
+    ipcRenderer.on('navigate', listener)
+    return () => ipcRenderer.removeListener('navigate', listener)
+  },
 
   // Runtime version probe — reads from Electron's app.getVersion() (which
   // resolves the bundled package.json at process start). Decouples the

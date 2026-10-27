@@ -322,6 +322,89 @@ public sealed class MySqlDriver : IDbDriver
         };
     }
 
+    /// <summary>
+    /// Runs one statement for a caller that is only allowed to read (an AI
+    /// client holding the MCP token). Defence in depth behind
+    /// <see cref="NKS.WebDevConsole.Daemon.Mcp.SqlReadOnlyGuard"/>:
+    /// single statement only, inside START TRANSACTION READ ONLY (the server
+    /// rejects any table write, also from stored functions), always rolled
+    /// back, with a server-side execution limit where the server supports
+    /// one, a client-side timeout and a row cap.
+    /// </summary>
+    public async Task<ReadOnlyQueryResult> ExecuteReadOnlyQueryAsync(
+        string database, string sql, int maxRows, int timeoutSeconds, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(sql))
+            throw new ArgumentException("sql required", nameof(sql));
+
+        var sw = Stopwatch.StartNew();
+        await using var conn = await OpenAsync(
+            database: string.IsNullOrEmpty(database) ? null : database,
+            allowMultiple: false,
+            ct).ConfigureAwait(false);
+
+        // MySQL 5.7+: max_execution_time (ms, SELECT only); MariaDB 10.1+:
+        // max_statement_time (s). Whichever the server does not know fails
+        // harmlessly.
+        foreach (var limit in new[]
+                 {
+                     $"SET SESSION max_execution_time = {timeoutSeconds * 1000}",
+                     $"SET SESSION max_statement_time = {timeoutSeconds}",
+                 })
+        {
+            try
+            {
+                await using var lim = new MySqlCommand(limit, conn);
+                await lim.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+            }
+            catch (MySqlException) { /* not supported by this server */ }
+        }
+
+        await using (var begin = new MySqlCommand("START TRANSACTION READ ONLY", conn))
+            await begin.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+        try
+        {
+            await using var cmd = new MySqlCommand(sql, conn) { CommandTimeout = timeoutSeconds };
+            await using var rdr = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
+
+            var colCount = rdr.FieldCount;
+            var cols = new List<DataColumn>(colCount);
+            for (int i = 0; i < colCount; i++)
+                cols.Add(new DataColumn(rdr.GetName(i), rdr.GetDataTypeName(i), Nullable: true, IsPrimaryKey: false));
+
+            var rows = new List<IReadOnlyList<object?>>();
+            var truncated = false;
+            while (await rdr.ReadAsync(ct).ConfigureAwait(false))
+            {
+                if (rows.Count >= maxRows) { truncated = true; break; }
+                var row = new object?[colCount];
+                for (int i = 0; i < colCount; i++)
+                    row[i] = NormalizeValue(rdr.IsDBNull(i) ? null : rdr.GetValue(i));
+                rows.Add(row);
+            }
+            sw.Stop();
+            return new ReadOnlyQueryResult(
+                new QueryResultSet
+                {
+                    StatementText = TruncateForLabel(sql, 1),
+                    Columns = cols,
+                    Rows = rows,
+                    RowsAffected = 0,
+                    ExecutionTimeMs = sw.ElapsedMilliseconds,
+                },
+                truncated);
+        }
+        finally
+        {
+            try
+            {
+                await using var rollback = new MySqlCommand("ROLLBACK", conn);
+                await rollback.ExecuteNonQueryAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (MySqlException) { /* connection is discarded anyway */ }
+        }
+    }
+
     private async Task<MySqlConnection> OpenAsync(string? database, bool allowMultiple, CancellationToken ct)
     {
         var b = new MySqlConnectionStringBuilder(_baseConnectionString);

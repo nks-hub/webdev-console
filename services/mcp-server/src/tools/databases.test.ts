@@ -27,6 +27,7 @@ describe('isReadOnlySql', () => {
     'EXPLAIN SELECT * FROM users',
     "SELECT 'it''s' FROM t",
     'SELECT 1 -- delete\n',
+    'SELECT into_count, sleep_ms FROM stats',
   ])('allows %s', (sql) => {
     expect(isReadOnlySql(sql)).toBe(true)
   })
@@ -46,6 +47,13 @@ describe('isReadOnlySql', () => {
     "SELECT 1--1 INTO OUTFILE '/tmp/x'",
     'WITH c AS (SELECT 1) /*! DELETE FROM users */',
     'SELECT 1 /*M! INTO OUTFILE "/tmp/x" */',
+    "SELECT LOAD_FILE('/etc/hosts')",
+    "SELECT SLEEP(30)",
+    "SELECT BENCHMARK(100000000, MD5('x'))",
+    "SELECT GET_LOCK('wdc', 10)",
+    "SELECT id INTO @x FROM users LIMIT 1",
+    "SELECT * FROM users LOCK IN SHARE MODE",
+    "SELECT NEXTVAL(seq)",
   ])('rejects %s', (sql) => {
     expect(isReadOnlySql(sql)).toBe(false)
   })

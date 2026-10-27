@@ -4,7 +4,7 @@
     "empty": "No matching commands",
     "goTo": "Go to {target}",
     "gotoSites": "Go to Sites",
-    "gotoDashboard": "Go to Services",
+    "gotoDashboard": "Go to Overview",
     "gotoDatabases": "Go to Databases",
     "gotoSsl": "Go to SSL Manager",
     "gotoPhp": "Go to PHP Manager",
@@ -89,7 +89,9 @@
     "register": "Register",
     "justNow": "just now",
     "warning": "Warning",
-    "danger": "Danger"
+    "danger": "Danger",
+    "working": "Working…",
+    "retry": "Retry"
   },
   "header": {
     "connected": "Connected",
@@ -97,7 +99,9 @@
     "darkMode": "Dark mode",
     "lightMode": "Light mode",
     "newVersionAvailable": "New version v{version} is available",
-    "connecting": "Connecting…"
+    "connecting": "Connecting…",
+    "openNavigation": "Open navigation",
+    "searchPlaceholder": "Search sites, services and actions"
   },
   "autostart": {
     "label": "Auto-start when WDC launches"
@@ -151,7 +155,17 @@
     "serviceStopped": "{name} stopped",
     "signedInAsTitle": "Signed in as {name} — click to sign out",
     "signInTitle": "Sign in with SSO",
-    "system": "System"
+    "system": "System",
+    "mainNavigation": "Main navigation",
+    "brandHome": "WebDev Console, overview",
+    "application": "Application",
+    "servicesCrashed": "{n} service crashed | {n} services crashed",
+    "groups": {
+      "workspace": "Workspace",
+      "stack": "Stack",
+      "network": "Network",
+      "operations": "Operations"
+    }
   },
   "versions": {
     "active": "Active",
@@ -301,6 +315,14 @@
       "toastRevokeFailed": "Revoke failed: {error}",
       "toastIdCopied": "Intent ID copied",
       "toastCopyFail": "Copy failed — clipboard access denied"
+    },
+    "approve": "Approve",
+    "reject": "Reject",
+    "approveAria": "Approve this AI request",
+    "rejectAria": "Reject and revoke this AI request so the AI cannot run it",
+    "approveDialog": {
+      "title": "Approve AI request?",
+      "message": "AI wants to perform {kind} on {target}. Reason given: {prompt}"
     }
   },
   "mcpHub": {
@@ -371,6 +393,16 @@
         ],
         "cta": "Use Balanced"
       },
+      "localDev": {
+        "name": "Local development",
+        "desc": "Restart services and change *_dev databases without asking",
+        "bullets": [
+          "Auto-approve: stopping and restarting services",
+          "Auto-approve: drop, SQL and import on databases named *_dev",
+          "Everything else still asks"
+        ],
+        "cta": "Use Local development"
+      },
       "permissive": {
         "name": "Full Trust",
         "desc": "AI may do anything without asking — test envs only",
@@ -391,7 +423,8 @@
         ],
         "cta": "Open Rules"
       }
-    }
+    },
+    "default": "default"
   },
   "mcpActivity": {
     "stats": {
@@ -414,7 +447,8 @@
       "allDanger": "All danger levels",
       "toolName": "Filter by tool…",
       "search": "Search tools and args…",
-      "collapseReads": "Collapse reads"
+      "collapseReads": "Collapse reads",
+      "dangerAria": "Filter by danger level"
     },
     "view": {
       "sessions": "By session",
@@ -488,7 +522,16 @@
       "plugin_install": "Install a new plugin DLL",
       "plugin_uninstall": "Uninstall a plugin",
       "binary_install": "Install a new binary (PHP, MySQL, …)",
-      "service_restart": "Stop or restart a managed service"
+      "service_restart": "Stop or restart a managed service",
+      "service_config_write": "Rewrite a service config file (httpd.conf, php.ini, …)",
+      "hosts_write": "Rewrite or restore the system hosts file",
+      "node_process": "Set or run a site's Node.js start command",
+      "cloudflare_credentials": "Change Cloudflare credentials or tunnel routing",
+      "daemon_admin": "Restart, shut down, reset or uninstall the daemon",
+      "mysql_root_reset": "Reset the MySQL root password",
+      "mysql_user_drop": "Drop a MySQL user account",
+      "postgres_root_reset": "Reset the PostgreSQL superuser password",
+      "backup_delete": "Delete a WDC backup"
     },
     "empty": "No kinds registered",
     "col": {
@@ -782,7 +825,8 @@
       "restarted": "Apache restarted",
       "stopApacheTitle": "Stop Apache",
       "stopApacheConfirm": "Stopping Apache will take down ALL sites, not just this one. Proceed?",
-      "stopApacheTooltip": "Stop Apache — disables every site"
+      "stopApacheTooltip": "Stop Apache — disables every site",
+      "startWebServer": "Start web server"
     },
     "edit": {
       "browseDocRoot": "Select document root folder"
@@ -850,6 +894,30 @@
       "noConflicts": "No conflicts detected",
       "conflictsTitle": "Conflicts and warnings",
       "majorJump": "Major version jump — possible breaking changes"
+    },
+    "list": {
+      "stateFilter": "Filter by state",
+      "status": "Status",
+      "runtime": "Runtime",
+      "address": "Address",
+      "state": {
+        "ok": "Running",
+        "failed": "Apply failed",
+        "disabled": "Disabled"
+      },
+      "filter": {
+        "all": "All",
+        "failed": "With errors",
+        "disabled": "Disabled"
+      },
+      "summaryEmpty": "No sites yet.",
+      "summaryTotal": "{n} site | {n} sites",
+      "summaryFailed": "{n} failed on the last apply | {n} failed on the last apply",
+      "summaryDisabled": "{n} disabled | {n} disabled",
+      "noneInFilter": "No site matches this filter.",
+      "clearFilter": "Clear filter",
+      "enable": "Enable site",
+      "disable": "Disable site"
     }
   },
   "uiMode": {
@@ -1163,7 +1231,8 @@
     "hostnameColumn": "Hostname",
     "sourceColumn": "Source (site)",
     "entriesCount": "{n} entries",
-    "loadingHosts": "Parsing system hosts file…"
+    "loadingHosts": "Parsing system hosts file…",
+    "enableEntryAria": "Entry for {hostname} enabled"
   },
   "apache": {
     "title": "Apache Web Server",
@@ -2247,7 +2316,9 @@
       "account": "Account",
       "sync": "Sync",
       "update": "Update",
-      "about": "About"
+      "about": "About",
+      "mcp": "AI clients (MCP)",
+      "notifications": "Notifications"
     },
     "simple": {
       "apacheHttp": "Apache HTTP",
@@ -2441,7 +2512,8 @@
       "mailpitSmtp": "Mailpit SMTP",
       "mailpitHttp": "Mailpit HTTP",
       "phpFpmBase": "PHP-FPM base port",
-      "phpFpmFormula": "Per-version ports are derived as base + major×10 + minor. E.g. base 9000 + PHP 8.4 = port 9084."
+      "phpFpmFormula": "Per-version ports are derived as base + major×10 + minor. E.g. base 9000 + PHP 8.4 = port 9084.",
+      "postgresqlPort": "PostgreSQL Port"
     },
     "update": {
       "current": "Current version",
@@ -2497,16 +2569,6 @@
       "modeBuiltIn": "Currently: built-in (Program.cs handlers)",
       "modePlugin": "Currently: plugin v{v}",
       "pluginLoadedNotActive": "plugin v{v} loaded but inactive (legacy handlers own the routes)"
-    },
-    "osNotify": {
-      "title": "System notifications",
-      "description": "Native OS toasts (Windows, macOS, Linux) shown even when the WDC window is in the background. Each channel can be turned off independently. Stored locally on this desktop.",
-      "deployLabel": "Deploy notifications",
-      "mcpLabel": "MCP confirmation requests",
-      "systemLabel": "System events",
-      "testBtn": "Test notification",
-      "testTitle": "NKS WDC — test notification",
-      "testBody": "If you see this, OS notifications are wired correctly."
     },
     "groups": {
       "app": "Application",
@@ -2682,6 +2744,11 @@
       "toastTrustedFor": "Trusted for {minutes} min — future identical requests skip the banner",
       "toastAlwaysTrusted": "Trust grant saved — future identical requests skip the banner",
       "toastGrantFailed": "Could not save trust grant: {error}"
+    },
+    "notify": {
+      "title": "NKS WDC — AI request needs approval",
+      "body": "AI wants to: {kind}. Open WDC to approve or reject it.",
+      "bodyGeneric": "AI wants to run a destructive operation. Open WDC to approve or reject it."
     }
   },
   "footer": {
@@ -2895,7 +2962,7 @@
     "title": "Apply pipeline",
     "notYet": "Not applied since the app started",
     "allOk": "All steps succeeded",
-    "someFailed": "{n} step(s) failed",
+    "someFailed": "{n} step failed | {n} steps failed",
     "when": "applied {when}",
     "minutesAgo": "{n} min ago",
     "applyAgain": "Apply again",
@@ -2921,7 +2988,9 @@
       "reload": "Check the web server on the Services page — its log usually names the broken directive.",
       "php": "Install the PHP version this site uses on the Binaries page.",
       "vhost": "The web server plugin could not write the vhost; check that Apache is installed."
-    }
+    },
+    "failedStep": "The “{step}” step failed",
+    "moreFailed": "{n} more step failed. | {n} more steps failed."
   },
   "servicesPage": {
     "title": "Services",
@@ -2930,15 +2999,283 @@
     "filter": {
       "all": "All",
       "running": "Running",
-      "problems": "Needs attention"
+      "problems": "Crashed"
     },
     "empty": "No services registered yet",
-    "noProblems": "Every service is running",
+    "noProblems": "No service has crashed.",
     "whyTitle": "Why is it not running?",
     "showLog": "Show log",
     "logEmpty": "The service log is empty.",
     "fixRestart": "Start again",
-    "fixConfig": "Edit configuration"
+    "fixConfig": "Edit configuration",
+    "showAll": "Show all",
+    "explain": {
+      "running": "Running and answering.",
+      "stopped": "Stopped. It does not run until you start it.",
+      "starting": "Starting…",
+      "stopping": "Stopping…",
+      "crashed": "Crashed: the process ended on its own. The end of its log usually says why.",
+      "disabled": "Disabled; its plugin is turned off."
+    },
+    "facts": {
+      "uptime": "Running for"
+    },
+    "logTitle": "End of the log",
+    "stop": "Stop"
+  },
+  "overview": {
+    "summary": "{running} of {total} services running · {sites} site | {running} of {total} services running · {sites} sites",
+    "summaryNoServices": "No services installed yet · {sites} site | No services installed yet · {sites} sites",
+    "summaryCrashed": "{n} service crashed | {n} services crashed",
+    "restarted": "{name} restarted",
+    "actionFailed": "{name}: the action failed",
+    "attention": {
+      "title": "Needs attention",
+      "none": "Nothing needs your attention right now.",
+      "crashed": "crashed. The log usually says why.",
+      "showWhy": "Show why",
+      "applyFailed": "The {step} step failed on the last apply. | these steps failed on the last apply: {step}.",
+      "openSite": "Open site",
+      "apacheStopped": "The web server is stopped, so your sites do not load.",
+      "startApache": "Start Apache",
+      "backupNever": "No backup has been made yet.",
+      "backupOld": "The last backup is more than {days} days old.",
+      "openBackups": "Open backups",
+      "update": "Version {version} is ready to install.",
+      "openUpdate": "Open update"
+    },
+    "stack": {
+      "title": "Stack",
+      "all": "All services",
+      "caption": "Service status",
+      "loading": "Loading service status",
+      "service": "Service",
+      "status": "Status",
+      "port": "Port",
+      "version": "Version",
+      "usage": "CPU · RAM",
+      "actions": "Actions",
+      "empty": "No services installed yet.",
+      "emptyHint": "Sites need a web server and PHP. Binaries downloads the recommended versions.",
+      "openBinaries": "Open Binaries"
+    },
+    "status": {
+      "running": "Running",
+      "stopped": "Stopped",
+      "starting": "Starting",
+      "stopping": "Stopping",
+      "crashed": "Crashed",
+      "disabled": "Disabled"
+    },
+    "actions": {
+      "start": "Start",
+      "restart": "Restart",
+      "why": "Why?",
+      "logs": "Logs",
+      "config": "Config",
+      "more": "More actions for {name}"
+    },
+    "figures": {
+      "title": "At a glance"
+    }
+  },
+  "mcpCapabilities": {
+    "intro": "AI clients connected over MCP can always read state and run the everyday actions (sites, services, databases). Each group below unlocks more. Destructive actions inside a group still wait for your approval in WDC unless a grant covers them.",
+    "loadFailed": "Could not load the MCP capabilities: {err}",
+    "approvalStillRequired": "Destructive actions still ask for approval",
+    "alwaysTitle": "Always allowed ({n})",
+    "alwaysHint": "What the shipped MCP tools need for everyday work.",
+    "neverTitle": "Never allowed",
+    "neverHint": "An AI client can never approve its own requests or change these switches.",
+    "settingsPrefix": "Settings starting with {prefix}",
+    "enableTitle": "Allow AI clients?",
+    "enableConfirm": "AI clients connected to WDC will be able to use “{name}”. Destructive actions in this group still need your approval.",
+    "enableButton": "Allow",
+    "enabled": "AI clients may now use “{name}”",
+    "disabled": "“{name}” is off for AI clients",
+    "mcpOff": "MCP is turned off, so no AI client can connect. These switches take effect once it is on.",
+    "openAdvanced": "Turn on MCP",
+    "groups": {
+      "settings_operator": {
+        "title": "Operator settings",
+        "description": "Change deploy, daemon, plugin, sync, path and telemetry settings and the backup folder."
+      },
+      "service_config": {
+        "title": "Service configuration",
+        "description": "Edit httpd.conf, php.ini and other service config files, then restart the service."
+      },
+      "hosts_file": {
+        "title": "Hosts file",
+        "description": "Apply, back up and restore the system hosts file."
+      },
+      "node_process": {
+        "title": "Node.js processes",
+        "description": "Set a start command for Node sites and start, stop or restart those processes."
+      },
+      "site_advanced_fields": {
+        "title": "Advanced site fields",
+        "description": "Set site fields beyond domain, folder, PHP and HTTPS (ports, environment, PHP settings)."
+      },
+      "cloudflare_credentials": {
+        "title": "Cloudflare credentials",
+        "description": "Set the cloudflared path, tunnel and API tokens, account and ingress rules."
+      },
+      "plugin_install": {
+        "title": "Plugins",
+        "description": "Install and uninstall plugins."
+      },
+      "database_admin": {
+        "title": "Database administration",
+        "description": "Reset MySQL/PostgreSQL root passwords and drop MySQL users."
+      },
+      "backup_restore": {
+        "title": "Restore backups",
+        "description": "Restore WDC from a backup, replacing current sites and settings."
+      },
+      "deploy_config": {
+        "title": "Deploy configuration",
+        "description": "Change deploy targets and hooks, run hook and notification tests, probe hosts."
+      },
+      "daemon_admin": {
+        "title": "Daemon administration",
+        "description": "Restart, shut down or reset the daemon and run the uninstaller."
+      },
+      "unlisted_routes": {
+        "title": "Everything else",
+        "description": "Any other daemon endpoint without its own group."
+      },
+      "composer": {
+        "title": "Composer",
+        "description": "Run Composer install, require and remove in site folders; package scripts run."
+      }
+    }
+  },
+  "splash": {
+    "failedTitle": "The daemon failed to start",
+    "retry": "Try again",
+    "restartApp": "Restart the app",
+    "logHint": "Daemon log: {path}",
+    "status": {
+      "mounting": "Starting the frontend…",
+      "connecting": "Connecting to the backend…",
+      "daemonStarting": "The daemon is starting…",
+      "pluginsStarting": "The daemon is starting plugins…",
+      "slow": "The daemon is still responding slowly…",
+      "unresponsive": "The daemon has not responded for a long time — preparing diagnostics…",
+      "auth": "The daemon is running, syncing the token…",
+      "server": "The daemon reports an error — retrying…",
+      "waiting": "Waiting for the backend…"
+    },
+    "hint": {
+      "mount": "mount phase",
+      "first": "first attempt",
+      "attempt": "attempt {n}",
+      "network": "attempt {n} · port file / socket",
+      "auth": "attempt {n} · token rotation",
+      "server": "attempt {n} · 5xx response"
+    },
+    "attempts": "{n} attempt | {n} attempts",
+    "fail": {
+      "network": "The daemon is not responding (port file / socket) — {attempts} in {s}s.",
+      "auth": "The daemon is running, but the token could not be synced — {attempts}.",
+      "server": "The daemon returns an error (5xx) — {attempts} in {s}s.",
+      "unknown": "The backend did not respond within {s}s ({attempts})."
+    }
+  },
+  "osNotifications": {
+    "channels": {
+      "services": {
+        "label": "Service crashes",
+        "description": "A service such as Apache or MySQL crashed."
+      },
+      "sites": {
+        "label": "Site apply failures",
+        "description": "Applying a site's configuration finished with failed steps."
+      },
+      "deploy": {
+        "label": "Deploys",
+        "description": "A deploy finished, successfully or with an error."
+      },
+      "mcp": {
+        "label": "MCP confirmation requests",
+        "description": "An AI assistant waits for you to approve an operation."
+      },
+      "backup": {
+        "label": "Backups",
+        "description": "A scheduled or manual backup finished or failed."
+      },
+      "updates": {
+        "label": "App updates",
+        "description": "A new version of WebDev Console is available (once per version)."
+      },
+      "daemon": {
+        "label": "Daemon status",
+        "description": "The background daemon stopped or was restarted automatically."
+      },
+      "system": {
+        "label": "Other system events",
+        "description": "Other long-running operations, such as snapshots and restores."
+      }
+    },
+    "settings": {
+      "title": "Notifications",
+      "subtitle": "Native system notifications (Windows, macOS, Linux)",
+      "description": "WebDev Console can show native system notifications for important events. Clicking a notification opens the related page. Settings apply to this computer only.",
+      "masterLabel": "Show system notifications",
+      "masterHint": "Turns all notifications on or off.",
+      "backgroundOnlyLabel": "Only when the app is in the background",
+      "backgroundOnlyHint": "No notifications while the WebDev Console window is focused, except critical ones such as crashes and failures.",
+      "channelsTitle": "Notify me about",
+      "throttleHint": "Repeated notifications for the same event are shown at most once per minute.",
+      "testBtn": "Send test notification",
+      "testTitle": "WebDev Console test notification",
+      "testBody": "If you can see this, system notifications work. Click it to open Settings.",
+      "testShown": "Test notification sent.",
+      "testUnsupported": "This system doesn't support notifications, or they are blocked for WebDev Console.",
+      "testFailed": "The test notification couldn't be shown.",
+      "testBrowser": "System notifications are only available in the desktop app.",
+      "platformHint": "If nothing appears, check that notifications for WebDev Console are allowed in the system settings and that Do Not Disturb or Focus is off.",
+      "saveFailed": "Couldn't save notification settings."
+    },
+    "events": {
+      "serviceCrashedTitle": "{service} crashed",
+      "serviceCrashedBody": "The service stopped unexpectedly. Click to open Services.",
+      "siteApplyFailedTitle": "Site {domain} wasn't applied completely",
+      "siteApplyFailedBody": "Step \"{step}\" failed: {detail}",
+      "siteApplyFailedBodyNoDetail": "Step \"{step}\" failed.",
+      "siteApplyFailedMore": "{count} more step(s) failed too.",
+      "deploySucceededTitle": "Deploy succeeded",
+      "deploySucceededBody": "Deploy {id} finished successfully.",
+      "deploySucceededBodySite": "Deploy of {domain} finished successfully.",
+      "deployFailedTitle": "Deploy failed",
+      "deployFailedBody": "Deploy {id} failed: {error}",
+      "deployFailedBodySite": "Deploy of {domain} failed: {error}",
+      "deployCancelledTitle": "Deploy cancelled",
+      "deployCancelledBody": "Deploy {id} was cancelled.",
+      "rollbackSucceededTitle": "Rollback finished",
+      "rollbackSucceededBody": "The previous release is live again.",
+      "rollbackFailedTitle": "Rollback failed",
+      "rollbackFailedBody": "Rollback failed: {error}",
+      "mcpConfirmTitle": "Approval needed",
+      "mcpConfirmBodyKind": "An AI assistant wants to run \"{kind}\". Open WebDev Console to approve or reject it.",
+      "mcpConfirmBody": "An AI assistant wants to run a destructive operation. Open WebDev Console to approve or reject it.",
+      "backupCompletedTitle": "Backup finished",
+      "backupCompletedBody": "{trigger} backup saved ({files} files, {size}).",
+      "backupFailedTitle": "Backup failed",
+      "backupFailedBody": "{trigger} backup failed: {error}",
+      "backupTriggerScheduled": "Scheduled",
+      "backupTriggerManual": "Manual",
+      "updateAvailableTitle": "Update available",
+      "updateAvailableBody": "WebDev Console {version} is available.",
+      "daemonRestartedTitle": "Daemon restarted",
+      "daemonRestartedBody": "The WebDev Console daemon stopped unexpectedly and was restarted automatically.",
+      "daemonGaveUpTitle": "The daemon keeps stopping",
+      "daemonGaveUpBody": "Automatic restarts were stopped. Check the logs, then use \"Start daemon\" in the tray menu.",
+      "daemonStartFailedTitle": "The daemon couldn't be started",
+      "daemonStartFailedBody": "{error}",
+      "daemonMigrationFailedTitle": "Database upgrade failed",
+      "daemonMigrationFailedBody": "The daemon stopped because its database couldn't be upgraded. Check the daemon log, then use \"Start daemon\" in the tray menu."
+    }
   },
   "mcpConnect": {
     "title": "Connect an AI client",

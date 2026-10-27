@@ -56,6 +56,16 @@
           />
         </SettingsPanel>
 
+        <!-- Native OS notifications — same component as the Advanced
+             "Notifications" section; changes apply immediately. -->
+        <SettingsPanel
+          :title="$t('osNotifications.settings.title')"
+          :subtitle="$t('osNotifications.settings.subtitle')"
+          :icon="Bell"
+        >
+          <NotificationSettings :t="t" />
+        </SettingsPanel>
+
         <!-- Simple Network panel — read-only port snapshot + DNS flush
              shortcut. The full per-plugin port editor stays in Advanced;
              beginners just need to see "what listens where" without
@@ -479,6 +489,18 @@
         </section>
 
         <!-- Advanced tab — integration endpoints -->
+        <!-- What AI clients connected over MCP may do. Toggles save
+             immediately; the daemon refuses them from the MCP token. -->
+        <section v-show="activeTab === 'mcp'" class="shell-section">
+          <div class="tab-content">
+            <p v-if="!mcpEnabled" class="tab-desc">
+              {{ $t('mcpCapabilities.mcpOff') }}
+              <el-button size="small" text @click="activeTab = 'advanced'">{{ $t('mcpCapabilities.openAdvanced') }}</el-button>
+            </p>
+            <McpCapabilitiesSettings v-if="activeTab === 'mcp'" />
+          </div>
+        </section>
+
         <section v-show="activeTab === 'advanced'" class="shell-section">
           <div class="tab-content">
             <p class="tab-desc">{{ $t('settings.advanced.tabDesc') }}</p>
@@ -871,33 +893,6 @@
                 </el-form-item>
               </el-form>
             </div>
-
-            <!-- #147 — OS notification toggles. Stored client-side
-                 (localStorage via osNotifications service) since they
-                 only matter for THIS desktop install. Each channel can
-                 be turned off independently so an operator who lives in
-                 the WDC window all day can mute deploy toasts but keep
-                 the louder MCP confirm requests. -->
-            <div class="settings-section" style="margin-top: var(--wdc-space-4)">
-              <h4 class="section-title">{{ $t('settings.osNotify.title') }}</h4>
-              <p class="hint">{{ $t('settings.osNotify.description') }}</p>
-              <el-form label-position="left" label-width="240px" size="small">
-                <el-form-item :label="$t('settings.osNotify.deployLabel')">
-                  <el-switch v-model="osNotifyDeploy" />
-                </el-form-item>
-                <el-form-item :label="$t('settings.osNotify.mcpLabel')">
-                  <el-switch v-model="osNotifyMcp" />
-                </el-form-item>
-                <el-form-item :label="$t('settings.osNotify.systemLabel')">
-                  <el-switch v-model="osNotifySystem" />
-                </el-form-item>
-                <el-form-item>
-                  <el-button size="small" plain @click="onTestOsNotify">
-                    {{ $t('settings.osNotify.testBtn') }}
-                  </el-button>
-                </el-form-item>
-              </el-form>
-            </div>
           </div>
         </section>
 
@@ -1004,6 +999,13 @@
             @check="runUpdateCheck"
             @download="downloadAndInstall"
           />
+        </section>
+        <!-- Notifications tab — visible in both Simple and Advanced. Stored
+             by the Electron main process, so no Save step is involved. -->
+        <section v-show="activeTab === 'notifications'" class="shell-section">
+          <SettingsCard :title="$t('osNotifications.settings.title')">
+            <NotificationSettings :t="t" />
+          </SettingsCard>
         </section>
         <!-- Sync tab — cloud config sync + export/import -->
         <section v-show="activeTab === 'sync'" class="shell-section">
@@ -1158,8 +1160,8 @@
             </div>
           </div>
         </section>
-        <!-- Save button (not shown on About or Update) -->
-        <template v-if="activeTab !== 'about' && activeTab !== 'update'" #footer>
+        <!-- Save button (not shown on About, Update, MCP or Notifications; those save on change) -->
+        <template v-if="activeTab !== 'about' && activeTab !== 'update' && activeTab !== 'mcp' && activeTab !== 'notifications'" #footer>
           <el-button type="primary" size="small" :loading="saving" @click="save">
             {{ $t('common.save') }} {{ $t('common.settings') }}
           </el-button>
@@ -1176,9 +1178,10 @@ import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import SettingsShell, { type SettingsSection } from '../settings/SettingsShell.vue'
+import McpCapabilitiesSettings from '../settings/McpCapabilitiesSettings.vue'
 import { setLocale, type Locale } from '../../i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Setting, Download, Connection, FolderOpened, InfoFilled, User, Operation, Warning } from '@element-plus/icons-vue'
+import { Setting, Download, Connection, FolderOpened, InfoFilled, User, Operation, Warning, Bell } from '@element-plus/icons-vue'
 import { useThemeStore } from '../../stores/theme'
 import { useUiModeStore } from '../../stores/uiMode'
 import { useAuthStore } from '../../stores/auth'
@@ -1192,10 +1195,10 @@ import {
   type SystemInfo,
 } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
-import { osNotify, isChannelEnabled, setChannelEnabled } from '../../services/osNotifications'
 import HealthStatusDot from '../shared/HealthStatusDot.vue'
 import SettingsPanel from '../shared/SettingsPanel.vue'
 import SettingsCard from '../settings/shared/SettingsCard.vue'
+import NotificationSettings from '../settings/shared/NotificationSettings.vue'
 import ReadinessBlockerList from '../deploy/ReadinessBlockerList.vue'
 import AccountAdvancedSummaryCard from '../settings/account/AccountAdvancedSummaryCard.vue'
 import AccountDeviceTableCard from '../settings/account/AccountDeviceTableCard.vue'
@@ -1265,15 +1268,17 @@ const settingsSections = computed<SettingsSection[]>(() => [
   { name: 'general', label: t('settings.tabs.general'), group: 'app' },
   { name: 'account', label: t('settings.tabs.account'), group: 'app' },
   { name: 'update', label: t('settings.tabs.update'), group: 'app' },
+  { name: 'notifications', label: t('settings.tabs.notifications'), group: 'app' },
   { name: 'about', label: t('settings.tabs.about'), group: 'app' },
   { name: 'ports', label: t('settings.tabs.ports'), group: 'environment' },
   { name: 'paths', label: t('settings.tabs.paths'), group: 'environment' },
   { name: 'databases', label: t('settings.tabs.databases'), group: 'environment' },
   { name: 'sync', label: t('settings.tabs.sync'), group: 'integration' },
+  { name: 'mcp', label: t('settings.tabs.mcp'), group: 'integration' },
   { name: 'advanced', label: t('settings.tabs.advanced'), group: 'integration' },
 ])
 
-const ADVANCED_ONLY_TABS = new Set(['ports', 'paths', 'databases', 'advanced', 'sync'])
+const ADVANCED_ONLY_TABS = new Set(['ports', 'paths', 'databases', 'advanced', 'sync', 'mcp'])
 watch(() => uiModeStore.isSimple, (simple) => {
   if (simple && ADVANCED_ONLY_TABS.has(activeTab.value)) {
     activeTab.value = 'general'
@@ -1456,24 +1461,6 @@ async function loadDeployFlipReadiness(): Promise<void> {
   } catch { /* keep locked on error */ }
 }
 
-// #147 — OS notification per-channel toggles. Persist via the
-// osNotifications service (localStorage-backed) on flip so the change
-// takes effect immediately without a Save All step.
-const osNotifyDeploy = ref(isChannelEnabled('deploy'))
-const osNotifyMcp = ref(isChannelEnabled('mcp'))
-const osNotifySystem = ref(isChannelEnabled('system'))
-watch(osNotifyDeploy, (v) => setChannelEnabled('deploy', v))
-watch(osNotifyMcp,    (v) => setChannelEnabled('mcp', v))
-watch(osNotifySystem, (v) => setChannelEnabled('system', v))
-
-async function onTestOsNotify(): Promise<void> {
-  await osNotify({
-    title: t('settings.osNotify.testTitle'),
-    body: t('settings.osNotify.testBody'),
-    urgency: 'normal',
-    channel: 'system',
-  })
-}
 // Auto-start is now per-plugin only — toggle lives on each plugin card in
 // Plugin Manager. The daemon still reads `service.<id>.autoStart` the same
 // way, so the settings key format hasn't changed — just the UI surface.
@@ -2882,10 +2869,10 @@ async function save() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--wdc-space-4-5) var(--wdc-space-5);
+  padding: 0 0 var(--wdc-space-4);
   margin-bottom: 0;
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
 }
 
 .page-title {
@@ -3151,12 +3138,11 @@ async function save() {
 
 .about-system { font-size: 0.85rem; }
 .about-sys-title {
-  font-size: 0.72rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-text-3);
   margin: 0 0 var(--wdc-space-1-5);
+  font-family: var(--wdc-font-display);
 }
 .about-sys-row {
   display: flex;
@@ -3216,11 +3202,10 @@ async function save() {
   border-bottom: 1px solid var(--wdc-border);
 }
 .settings-card-title {
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-text);
+  font-family: var(--wdc-font-display);
 }
 .settings-card-body { padding: 18px; }
 .sync-actions { display: flex; gap: 8px; flex-wrap: wrap; }

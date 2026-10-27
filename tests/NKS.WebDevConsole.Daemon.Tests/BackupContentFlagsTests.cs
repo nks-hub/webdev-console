@@ -33,7 +33,7 @@ public class BackupContentFlagsTests : IDisposable
     public void CreateBackup_returns_flags_in_result()
     {
         var bm = Bm();
-        var outZip = Path.Combine(_tempRoot, "test.zip");
+        var outZip = Path.Combine(_wdcDir, "backups", "test.zip");
         var result = bm.CreateBackup(outZip, BackupContentFlags.Vhosts | BackupContentFlags.Ssl);
         Assert.Equal(BackupContentFlags.Vhosts | BackupContentFlags.Ssl, result.Flags);
     }
@@ -47,7 +47,7 @@ public class BackupContentFlagsTests : IDisposable
         File.WriteAllText(Path.Combine(_wdcDir, "sites", "foo.loc.toml"), "domain = \"foo.loc\"");
 
         var bm = Bm();
-        var outZip = Path.Combine(_tempRoot, "vhosts.zip");
+        var outZip = Path.Combine(_wdcDir, "backups", "vhosts.zip");
         bm.CreateBackup(outZip, BackupContentFlags.Vhosts);
 
         using var zip = ZipFile.OpenRead(outZip);
@@ -62,7 +62,7 @@ public class BackupContentFlagsTests : IDisposable
         File.WriteAllText(Path.Combine(_wdcDir, "sites", "bar.loc.toml"), "domain = \"bar.loc\"");
 
         var bm = Bm();
-        var outZip = Path.Combine(_tempRoot, "no-vhosts.zip");
+        var outZip = Path.Combine(_wdcDir, "backups", "no-vhosts.zip");
         bm.CreateBackup(outZip, BackupContentFlags.Ssl);
 
         using var zip = ZipFile.OpenRead(outZip);
@@ -80,7 +80,7 @@ public class BackupContentFlagsTests : IDisposable
         File.WriteAllText(Path.Combine(sslDir, "key.pem"), "KEY");
 
         var bm = Bm();
-        var outZip = Path.Combine(_tempRoot, "ssl.zip");
+        var outZip = Path.Combine(_wdcDir, "backups", "ssl.zip");
         bm.CreateBackup(outZip, BackupContentFlags.Ssl);
 
         using var zip = ZipFile.OpenRead(outZip);
@@ -97,7 +97,7 @@ public class BackupContentFlagsTests : IDisposable
         File.WriteAllText(Path.Combine(caddyDir, "Caddyfile"), "localhost { respond 200 }");
 
         var bm = Bm();
-        var outZip = Path.Combine(_tempRoot, "plugincfg.zip");
+        var outZip = Path.Combine(_wdcDir, "backups", "plugincfg.zip");
         bm.CreateBackup(outZip, BackupContentFlags.PluginConfigs);
 
         using var zip = ZipFile.OpenRead(outZip);
@@ -112,7 +112,7 @@ public class BackupContentFlagsTests : IDisposable
         File.WriteAllText(Path.Combine(pluginDir, "config.json"), "{\"port\":80}");
 
         var bm = Bm();
-        var outZip = Path.Combine(_tempRoot, "plugincfg2.zip");
+        var outZip = Path.Combine(_wdcDir, "backups", "plugincfg2.zip");
         bm.CreateBackup(outZip, BackupContentFlags.PluginConfigs);
 
         using var zip = ZipFile.OpenRead(outZip);
@@ -129,7 +129,7 @@ public class BackupContentFlagsTests : IDisposable
         File.WriteAllBytes(Path.Combine(dataDir, "state.db"), new byte[] { 0x53, 0x51, 0x4C });
 
         var bm = Bm();
-        var outZip = Path.Combine(_tempRoot, "statedb.zip");
+        var outZip = Path.Combine(_wdcDir, "backups", "statedb.zip");
         bm.CreateBackup(outZip, BackupContentFlags.None);
 
         using var zip = ZipFile.OpenRead(outZip);
@@ -154,7 +154,7 @@ public class BackupContentFlagsTests : IDisposable
     public void Manifest_records_selected_flags()
     {
         var bm = Bm();
-        var outZip = Path.Combine(_tempRoot, "manifest-flags.zip");
+        var outZip = Path.Combine(_wdcDir, "backups", "manifest-flags.zip");
         bm.CreateBackup(outZip, BackupContentFlags.Vhosts | BackupContentFlags.Ssl);
 
         using var zip = ZipFile.OpenRead(outZip);
@@ -187,7 +187,7 @@ public class BackupContentFlagsTests : IDisposable
     public void CreateBackup_produces_nonzero_archive()
     {
         var bm = Bm();
-        var outZip = Path.Combine(_tempRoot, "nonzero.zip");
+        var outZip = Path.Combine(_wdcDir, "backups", "nonzero.zip");
         var result = bm.CreateBackup(outZip, BackupContentFlags.Default);
         Assert.True(result.SizeBytes > 0, $"Expected non-zero archive, got {result.SizeBytes} bytes");
         Assert.True(new FileInfo(outZip).Length > 0);

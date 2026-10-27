@@ -154,11 +154,10 @@ defineExpose({ open, close, hasSeen })
 }
 
 .gsw-step-indicator {
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-accent);
+  font-family: var(--wdc-font-display);
 }
 
 .gsw-step-title {

@@ -79,8 +79,12 @@ export const useDeployStore = defineStore('deploy', () => {
   /**
    * SSE handler. Fed by App.vue's subscribeEventsMap call:
    *   subscribeEventsMap({ 'deploy:event': (d) => deployStore.handleSseEvent(d as DeployEventDto) })
+   *
+   * `success` overrides the outcome of a terminal event. Without it only
+   * phase 'Done' counts as success, which is wrong for a rollback run:
+   * its successful end is phase 'RolledBack'.
    */
-  function handleSseEvent(evt: DeployEventDto): void {
+  function handleSseEvent(evt: DeployEventDto, success?: boolean): void {
     let run = runs.value.get(evt.deployId)
     if (!run) {
       // First we hear of this deploy — likely triggered from MCP, CLI, or
@@ -108,7 +112,7 @@ export const useDeployStore = defineStore('deploy', () => {
     if (evt.isPastPonr) run.isPastPonr = true
     if (evt.isTerminal) {
       run.isTerminal = true
-      run.success = evt.phase === 'Done'
+      run.success = success ?? (evt.phase === 'Done')
       run.completedAt = evt.timestamp
     }
     // Reactivity nudge: ref<Map> updates need a manual re-assign for Vue
@@ -152,7 +156,7 @@ export const useDeployStore = defineStore('deploy', () => {
       timestamp: new Date().toISOString(),
       isTerminal: true,
       isPastPonr: runs.value.get(evt.deployId)?.isPastPonr ?? false,
-    })
+    }, evt.success)
   }
 
   /**
