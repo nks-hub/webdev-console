@@ -40,6 +40,7 @@ import { useSiteApplyStore } from '../../stores/siteApply'
 import { useUpdatesStore } from '../../stores/updates'
 import { runServiceAction } from '../../utils/serviceActions'
 import { isRunning, serviceViewState, shortServiceName } from '../../utils/serviceState'
+import { stateKeyOf } from '../../utils/services'
 import { lastBackup } from '../../utils/lastBackup'
 
 /**
@@ -99,13 +100,14 @@ function installAction(app: string, label: string): Pick<AttentionItem, 'action'
 const items = computed<AttentionItem[]>(() => {
   const out: AttentionItem[] = []
 
-  for (const svc of daemonStore.crashedServices) {
+  for (const svc of daemonStore.problemServices) {
     const name = shortServiceName(svc)
     out.push({
       key: `crashed:${svc.id}`,
       tone: 'err',
       subject: t('overview.attention.serviceSubject', { name }),
-      text: t(svc.crashKind === 'startFailed' ? 'overview.attention.startFailed' : 'overview.attention.crashed'),
+      text: t(stateKeyOf(svc) === 'startFailed' ? 'overview.attention.startFailed' : 'overview.attention.crashed'),
+      detail: svc.startError ?? null,
       action: t('overview.attention.showWhy'),
       run: () => void router.push({ path: '/services', query: { filter: 'problems' } }),
     })

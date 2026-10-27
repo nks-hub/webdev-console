@@ -116,6 +116,7 @@ import { useAuthStore } from '../../stores/auth'
 import { useMcpConfirmStore } from '../../stores/mcpConfirm'
 import { useI18n } from 'vue-i18n'
 import { isRunning } from '../../utils/serviceState'
+import { stateKeyOf } from '../../utils/services'
 
 const emit = defineEmits<{ navigate: [] }>()
 const { t } = useI18n()
@@ -152,10 +153,10 @@ function openAccount() {
 
 // Same set the Overview and the status bar count (visible plugins only).
 const problems = computed(() => {
-  const list = daemonStore.crashedServices
+  const list = daemonStore.problemServices
   if (!list.length) return undefined
   const detail = list
-    .map(s => t(s.crashKind === 'startFailed' ? 'nav.problemStartFailed' : 'nav.problemExited', { name: s.displayName || s.id }))
+    .map(s => t(stateKeyOf(s) === 'startFailed' ? 'nav.problemStartFailed' : 'nav.problemExited', { name: s.displayName || s.id }))
     .join('. ')
   return { count: list.length, label: t('nav.problemsBadge', { n: list.length }, list.length), detail }
 })

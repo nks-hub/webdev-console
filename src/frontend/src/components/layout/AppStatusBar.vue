@@ -67,7 +67,7 @@ const localeName = computed(() => String(locale.value))
 const services = computed(() => daemonStore.visibleServices)
 const totalCount = computed(() => services.value.length)
 const runningCount = computed(() => daemonStore.runningServices.length)
-const crashedCount = computed(() => daemonStore.crashedServices.length)
+const crashedCount = computed(() => daemonStore.problemServices.length)
 const problemsLink = { path: '/services', query: { filter: 'problems' } }
 const tunnelRunning = computed(() => services.value.some(s => s.id === 'cloudflare' && isRunning(s)))
 const totalCpu = computed(() => services.value.reduce((sum, s) => sum + (s.cpuPercent ?? 0), 0))

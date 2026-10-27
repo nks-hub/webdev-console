@@ -197,7 +197,7 @@ const summary = computed(() => {
   const total = services.value.length
   if (total === 0) return t('overview.summaryNoServices', { sites: sitesCount.value }, sitesCount.value)
   let text = t('overview.summary', { running: running.value.length, total, sites: sitesCount.value }, sitesCount.value)
-  const crashed = daemonStore.crashedServices.length
+  const crashed = daemonStore.problemServices.length
   if (crashed > 0) text += ` · ${t('overview.summaryCrashed', { n: crashed }, crashed)}`
   const missing = services.value.filter(s => serviceViewState(s) === 'notInstalled').length
   if (missing > 0) text += ` · ${t('overview.summaryNotInstalled', { n: missing }, missing)}`

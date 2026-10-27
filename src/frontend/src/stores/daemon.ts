@@ -2,7 +2,8 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { fetchStatus, fetchServices, subscribeEvents } from '../api/daemon'
 import type { StatusResponse, ServiceInfo, ValidationUpdate } from '../api/types'
-import { isRunning, isCrashed } from '../utils/serviceState'
+import { isRunning } from '../utils/serviceState'
+import { needsAttention } from '../utils/services'
 import { usePluginsStore } from './plugins'
 
 type OnConnectListener = () => void | Promise<void>
@@ -52,8 +53,10 @@ export const useDaemonStore = defineStore('daemon', () => {
     services.value.filter(s => pluginsStore.isServiceVisible(s.id))
   )
   const runningServices = computed(() => visibleServices.value.filter(isRunning))
+  // Crashed, switched off after repeated crashes, or the last start failed: the
+  // test the Services page uses, so badge, status bar and Overview agree with it.
   // A failed start of something that is not installed is "not installed", not a fault.
-  const crashedServices = computed(() => visibleServices.value.filter(s => isCrashed(s) && s.installed !== false))
+  const problemServices = computed(() => visibleServices.value.filter(s => s.installed !== false && needsAttention(s)))
 
   const allRunning = computed(() =>
     visibleServices.value.length > 0 && visibleServices.value.every(isRunning)
@@ -235,7 +238,7 @@ export const useDaemonStore = defineStore('daemon', () => {
 
   return {
     status, services, connected, hasEverConnected, validation,
-    visibleServices, runningServices, crashedServices, allRunning, cpuHistory, ramHistory,
+    visibleServices, runningServices, problemServices, allRunning, cpuHistory, ramHistory,
     bootStartedAt, pollAttempts, bootFailed,
     consecutiveFailures: consecutiveFailuresPublic, lastErrorKind,
     isReloading, reloadReason, beginReload, endReload,
