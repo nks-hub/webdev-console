@@ -39,6 +39,11 @@ export const CONFIRMABLE_OPERATIONS = {
   service_config_write: { kind: 'service_config_write', host: '*mcp*', describe: 'rewrite the config file of service' },
   hosts_write: { kind: 'hosts_write', host: '*mcp*', describe: 'rewrite the system hosts file', fixedDomain: 'hosts' },
   daemon_admin: { kind: 'daemon_admin', host: '*mcp*', describe: 'run the daemon admin action' },
+  // Deploy routes (target = site domain). A deploy itself is bound to one host,
+  // so it is minted with wdc_deploy_create_intent, which takes the host.
+  deploy_rollback: { kind: 'rollback', host: '*', describe: 'roll back the live release (deploy or group) of site' },
+  deploy_cancel: { kind: 'cancel', host: '*', describe: 'cancel the running deploy of site' },
+  deploy_restore: { kind: 'restore', host: '*restore*', describe: 'restore a pre-deploy database snapshot over the live data of site' },
 } as const
 
 export type ConfirmableOperation = keyof typeof CONFIRMABLE_OPERATIONS

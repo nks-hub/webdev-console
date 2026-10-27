@@ -157,15 +157,16 @@ public static class McpCapabilities
         new("POST", "/api/ssl/install-ca"),
         new("POST", "/api/ssl/generate"),
         new("DELETE", "/api/ssl/certs/{domain}"),
-        // deploy.ts
+        // deploy.ts (the deploy, rollback, cancel and restore routes keep their intent gate)
         new("GET", "/api/nks.wdc.deploy/sites/{domain}/history"),
         new("GET", "/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}"),
         new("DELETE", "/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}"),
-        new("POST", "/api/nks.wdc.deploy/sites/{domain}/hosts/{host}/deploy"),
+        new("POST", "/api/nks.wdc.deploy/sites/{domain}/deploy"),
         new("POST", "/api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}/rollback"),
+        new("GET", "/api/nks.wdc.deploy/sites/{domain}/groups"),
         new("POST", "/api/nks.wdc.deploy/sites/{domain}/groups"),
-        new("GET", "/api/nks.wdc.deploy/sites/{domain}/groups/{groupId}"),
         new("POST", "/api/nks.wdc.deploy/sites/{domain}/groups/{groupId}/rollback"),
+        new("GET", "/api/nks.wdc.deploy/sites/{domain}/snapshots"),
         new("POST", "/api/nks.wdc.deploy/sites/{domain}/snapshots/{snapshotId}/restore"),
     ];
 
@@ -291,17 +292,20 @@ public static class McpCapabilities
             Tools: ["wdc_restore_backup"]),
         new(DeployConfig,
             "Deploy configuration",
-            "Change per-site deploy settings (hooks run on deploy), test-run hooks and notifications, probe hosts.",
+            "Read and change per-site deploy settings (hosts, hooks run on deploy, notification webhooks, env vars), " +
+            "test-run hooks and notifications, probe hosts.",
             DefaultEnabled: false,
             Routes:
             [
+                // The settings file holds notification webhooks and env vars besides the hosts.
+                new("GET", "/api/nks.wdc.deploy/sites/{domain}/settings"),
                 new("PUT", "/api/nks.wdc.deploy/sites/{domain}/settings", "settings_write", IntentByEndpoint: true),
                 new("POST", "/api/nks.wdc.deploy/sites/{domain}/hooks/test", "test_hook", IntentByEndpoint: true),
                 new("POST", "/api/nks.wdc.deploy/sites/{domain}/notifications/test"),
                 new("POST", "/api/nks.wdc.deploy/test-host-connection"),
             ],
             BodyFields: [],
-            Tools: []),
+            Tools: ["wdc_deploy_list_targets"]),
         new(DaemonAdmin,
             "Daemon administration",
             "Restart, shut down, reset or uninstall the daemon. Each needs an approved intent.",

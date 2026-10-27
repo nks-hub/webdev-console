@@ -119,6 +119,18 @@ Append `--readonly` to skip mutation tools (only list/get/metrics):
 | `wdc_save_cloudflare_config` / `wdc_create_cloudflare_dns` | mutate |
 | `wdc_delete_cloudflare_dns` | **destructive** |
 
+### Deploy (16)
+Registered per deploy scope from the port file's `scope:` line (`deploy:read`, `deploy:write`, `deploy:admin`; all when absent).
+
+| Tool | Type |
+|---|---|
+| `wdc_deploy_list_targets` / `wdc_deploy_get_status` / `wdc_deploy_list_releases` / `wdc_deploy_get_release` / `wdc_deploy_get_logs` / `wdc_deploy_list_snapshots` / `wdc_deploy_list_groups` / `wdc_deploy_group_status` | read |
+| `wdc_deploy_create_intent` | mutate (asks the user to approve a deploy, rollback, cancel or restore) |
+| `wdc_deploy_preflight` (dry run; uses up a deploy intent) | mutate |
+| `wdc_deploy_site` / `wdc_deploy_rollback` / `wdc_deploy_cancel` / `wdc_deploy_group_start` / `wdc_deploy_group_rollback` / `wdc_deploy_restore_snapshot` | **destructive**, need an approved `intentToken` |
+
+A group deploy is approved with one deploy intent for the first host of the group. Rollback, cancel and snapshot restore can also be requested with `wdc_request_confirmation` (`deploy_rollback`, `deploy_cancel`, `deploy_restore`, target = site domain).
+
 ## Daemon discovery
 
 The MCP server reads the WDC daemon's port + auth token from the first of:

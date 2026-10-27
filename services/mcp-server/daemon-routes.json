@@ -59,14 +59,16 @@
     "POST /api/ssl/install-ca",
     "POST /api/ssl/generate",
     "DELETE /api/ssl/certs/{domain}",
+    "GET /api/nks.wdc.deploy/sites/{domain}/settings",
     "GET /api/nks.wdc.deploy/sites/{domain}/history",
     "GET /api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}",
     "DELETE /api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}",
-    "POST /api/nks.wdc.deploy/sites/{domain}/hosts/{host}/deploy",
+    "POST /api/nks.wdc.deploy/sites/{domain}/deploy",
     "POST /api/nks.wdc.deploy/sites/{domain}/deploys/{deployId}/rollback",
+    "GET /api/nks.wdc.deploy/sites/{domain}/groups",
     "POST /api/nks.wdc.deploy/sites/{domain}/groups",
-    "GET /api/nks.wdc.deploy/sites/{domain}/groups/{groupId}",
     "POST /api/nks.wdc.deploy/sites/{domain}/groups/{groupId}/rollback",
+    "GET /api/nks.wdc.deploy/sites/{domain}/snapshots",
     "POST /api/nks.wdc.deploy/sites/{domain}/snapshots/{snapshotId}/restore",
     "POST /api/mcp/tool-calls"
   ]

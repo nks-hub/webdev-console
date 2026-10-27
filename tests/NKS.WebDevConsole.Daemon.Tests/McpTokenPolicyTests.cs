@@ -116,6 +116,9 @@ public class McpTokenPolicyTests
     [InlineData("POST", "/api/mcp/tool-calls")]
     [InlineData("GET", "/api/mcp/capabilities")]
     [InlineData("POST", "/api/nks.wdc.deploy/sites/{domain}/snapshots/{deployId}/restore")]
+    [InlineData("POST", "/api/nks.wdc.deploy/sites/{domain}/deploy")]
+    [InlineData("GET", "/api/nks.wdc.deploy/sites/{domain}/groups")]
+    [InlineData("GET", "/api/nks.wdc.deploy/sites/{domain}/snapshots")]
     public async Task Routes_the_shipped_tools_use_pass_with_every_capability_off(string method, string pattern)
     {
         Assert.Null(await McpTokenPolicy.EvaluateAsync(Request(method, pattern), AllOff, null));
@@ -160,6 +163,7 @@ public class McpTokenPolicyTests
         { McpCapabilities.DatabaseAdmin, "GET /api/databases/root-password", null, "" },
         { McpCapabilities.BackupRestore, "POST /api/restore", "{}", "" },
         { McpCapabilities.DeployConfig, "POST /api/nks.wdc.deploy/sites/{domain}/hooks/test", "{}", "domain=a.loc" },
+        { McpCapabilities.DeployConfig, "GET /api/nks.wdc.deploy/sites/{domain}/settings", null, "domain=a.loc" },
         { McpCapabilities.DaemonAdmin, "POST /api/admin/restart", null, "" },
         { McpCapabilities.UnlistedRoutes, "PUT /api/sites/{domain}", "{}", "domain=a.loc" },
         { McpCapabilities.UnlistedRoutes, "GET /api/databases/{name}/export", null, "name=shop" },
@@ -321,12 +325,8 @@ public class McpTokenPolicyTests
     }
 
     // Routes served by the nks.wdc.deploy plugin (sibling plugins repo), not
-    // by daemon sources in this repo.
-    private static readonly string[] PluginRoutes =
-    [
-        "POST /api/nks.wdc.deploy/sites/{*}/hosts/{*}/deploy",
-        "GET /api/nks.wdc.deploy/sites/{*}/groups/{*}",
-    ];
+    // by daemon sources in this repo. The deploy tools only call daemon routes.
+    private static readonly string[] PluginRoutes = [];
 
     [Fact]
     public void Every_listed_route_exists_in_the_daemon()
