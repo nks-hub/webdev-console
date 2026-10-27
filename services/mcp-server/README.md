@@ -201,13 +201,12 @@ Registered per deploy scope from the port file's `scope:` line (`deploy:read`, `
 
 ## Daemon discovery
 
-The MCP server reads the WDC daemon's port + auth token from the first of:
+The MCP server reads the WDC daemon's port + MCP token from
+`$TMPDIR/nks-wdc-mcp.port`, which the daemon writes on start. It never
+reads the GUI token file (`nks-wdc-daemon.port`): that token can approve
+intents.
 
-1. `$TMPDIR/nks-wdc-mcp.port`: the MCP token, which the daemon issues for AI clients
-2. `$TMPDIR/nks-wdc-daemon.port`: the GUI token, only used with daemons that predate the MCP token
-3. `~/.wdc/daemon.port` (legacy fallback)
-
-On Unix a port file is only used when it belongs to the current user and has no group/other permissions.
+On Unix the port file is only used when it belongs to the current user and has no group/other permissions.
 
 If the daemon isn't running, every tool call returns:
 

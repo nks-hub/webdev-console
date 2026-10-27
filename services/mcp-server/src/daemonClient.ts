@@ -1,11 +1,10 @@
 // Discovery + auth + HTTP plumbing for the NKS WDC daemon.
 //
-// Reads the same `~/.wdc/daemon.port` file the wdc CLI uses: one line port,
-// next line the per-session Bearer token. Token rotates every daemon restart
-// — on 401 we re-read the file and retry once.
+// Reads the daemon's `nks-wdc-mcp.port` file from the temp folder: one line
+// port, next line the per-session MCP Bearer token. Token rotates every
+// daemon restart — on 401 we re-read the file and retry once.
 
 import { existsSync, readFileSync, statSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 
@@ -41,7 +40,7 @@ class DaemonNotRunningError extends Error {
   constructor() {
     super(
       'NKS WDC daemon is not running. Start the WDC GUI or run `wdc daemon start`. ' +
-        'The MCP server reads ~/.wdc/daemon.port to discover the local daemon.',
+        'The MCP server reads nks-wdc-mcp.port in the temp folder, which the daemon writes on start.',
     )
   }
 }
@@ -190,17 +189,11 @@ export class DaemonClient {
    * don't collide on a shared `~/.wdc` location.
    */
   private readPortFile(): PortFile | null {
-    // Order matches what wdc CLI checks: first the OS temp path used by
-    // the daemon's Lifetime callback, then the legacy ~/.wdc location.
     // The daemon writes a separate MCP token to nks-wdc-mcp.port. Requests
     // with it must present GUI-confirmed intents for destructive operations
-    // and cannot approve intents themselves. The GUI port file is only a
-    // fallback for daemons that predate the MCP token.
-    const candidates = this.portFiles ?? [
-      join(tmpdir(), 'nks-wdc-mcp.port'),
-      join(tmpdir(), 'nks-wdc-daemon.port'),
-      join(homedir(), '.wdc', 'daemon.port'),
-    ]
+    // and cannot approve intents themselves. The GUI port file
+    // (nks-wdc-daemon.port) is deliberately never read: its token can approve.
+    const candidates = this.portFiles ?? [join(tmpdir(), 'nks-wdc-mcp.port')]
     for (const path of candidates) {
       if (!existsSync(path)) continue
       // In the shared temp dir another local user could pre-create this file

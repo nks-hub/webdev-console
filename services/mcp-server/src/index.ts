@@ -4,8 +4,8 @@
  *
  * Connects an MCP-compatible AI client (Claude Desktop, Claude Code, Cursor)
  * to the locally-running NKS WebDev Console daemon. Discovers the daemon via
- * the same `~/.wdc/daemon.port` file the wdc CLI uses, forwards each tool
- * call to the daemon's REST API with structured error surfacing.
+ * the `nks-wdc-mcp.port` file (MCP token) in the temp folder, forwards each
+ * tool call to the daemon's REST API with structured error surfacing.
  *
  * Usage:
  *   nks-wdc-mcp                 (mutation + read-only tools)
