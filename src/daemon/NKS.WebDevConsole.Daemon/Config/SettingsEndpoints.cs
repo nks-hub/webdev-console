@@ -61,6 +61,10 @@ internal static class SettingsEndpoints
             }
             if (raw == null) return Results.BadRequest();
 
+            var malformed = raw.Keys.Where(k => !SettingsKeys.TrySplit(k, out _, out _)).ToList();
+            if (malformed.Count > 0)
+                return Results.BadRequest(new { error = $"Setting names must look like category.key: {string.Join(", ", malformed)}" });
+
             var settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var (k, v) in raw)
             {
@@ -89,9 +93,7 @@ internal static class SettingsEndpoints
             {
                 foreach (var (compositeKey, value) in settings)
                 {
-                    var parts = compositeKey.Split('.', 2);
-                    var category = parts.Length > 1 ? parts[0] : "general";
-                    var key = parts.Length > 1 ? parts[1] : parts[0];
+                    SettingsKeys.TrySplit(compositeKey, out var category, out var key);
                     await conn.ExecuteAsync(
                         "INSERT INTO settings (category, key, value) VALUES (@Category, @Key, @Value) ON CONFLICT(category, key) DO UPDATE SET value = @Value, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')",
                         new { Category = category, Key = key, Value = value },

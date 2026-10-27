@@ -205,14 +205,14 @@
       "noBackupsYet": "Zatím tu není žádná záloha. Nejdřív nějakou vytvořte."
     },
     "snapshots": {
-      "count": "{n} záloh",
+      "count": "{n} záloha | {n} zálohy | {n} záloh",
       "loading": "Načítám…",
       "empty": "Žádné zálohy. Spusťte první zálohu přes záložku Přehled.",
       "download": "Stáhnout",
       "restore": "Obnovit",
       "delete": "Smazat",
       "restoreConfirmTitle": "Obnovit zálohu",
-      "restoreConfirmMessage": "Obnovit zálohu z {date}? Aktuální stav bude před obnovením automaticky uložen jako bezpečnostní záloha.",
+      "restoreConfirmMessage": "Obnovit zálohu z {date}? Přepíše se konfigurace webů, SSL certifikáty, konfigurace pluginů a interní databáze WDC (nastavení a seznam webů). Databáze MySQL a soubory webů se z této zálohy neobnovují. Aktuální stav se nejdřív uloží jako bezpečnostní záloha. Po obnovení se WDC restartuje a okno se znovu načte.",
       "deleteConfirmTitle": "Smazat zálohu",
       "deleteConfirmMessage": "Smazat zálohu {name}?",
       "backupFailed": "Záloha selhala",
@@ -222,12 +222,12 @@
     },
     "toast": {
       "completed": "Záloha dokončena",
-      "restored": "Obnoveno {files} souborů. Bezpečnostní záloha: {safety}",
+      "restored": "Obnoveno {files} souborů. Bezpečnostní záloha: {safety}. WDC se restartuje…",
       "deleted": "Záloha smazána",
       "scheduleSaved": "Plánování uloženo",
       "contentSaved": "Výběr obsahu uložen",
       "loadError": "Chyba načítání: {err}",
-      "settingsSaveFailed": "Uložení nastavení selhalo: {key}"
+      "settingsSaveFailed": "Nastavení záloh se nepodařilo uložit: {err}"
     },
     "schedule": {
       "cardTitle": "Interval automatické zálohy",
@@ -253,6 +253,14 @@
         "databasesDesc": "Dump všech MySQL databází — může být velký",
         "docrootsLabel": "Document roots (soubory stránek)",
         "docrootsDesc": "Fyzické soubory webu — může být velmi velký"
+      },
+      "noneSelected": "Vyberte aspoň jednu položku, jinak by záloha byla prázdná.",
+      "short": {
+        "vhosts": "weby",
+        "pluginConfigs": "pluginy",
+        "ssl": "SSL",
+        "databases": "databáze",
+        "docroots": "soubory webů"
       }
     }
   },

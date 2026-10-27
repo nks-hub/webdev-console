@@ -205,14 +205,14 @@
       "noBackupsYet": "No backup yet. Create one first."
     },
     "snapshots": {
-      "count": "{n} backups",
+      "count": "{n} backup | {n} backups",
       "loading": "Loading…",
       "empty": "No backups. Run the first one from the Overview tab.",
       "download": "Download",
       "restore": "Restore",
       "delete": "Delete",
       "restoreConfirmTitle": "Restore backup",
-      "restoreConfirmMessage": "Restore backup from {date}? Current state will be saved as a safety backup first.",
+      "restoreConfirmMessage": "Restore the backup from {date}? This overwrites site configs, SSL certificates, plugin configs and the WDC internal database (settings and the site list). MySQL databases and site files are not restored from it. The current state is saved as a safety backup first. WDC restarts and the window reloads afterwards.",
       "deleteConfirmTitle": "Delete backup",
       "deleteConfirmMessage": "Delete backup {name}?",
       "backupFailed": "Backup failed",
@@ -222,12 +222,12 @@
     },
     "toast": {
       "completed": "Backup completed",
-      "restored": "Restored {files} files. Safety backup: {safety}",
+      "restored": "Restored {files} files. Safety backup: {safety}. WDC is restarting…",
       "deleted": "Backup deleted",
       "scheduleSaved": "Schedule saved",
       "contentSaved": "Content selection saved",
       "loadError": "Load error: {err}",
-      "settingsSaveFailed": "Failed to save setting: {key}"
+      "settingsSaveFailed": "Could not save the backup settings: {err}"
     },
     "schedule": {
       "cardTitle": "Auto-backup interval",
@@ -253,6 +253,14 @@
         "databasesDesc": "Dump of all MySQL databases — may be large",
         "docrootsLabel": "Document roots (site files)",
         "docrootsDesc": "Physical site files — may be very large"
+      },
+      "noneSelected": "Select at least one item, otherwise the backup would be empty.",
+      "short": {
+        "vhosts": "sites",
+        "pluginConfigs": "plugins",
+        "ssl": "SSL",
+        "databases": "databases",
+        "docroots": "site files"
       }
     }
   },
