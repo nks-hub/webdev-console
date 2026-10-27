@@ -479,6 +479,18 @@
         </section>
 
         <!-- Advanced tab — integration endpoints -->
+        <!-- What AI clients connected over MCP may do. Toggles save
+             immediately; the daemon refuses them from the MCP token. -->
+        <section v-show="activeTab === 'mcp'" class="shell-section">
+          <div class="tab-content">
+            <p v-if="!mcpEnabled" class="tab-desc">
+              {{ $t('mcpCapabilities.mcpOff') }}
+              <el-button size="small" text @click="activeTab = 'advanced'">{{ $t('mcpCapabilities.openAdvanced') }}</el-button>
+            </p>
+            <McpCapabilitiesSettings v-if="activeTab === 'mcp'" />
+          </div>
+        </section>
+
         <section v-show="activeTab === 'advanced'" class="shell-section">
           <div class="tab-content">
             <p class="tab-desc">{{ $t('settings.advanced.tabDesc') }}</p>
@@ -1147,8 +1159,8 @@
             </div>
           </div>
         </section>
-        <!-- Save button (not shown on About or Update) -->
-        <template v-if="activeTab !== 'about' && activeTab !== 'update'" #footer>
+        <!-- Save button (not shown on About, Update or MCP — MCP switches save on change) -->
+        <template v-if="activeTab !== 'about' && activeTab !== 'update' && activeTab !== 'mcp'" #footer>
           <el-button type="primary" size="small" :loading="saving" @click="save">
             {{ $t('common.save') }} {{ $t('common.settings') }}
           </el-button>
@@ -1165,6 +1177,7 @@ import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import SettingsShell, { type SettingsSection } from '../settings/SettingsShell.vue'
+import McpCapabilitiesSettings from '../settings/McpCapabilitiesSettings.vue'
 import { setLocale, type Locale } from '../../i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Setting, Download, Connection, FolderOpened, InfoFilled, User, Operation, Warning } from '@element-plus/icons-vue'
@@ -1259,10 +1272,11 @@ const settingsSections = computed<SettingsSection[]>(() => [
   { name: 'paths', label: t('settings.tabs.paths'), group: 'environment' },
   { name: 'databases', label: t('settings.tabs.databases'), group: 'environment' },
   { name: 'sync', label: t('settings.tabs.sync'), group: 'integration' },
+  { name: 'mcp', label: t('settings.tabs.mcp'), group: 'integration' },
   { name: 'advanced', label: t('settings.tabs.advanced'), group: 'integration' },
 ])
 
-const ADVANCED_ONLY_TABS = new Set(['ports', 'paths', 'databases', 'advanced', 'sync'])
+const ADVANCED_ONLY_TABS = new Set(['ports', 'paths', 'databases', 'advanced', 'sync', 'mcp'])
 watch(() => uiModeStore.isSimple, (simple) => {
   if (simple && ADVANCED_ONLY_TABS.has(activeTab.value)) {
     activeTab.value = 'general'
@@ -2871,10 +2885,10 @@ async function save() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--wdc-space-4-5) var(--wdc-space-5);
+  padding: 0 0 var(--wdc-space-4);
   margin-bottom: 0;
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
 }
 
 .page-title {
@@ -3139,12 +3153,11 @@ async function save() {
 
 .about-system { font-size: 0.85rem; }
 .about-sys-title {
-  font-size: 0.72rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-text-3);
   margin: 0 0 var(--wdc-space-1-5);
+  font-family: var(--wdc-font-display);
 }
 .about-sys-row {
   display: flex;
@@ -3204,11 +3217,10 @@ async function save() {
   border-bottom: 1px solid var(--wdc-border);
 }
 .settings-card-title {
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--wdc-text);
+  font-family: var(--wdc-font-display);
 }
 .settings-card-body { padding: 18px; }
 .sync-actions { display: flex; gap: 8px; flex-wrap: wrap; }

@@ -43,20 +43,15 @@ public static class MySqlRootPassword
         {
             var plaintextBytes = Encoding.UTF8.GetBytes(password);
             var encrypted = ProtectedData.Protect(plaintextBytes, Entropy, DataProtectionScope.CurrentUser);
-            File.WriteAllBytes(StorePath, encrypted);
+            OwnerOnlyFile.WriteAllBytesAtomic(StorePath, encrypted);
         }
         else
         {
-            // Non-Windows fallback: plaintext file with 0600 permissions.
-            // Acceptable because the plan explicitly targets Windows for DPAPI; on
-            // macOS/Linux a future iteration can switch to Keychain / libsecret.
-            File.WriteAllText(StorePath, password);
-            try
-            {
-                var fi = new FileInfo(StorePath);
-                fi.UnixFileMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
-            }
-            catch { /* best effort */ }
+            // Non-Windows fallback: plaintext file created 0600 (never readable
+            // by others, not even between write and chmod). Acceptable because
+            // the plan explicitly targets Windows for DPAPI; on macOS/Linux a
+            // future iteration can switch to Keychain / libsecret.
+            OwnerOnlyFile.WriteAllTextAtomic(StorePath, password);
         }
 
         return password;
@@ -104,17 +99,11 @@ public static class MySqlRootPassword
         {
             var plaintextBytes = Encoding.UTF8.GetBytes(password);
             var encrypted = ProtectedData.Protect(plaintextBytes, Entropy, DataProtectionScope.CurrentUser);
-            File.WriteAllBytes(StorePath, encrypted);
+            OwnerOnlyFile.WriteAllBytesAtomic(StorePath, encrypted);
         }
         else
         {
-            File.WriteAllText(StorePath, password);
-            try
-            {
-                var fi = new FileInfo(StorePath);
-                fi.UnixFileMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
-            }
-            catch { /* best effort */ }
+            OwnerOnlyFile.WriteAllTextAtomic(StorePath, password);
         }
     }
 
@@ -152,13 +141,7 @@ public static class MySqlRootPassword
         // Non-Windows fallback path that skips the [SupportedOSPlatform] check
         var password = GenerateSecurePassword(32);
         Directory.CreateDirectory(Path.GetDirectoryName(StorePath)!);
-        File.WriteAllText(StorePath, password);
-        try
-        {
-            var fi = new FileInfo(StorePath);
-            fi.UnixFileMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
-        }
-        catch { }
+        OwnerOnlyFile.WriteAllTextAtomic(StorePath, password);
         return password;
     }
 

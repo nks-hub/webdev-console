@@ -637,11 +637,11 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--wdc-space-4-5) var(--wdc-space-5);
+  padding: 0 0 var(--wdc-space-4);
   margin-bottom: 0;
   gap: var(--wdc-space-3);
-  border-bottom: 1px solid var(--wdc-accent-glow);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), transparent);
+  border-bottom: 1px solid var(--wdc-border);
+  background: transparent;
 }
 
 .header-title-block {
@@ -720,7 +720,7 @@ onMounted(() => {
 }
 
 .page-body-pad {
-  padding: 0 var(--wdc-space-5) var(--wdc-space-5);
+  padding: 0 0 var(--wdc-space-5);
 }
 
 /* Grid of module cards */
@@ -807,10 +807,9 @@ onMounted(() => {
 }
 
 .metric-label {
-  font-size: 0.62rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 0.82rem;
   color: var(--wdc-text-3);
+  font-family: var(--wdc-font-display);
 }
 
 .bin-card-actions {

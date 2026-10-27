@@ -1,7 +1,8 @@
 import { h, type VNode } from 'vue'
 import { ElNotification, ElButton, ElMessage } from 'element-plus'
 import { i18n } from '../i18n'
-import { confirmIntent, revokeIntent } from '../api/daemon'
+import { useMcpConfirmStore } from '../stores/mcpConfirm'
+import { mcpKindLabel } from './mcpKindLabel'
 
 /**
  * Phase 8 (3a) — inline approve toast for MCP confirm-requests.
@@ -40,10 +41,12 @@ export function showMcpConfirmToast(evt: ToastEvent): void {
     }
   }
 
+  // Approve/reject through the banner store so the matching banner goes
+  // away together with the toast instead of lingering until expiry.
   const onApprove = async (): Promise<void> => {
     try {
-      await confirmIntent(evt.intentId)
-      ElMessage.success(t('mcp.toast.approveSuccess'))
+      if (await useMcpConfirmStore().approve(evt.intentId)) ElMessage.success(t('mcp.toast.approveSuccess'))
+      else ElMessage.info(t('mcp.banner.toastAlreadyConsumed'))
     } catch (err) {
       // Surface the failure visibly — silent close was leaving operator
       // wondering whether the request actually went through. Most common
@@ -56,8 +59,8 @@ export function showMcpConfirmToast(evt: ToastEvent): void {
   }
   const onReject = async (): Promise<void> => {
     try {
-      await revokeIntent(evt.intentId)
-      ElMessage.info(t('mcp.toast.rejectSuccess'))
+      if (await useMcpConfirmStore().reject(evt.intentId)) ElMessage.info(t('mcp.toast.rejectSuccess'))
+      else ElMessage.info(t('mcp.banner.toastAlreadyConsumed'))
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       ElMessage.error(t('mcp.toast.rejectFailed', { error: msg }))
@@ -91,11 +94,10 @@ export function showMcpConfirmToast(evt: ToastEvent): void {
       ),
     ])
 
-  const titleText = evt.kindLabel
-    ? t('mcp.toast.kindRequest', { kind: evt.kindLabel })
-    : evt.kind
-      ? t('mcp.toast.kindRequest', { kind: evt.kind })
-      : t('mcp.toast.genericRequest')
+  const kindText = mcpKindLabel(evt)
+  const titleText = kindText
+    ? t('mcp.toast.kindRequest', { kind: kindText })
+    : t('mcp.toast.genericRequest')
   const targetText = evt.domain && evt.host ? `${evt.domain}/${evt.host}` : ''
 
   const message = (): VNode =>

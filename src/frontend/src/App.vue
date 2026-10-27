@@ -1,16 +1,9 @@
 <template>
   <div class="app-root">
-    <div class="app-backdrop" />
-    <AppHeader />
-
     <div class="app-body">
-      <!-- Sidebar: always visible at >=960px; hidden below that breakpoint -->
+      <!-- Sidebar runs the full height on the left; at <960px it moves
+           into a drawer opened from the header's menu button. -->
       <AppSidebar class="sidebar-desktop" @navigate="drawerOpen = false" />
-
-      <!-- Hamburger button — only rendered at <960px -->
-      <button class="hamburger-btn" aria-label="Open menu" @click="drawerOpen = true">
-        <span /><span /><span />
-      </button>
 
       <!-- Mobile drawer sidebar -->
       <el-drawer
@@ -23,7 +16,9 @@
         <AppSidebar @navigate="drawerOpen = false" />
       </el-drawer>
 
-      <main class="content-area">
+      <div class="app-main">
+      <AppHeader @open-menu="drawerOpen = true" />
+      <main id="main" class="content-area" tabindex="-1">
         <!-- keep-alive caches mounted page components so clicking a nav
              item doesn't re-mount the whole tree AND re-run onMounted's
              fetch cascade every time. This is the biggest win for the
@@ -37,6 +32,7 @@
           </keep-alive>
         </router-view>
       </main>
+      </div>
     </div>
 
     <AppStatusBar />
@@ -118,11 +114,14 @@ import { useMcpConfirmStore } from './stores/mcpConfirm'
 import { useFeatureFlagsStore } from './stores/featureFlags'
 import { useUiModeStore } from './stores/uiMode'
 import { fetchSettings, subscribeEventsMap } from './api/daemon'
+import { OPEN_COMMAND_PALETTE_EVENT } from './utils/commandPalette'
 import type { DeployEventDto } from './api/deploy'
 import type { SiteApplyResultDto } from './api/daemon'
 import { useSiteApplyStore } from './stores/siteApply'
 import { osNotify } from './services/osNotifications'
 import { showMcpConfirmToast, closeMcpConfirmToast } from './utils/mcpConfirmToast'
+import { mcpKindLabel } from './utils/mcpKindLabel'
+import { i18n } from './i18n'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -181,20 +180,26 @@ function startDeploySse(): void {
       void showMcpConfirmToast(evt)
       // #147 — fire OS notification so the operator sees the request
       // even when the WDC window is in the background.
+      // Same human kind label the banner shows ("Drop a database"), not
+      // the wire id ("database_drop").
+      const kindText = mcpKindLabel(evt)
       void osNotify({
-        title: 'NKS WDC — MCP confirmation needed',
-        body: evt.kind
-          ? `Claude wants to perform ${evt.kind} — open WDC to approve.`
-          : 'Claude wants to run a destructive operation — open WDC to approve.',
+        title: i18n.global.t('mcp.notify.title'),
+        body: kindText
+          ? i18n.global.t('mcp.notify.body', { kind: kindText })
+          : i18n.global.t('mcp.notify.bodyGeneric'),
         urgency: 'critical',
         channel: 'mcp',
       })
     },
-    // Auto-dismiss the toast when the intent is resolved through the
-    // banner or another surface (used_at / revoked / matched grant).
+    // The intent was settled somewhere (banner, toast, Intents page, a
+    // trust grant, the agent consuming it, expiry): close its toast and
+    // drop its banner so nothing stale stays on screen.
     'mcp:intent-changed': (data) => {
-      const evt = data as { intentId?: string }
-      if (evt.intentId) closeMcpConfirmToast(evt.intentId)
+      const evt = data as { intentId?: string; change?: string }
+      if (!evt.intentId) return
+      closeMcpConfirmToast(evt.intentId)
+      mcpConfirmStore.handleIntentChanged(evt)
     },
     // #147 — surface deploy completion in OS notification center so a
     // long-running deploy doesn't require the operator to keep the
@@ -307,6 +312,10 @@ function reloadApp() {
   window.location.reload()
 }
 
+function openCommandPalette() {
+  commandPalette.value?.open()
+}
+
 function handleKeydown(e: KeyboardEvent) {
   if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
     e.preventDefault()
@@ -370,6 +379,10 @@ onMounted(() => {
   // the moment the backend is up instead of staying empty until manual reload.
   unsubscribeConnect = daemonStore.onConnect(() => {
     void featureFlagsStore.load()
+    // Reload MCP requests still waiting for approval — the SSE event for
+    // one that arrived while WDC was closed or the daemon was restarting
+    // was never seen, and without this it could not be approved at all.
+    void mcpConfirmStore.loadPending()
     void pluginsStore.loadAll()
     void sitesStore.load()
     // Retry token mirror on every daemon (re)connect — covers the case
@@ -392,6 +405,7 @@ onMounted(() => {
   startDeploySse()
 
   window.addEventListener('keydown', handleKeydown)
+  window.addEventListener(OPEN_COMMAND_PALETTE_EVENT, openCommandPalette)
 })
 
 onUnmounted(() => {
@@ -400,16 +414,12 @@ onUnmounted(() => {
   stopDeploySse()
   if (splashTimer) { clearInterval(splashTimer); splashTimer = null }
   window.removeEventListener('keydown', handleKeydown)
+  window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, openCommandPalette)
 })
 </script>
 
 <style>
-/*
-  Shell — base bg + radial gradient mesh. Two soft light sources
-  (accent + secondary) bake an ambient warmth into the chrome so it
-  doesn't read as a flat dark block. Mesh sits on top of the bg via
-  a fixed pseudo-element so it doesn't scroll with content.
-*/
+/* Shell: full-height sidebar | (header over content), status bar below. */
 .app-root {
   display: flex;
   flex-direction: column;
@@ -420,28 +430,18 @@ onUnmounted(() => {
   background: var(--wdc-bg);
 }
 
-.app-root::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: var(--wdc-mesh-bg);
-  z-index: 0;
-}
-
-.app-backdrop { display: none; }
-
-/* Lift app shell above the mesh */
-.app-header,
-.app-body,
-.app-status-bar { position: relative; z-index: 1; }
-
 .app-body {
   display: flex;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
-  position: relative;
-  z-index: 1;
+}
+
+.app-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
 }
 
 .content-area {
@@ -449,9 +449,9 @@ onUnmounted(() => {
   overflow-y: auto;
   overflow-x: hidden;
   background: var(--wdc-bg);
-  scroll-behavior: smooth;
   padding: 0;
 }
+.content-area:focus { outline: none; }
 
 /* ═══ Splash overlay — shown until backend first connects ════════════════ */
 .splash-overlay {
@@ -461,7 +461,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at 50% 40%, rgba(86, 194, 255, 0.08), var(--wdc-bg) 60%);
+  background: var(--wdc-bg);
   backdrop-filter: blur(4px);
 }
 
@@ -474,7 +474,7 @@ onUnmounted(() => {
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border-strong);
   border-radius: var(--wdc-radius-md);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+  box-shadow: var(--wdc-shadow-pop);
   min-width: 360px;
 }
 
@@ -579,45 +579,22 @@ onUnmounted(() => {
 }
 
 /* ═══ Mobile sidebar drawer ═══════════════════════════════════════════════ */
-.hamburger-btn {
-  display: none;
-  position: fixed;
-  top: 12px;
-  left: 12px;
-  z-index: 200;
-  flex-direction: column;
-  gap: var(--wdc-space-1);
-  padding: var(--wdc-space-2);
-  background: var(--wdc-surface-2);
-  border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius-sm);
-  cursor: pointer;
-}
-.hamburger-btn span {
-  display: block;
-  width: 20px;
-  height: 2px;
-  background: var(--wdc-text);
-  border-radius: var(--wdc-radius-2xs);
-}
-
-.sidebar-drawer :deep(.el-drawer__body) {
-  padding: 0;
+.sidebar-drawer .el-drawer__body {
+  padding: 0 !important;
   overflow: hidden;
 }
-.sidebar-drawer :deep(.el-drawer) {
-  background: var(--wdc-surface);
+.sidebar-drawer.el-drawer {
+  background: var(--wdc-chrome) !important;
+}
+.sidebar-drawer .sidebar {
+  width: 100%;
+  min-width: 0;
+  border-right: 0;
 }
 
 @media (max-width: 959px) {
   .app-body > .sidebar-desktop {
     display: none !important;
-  }
-  .hamburger-btn {
-    display: flex;
-  }
-  .content-area {
-    padding-left: 0;
   }
 }
 </style>

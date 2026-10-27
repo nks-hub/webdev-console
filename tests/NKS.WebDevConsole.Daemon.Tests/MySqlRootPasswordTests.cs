@@ -58,6 +58,23 @@ public sealed class MySqlRootPasswordTests
         });
     }
 
+    [Fact]
+    public void Store_is_owner_only_on_unix_from_creation()
+    {
+        WithTempStore(() =>
+        {
+            if (OperatingSystem.IsWindows()) return;
+            MySqlRootPassword.EnsureExists();
+            var path = Environment.GetEnvironmentVariable("WDC_MYSQL_ROOT_PASSWORD_STORE")!;
+            Assert.Equal(UnixFileMode.UserRead | UnixFileMode.UserWrite, File.GetUnixFileMode(path));
+
+            MySqlRootPassword.SetPlaintext("changed-password");
+            Assert.Equal(UnixFileMode.UserRead | UnixFileMode.UserWrite, File.GetUnixFileMode(path));
+            Assert.Equal("changed-password", MySqlRootPassword.TryRead());
+            Assert.Single(Directory.GetFiles(Path.GetDirectoryName(path)!));
+        });
+    }
+
     private static void WithTempStore(Action action)
     {
         var previous = Environment.GetEnvironmentVariable("WDC_MYSQL_ROOT_PASSWORD_STORE");

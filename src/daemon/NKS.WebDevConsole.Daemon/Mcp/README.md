@@ -50,6 +50,27 @@ Auto-approve rules. Pattern: `kindPattern × targetPattern × scope (always
 "⚠️ N never matched" links here filtered by `usage=deadweight` so unused
 rules can be cleaned up.
 
+#### How a rule matches a caller
+The MCP server sends three headers on every daemon request:
+
+| Header              | Value                                                            | Rule scope |
+|---------------------|------------------------------------------------------------------|------------|
+| `X-Mcp-Session-Id`  | one UUID per MCP server process (= audit-log session id)          | `session`  |
+| `X-Mcp-Instance-Id` | stable per-install UUID from `~/.wdc/mcp-instance-id`             | `instance` |
+| `X-Mcp-Api-Key-Id`  | `client:<name>` from the MCP initialize `clientInfo.name`         | `api_key`  |
+
+`always` rules match any request authenticated with the MCP token, with or
+without these headers. The headers are caller-supplied and are not
+authentication (the MCP token is), so session/instance/client scoping is a
+convenience boundary, not a security boundary.
+
+A rule is applied when the agent calls `POST /api/mcp/intents/confirm-request`:
+if one matches, the intent is confirmed right there, no banner is shown, and
+the response is `200 { confirmed: true, autoApproved: true, matchedGrantId }`
+so the agent can proceed at once. Otherwise the banner is broadcast and the
+response is `202 { confirmed: false, autoApproved: false }`. The same rule
+check also runs when an unconfirmed intent is consumed.
+
 ### 4. 📚 Catalog (formerly Kinds)
 Read-only inventory of every destructive operation kind plugins have
 registered. Each row shows the wire-format id, the human label, the
@@ -61,14 +82,19 @@ Banners that appear above the tabs based on state:
 
 ### Onboarding panel
 Shown on first visit (zero grants AND `localStorage["mcp.onboarding.dismissed.v1"]` not set).
-Four preset profiles:
+Five preset profiles. Strict (Minimal) is the default: nothing is
+auto-approved until the operator picks another profile.
 
-| Profile        | Grants created                              | Notes                                |
-|----------------|---------------------------------------------|--------------------------------------|
-| 🛡️ Minimal      | none                                        | Every destructive op asks            |
-| ⚖️ Balanced ⭐ | `deploy/*`, `rollback/*`                    | Reversible auto, destructive asks    |
-| 🚀 Full Trust  | `*/*`                                       | Test envs only — pair with Always-ask|
-| 🎯 Manual      | none — opens Rules tab                      | Build your own                       |
+| Profile             | Grants created                                                        | Notes                                 |
+|---------------------|-----------------------------------------------------------------------|---------------------------------------|
+| 🛡️ Minimal (default) | none                                                                  | Every destructive op asks             |
+| ⚖️ Balanced          | `deploy/*`, `rollback/*`                                              | Reversible auto, destructive asks     |
+| 🧪 Local development | `service_restart/*`, `database_drop`/`database_query`/`database_import` on `*_dev` | Local services and dev databases only |
+| 🚀 Full Trust        | `*/*`                                                                 | Test envs only — pair with Always-ask |
+| 🎯 Manual            | none — opens Rules tab                                                | Build your own                        |
+
+Grant target patterns accept `*` as a wildcard (`*_dev`), matched
+case-insensitively.
 
 ### Suggested grants
 Yellow banner. Polls `/api/mcp/grants/suggested` (last 7 d, ≥ 3 manual
@@ -77,9 +103,16 @@ an `always` grant matching `kind × domain/*`.
 
 ### Inline approve toast
 Element Plus `ElNotification` in `bottom-right`, 60 s duration, three
-buttons: **Approve** / **Reject** / **Detail**. Auto-dismisses on
-`mcp:intent-changed` SSE so the toast disappears when the operator
-resolves the intent through any other surface.
+buttons: **Approve** / **Reject** / **Detail**. Toast and banner close on
+`mcp:intent-changed` (`confirmed` / `revoked` / `consumed` / `expired`), so
+both disappear when the intent is settled through any surface.
+
+### Missed requests
+`confirm-request` records `confirm_requested_at` and the agent's prompt on the
+intent. On start and on every daemon reconnect the GUI loads
+`GET /api/mcp/intents?pendingOnly=true` into the banner queue, so a request
+that arrived while WDC was closed can still be approved — from the banner or
+with **Approve** / **Reject** on the Requests tab.
 
 ## Daemon REST endpoints
 

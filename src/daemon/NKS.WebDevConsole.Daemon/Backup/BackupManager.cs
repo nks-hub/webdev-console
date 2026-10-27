@@ -55,6 +55,58 @@ public sealed class BackupManager
     }
 
     /// <summary>
+    /// File-name prefix of backups written by <see cref="BackupScheduler"/>.
+    /// Manual and pre-uninstall backups use <c>wdc-backup-</c> and restore
+    /// safety copies use <c>auto-pre-restore-</c>; only this prefix is ever
+    /// pruned by the scheduler.
+    /// </summary>
+    public const string ScheduledBackupPrefix = "wdc-scheduled-";
+
+    private static readonly System.Text.RegularExpressions.Regex ScheduledBackupName =
+        new(@"^wdc-scheduled-\d{8}-\d{6}\.zip$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+    /// <summary>Path for a new scheduled backup: <c>wdc-scheduled-yyyyMMdd-HHmmss.zip</c> in the backup root.</summary>
+    public string ScheduledBackupPath()
+    {
+        var timestamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture);
+        return Path.Combine(_backupRoot, $"{ScheduledBackupPrefix}{timestamp}.zip");
+    }
+
+    /// <summary>True when <paramref name="path"/> names a scheduler-created backup.</summary>
+    public static bool IsScheduledBackup(string path) =>
+        ScheduledBackupName.IsMatch(Path.GetFileName(path));
+
+    /// <summary>
+    /// Deletes scheduler-created backups in the backup root beyond the
+    /// <paramref name="retain"/> newest (ordered by the timestamp in the file
+    /// name). Manual backups, restore safety backups and any other zip are
+    /// never touched. Returns the deleted paths.
+    /// </summary>
+    public IReadOnlyList<string> PruneScheduledBackups(int retain)
+    {
+        if (!Directory.Exists(_backupRoot)) return Array.Empty<string>();
+        var deleted = new List<string>();
+        var stale = Directory.GetFiles(_backupRoot, ScheduledBackupPrefix + "*.zip")
+            .Where(IsScheduledBackup)
+            .OrderByDescending(p => Path.GetFileName(p), StringComparer.Ordinal)
+            .Skip(Math.Max(retain, 0));
+        foreach (var path in stale)
+        {
+            try
+            {
+                File.Delete(path);
+                deleted.Add(path);
+                _logger.LogDebug("Pruned old scheduled backup: {Path}", path);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Failed to prune backup {Path}: {Error}", path, ex.Message);
+            }
+        }
+        return deleted;
+    }
+
+    /// <summary>
     /// Creates a zip backup at the requested path with the given content flags.
     /// Returns the absolute path, file count, and archive size.
     /// </summary>

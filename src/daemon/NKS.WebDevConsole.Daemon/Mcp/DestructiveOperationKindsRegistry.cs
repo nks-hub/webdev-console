@@ -100,6 +100,12 @@ public sealed class DestructiveOperationKindsRegistry : IDestructiveOperationKin
         // an already-stopped service).
         _kinds["service_restart"] = new DestructiveOperationKind(
             "service_restart", "Stop or restart a managed service", CorePluginId, DangerLevel.Reversible);
+        // Writing a service config file (httpd.conf, php.ini, my.cnf, ...)
+        // restarts the service with it; a crafted config can load modules or
+        // handlers that run code. Destructive so strict mode treats it like
+        // the other code-load vectors.
+        _kinds["service_config_write"] = new DestructiveOperationKind(
+            "service_config_write", "Rewrite a service config file (httpd.conf, php.ini, …)", CorePluginId, DangerLevel.Destructive);
         // `database_import` overwrites the target database with the SQL
         // dump in the request body. Strictly destructive — the existing
         // schema/data is gone. Operator-driven imports happen via the
@@ -126,6 +132,27 @@ public sealed class DestructiveOperationKindsRegistry : IDestructiveOperationKin
             "plugin_install", "Install a new plugin DLL", CorePluginId, DangerLevel.Destructive);
         _kinds["binary_install"] = new DestructiveOperationKind(
             "binary_install", "Install a new binary (PHP, MySQL, …)", CorePluginId, DangerLevel.Destructive);
+        // MCP capabilities (McpCapabilities): once the operator enables one of
+        // these groups, each call still needs an approved intent. The daemon's
+        // MCP policy checks them (host "*mcp*", "*backup*", or the database
+        // host markers); service_config_write above is one of them too.
+        // Deleting a backup zip cannot be undone.
+        _kinds["backup_delete"] = new DestructiveOperationKind(
+            "backup_delete", "Delete a WDC backup", CorePluginId, DangerLevel.Destructive);
+        _kinds["hosts_write"] = new DestructiveOperationKind(
+            "hosts_write", "Rewrite or restore the system hosts file", CorePluginId, DangerLevel.Destructive);
+        _kinds["node_process"] = new DestructiveOperationKind(
+            "node_process", "Set or run a site's Node.js start command", CorePluginId, DangerLevel.Destructive);
+        _kinds["cloudflare_credentials"] = new DestructiveOperationKind(
+            "cloudflare_credentials", "Change Cloudflare credentials or tunnel routing", CorePluginId, DangerLevel.Destructive);
+        _kinds["daemon_admin"] = new DestructiveOperationKind(
+            "daemon_admin", "Restart, shut down, reset or uninstall the daemon", CorePluginId, DangerLevel.Destructive);
+        _kinds["mysql_root_reset"] = new DestructiveOperationKind(
+            "mysql_root_reset", "Reset the MySQL root password", CorePluginId, DangerLevel.Destructive);
+        _kinds["mysql_user_drop"] = new DestructiveOperationKind(
+            "mysql_user_drop", "Drop a MySQL user account", CorePluginId, DangerLevel.Destructive);
+        _kinds["postgres_root_reset"] = new DestructiveOperationKind(
+            "postgres_root_reset", "Reset the PostgreSQL superuser password", CorePluginId, DangerLevel.Destructive);
     }
 
     public void Register(DestructiveOperationKind kind)

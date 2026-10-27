@@ -257,7 +257,7 @@ async function confirmDeploy(opts: { snapshot: boolean }): Promise<void> {
   align-items: center;
   gap: var(--wdc-space-3);
   padding: var(--wdc-space-3) var(--wdc-space-4);
-  background: linear-gradient(180deg, var(--wdc-accent-dim), var(--wdc-surface-2));
+  background: var(--wdc-surface-2);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
   margin-bottom: var(--wdc-space-3-5);
