@@ -116,6 +116,7 @@ import {
   MCP_SERVER_PATH_PLACEHOLDER,
   appLaunch,
   claudeCodeCommand,
+  cursorLaunch,
   mcpServerEntryJson,
   mcpServersJson,
   nodeLaunch,
@@ -132,7 +133,10 @@ const savingEnabled = ref(false)
 // hub was opened on Requests, Rules or Actions: the setup steps would push
 // that tab below the fold.
 const route = useRoute()
-const expanded = ref(!/\/mcp\/(intents|grants|kinds)$/.test(route.path))
+const onTabRoute = (): boolean => /\/mcp\/(intents|grants|kinds)$/.test(route.path)
+const expanded = ref(!onTabRoute())
+// The hub is kept alive, so this also has to happen when the route changes.
+watch(() => route.path, () => { if (onTabRoute()) expanded.value = false })
 
 const serverPath = computed(() => serverInfo.value?.serverPath ?? MCP_SERVER_PATH_PLACEHOLDER)
 
@@ -148,7 +152,7 @@ const launch = computed(() => runtime.value === 'app' && serverInfo.value
 const snippets = computed(() => [
   { id: 'claudeCode', text: claudeCodeCommand(launch.value), entry: '' },
   { id: 'claudeDesktop', text: mcpServersJson(launch.value), entry: mcpServerEntryJson(launch.value) },
-  { id: 'cursor', text: mcpServersJson(launch.value), entry: mcpServerEntryJson(launch.value) },
+  { id: 'cursor', text: mcpServersJson(cursorLaunch(launch.value)), entry: mcpServerEntryJson(cursorLaunch(launch.value)) },
 ])
 
 async function refreshServerInfo(): Promise<void> {
@@ -224,7 +228,8 @@ async function copy(text: string): Promise<void> {
 function formatRelative(iso: string): string {
   const sec = Math.round((Date.now() - new Date(iso).getTime()) / 1000)
   if (Number.isNaN(sec)) return iso
-  if (sec < 60) return t('mcpConnect.ago.seconds', { n: Math.max(sec, 0) })
+  if (sec < 5) return t('mcpConnect.ago.justNow')
+  if (sec < 60) return t('mcpConnect.ago.seconds', { n: sec })
   if (sec < 3600) return t('mcpConnect.ago.minutes', { n: Math.round(sec / 60) })
   if (sec < 86_400) return t('mcpConnect.ago.hours', { n: Math.round(sec / 3600) })
   return t('mcpConnect.ago.days', { n: Math.round(sec / 86_400) })

@@ -54,6 +54,15 @@ export function claudeCodeCommand(launch: McpLaunch): string {
   return `claude mcp add ${env}--scope user ${MCP_SERVER_NAME} -- ${command}`
 }
 
+/**
+ * Cursor warns above 40 tools and may leave the rest out; the server's
+ * `--modules=essential` set has 39 (sites, services, databases, status and
+ * approvals).
+ */
+export function cursorLaunch(launch: McpLaunch): McpLaunch {
+  return { ...launch, args: [...launch.args, '--modules=essential'] }
+}
+
 function serverEntry(launch: McpLaunch): Record<string, unknown> {
   return { command: launch.command, args: launch.args, ...(launch.env ? { env: launch.env } : {}) }
 }
