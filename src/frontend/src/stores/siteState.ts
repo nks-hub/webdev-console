@@ -3,8 +3,8 @@ import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { i18n } from '../i18n'
 import {
-  fetchLatestBinary, fetchOnboardingState, fetchPhpVersions, fetchSettings, installBinary, installSslCa,
-  type OnboardingState,
+  fetchCloudflareConfig, fetchLatestBinary, fetchOnboardingState, fetchPhpVersions, fetchSettings, installBinary,
+  installSslCa, type OnboardingState,
 } from '../api/daemon'
 import type { SiteInfo } from '../api/types'
 import { appDisplayName, installErrorMessage } from '../utils/binaries'
@@ -61,7 +61,16 @@ export const useSiteStateStore = defineStore('siteState', () => {
   const starting = ref(false)
   const installing = ref<Set<PrerequisiteApp>>(new Set())
 
-  const apacheService = computed(() => daemon.services.find(s => s.id === 'apache' || s.id === 'httpd'))
+  /**
+   * The daemon also lists the services of plugins that are switched off (MariaDB next to MySQL), as
+   * stopped. The one that counts is a visible one, running first, installed second.
+   */
+  function pickService(ids: string[]) {
+    const list = daemon.services.filter(s => ids.includes(s.id) && plugins.isServiceVisible(s.id))
+    return list.find(s => serviceViewState(s) === 'running') ?? list.find(s => s.installed !== false) ?? list[0]
+  }
+
+  const apacheService = computed(() => pickService(['apache', 'httpd']))
 
   /** Apache died before it ever reached "running" (a bad config, a busy port), as opposed to crashing later. */
   const apacheStartFailed = computed(() => apacheService.value?.crashKind === 'startFailed')
@@ -83,7 +92,7 @@ export const useSiteStateStore = defineStore('siteState', () => {
   })
 
   /** MySQL or MariaDB, whichever the daemon manages. */
-  const databaseService = computed(() => daemon.services.find(s => s.id === 'mysql' || s.id === 'mariadb'))
+  const databaseService = computed(() => pickService(['mysql', 'mariadb']))
   const databaseServer = computed<DatabaseServerKind>(() => {
     const svc = databaseService.value
     const view = svc ? serviceViewState(svc) : null
@@ -95,6 +104,16 @@ export const useSiteStateStore = defineStore('siteState', () => {
 
   const cloudflareActive = computed(() =>
     plugins.manifests.some(m => m.id === 'nks.wdc.cloudflare' && m.enabled))
+
+  /** A new site can only get a tunnel when the tunnel and a default zone are set up on the Cloudflare page. */
+  const cloudflareReady = ref(false)
+  async function loadCloudflareReady() {
+    if (!cloudflareActive.value) { cloudflareReady.value = false; return }
+    try {
+      const cfg = await fetchCloudflareConfig()
+      cloudflareReady.value = !!(cfg.tunnelId && cfg.defaultZoneId)
+    } catch { cloudflareReady.value = false }
+  }
 
   async function loadPrerequisites() {
     try { prerequisites.value = (await fetchOnboardingState()).prerequisites } catch { /* keep the last known state */ }
@@ -120,7 +139,7 @@ export const useSiteStateStore = defineStore('siteState', () => {
     } catch { /* keep the last known list */ }
   }
 
-  const refresh = () => Promise.all([loadPrerequisites(), loadPhpVersions()])
+  const refresh = () => Promise.all([loadPrerequisites(), loadPhpVersions(), loadCloudflareReady()])
 
   // The checklist ("Apache installed? PHP? HTTPS?") must follow installs done anywhere: a binary being
   // installed or removed changes the services' `installed` flag, so that is the cue to read it again.
@@ -219,7 +238,7 @@ export const useSiteStateStore = defineStore('siteState', () => {
 
   return {
     prerequisites, phpVersions, starting, startError, installing,
-    webServer, apacheStartFailed, databaseServer, cloudflareActive,
+    webServer, apacheStartFailed, databaseServer, cloudflareActive, cloudflareReady,
     refresh, loadPrerequisites, loadPhpVersions, stateOf, stepLabel, runtimeOf, startWebServer, startDatabase, install,
   }
 })

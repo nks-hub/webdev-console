@@ -1136,6 +1136,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   font-size: 0.82rem;
 }
 .inline-callout .el-icon { color: var(--wdc-status-starting); }
+.inline-callout > span { flex: 1 1 14rem; min-width: 0; }
 .inline-callout .el-button { margin-left: auto; }
 
 .toggle-line { display: inline-flex; align-items: center; gap: var(--wdc-space-2-5); cursor: pointer; }

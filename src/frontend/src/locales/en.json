@@ -1157,7 +1157,8 @@
       "mysqlStopped": "MySQL is not running, so the database cannot be created.",
       "startMysql": "Start MySQL",
       "mysqlStarting": "MySQL is starting; you can create the database in a moment.",
-      "creating": "The site is being created and Apache restarts, which can take a few seconds."
+      "creating": "The site is being created and Apache restarts, which can take a few seconds.",
+      "tunnelNotReady": "The tunnel is not set up yet. Choose the tunnel and the default zone on the Cloudflare page."
     }
   },
   "uiMode": {
@@ -1957,7 +1958,7 @@
       "allAddresses": "all addresses",
       "tunnel": "Cloudflare tunnel",
       "explain": {
-        "running": "The site answers at the address above.",
+        "running": "The site answers at:",
         "waitingStopped": "The configuration is written. The site starts answering once you start Apache; the button is below in Site services.",
         "waitingMissing": "The configuration is written. The site starts answering after Apache is installed and started; the button is below in Site services.",
         "failed": "The last configuration apply did not succeed. Details are in the bar above.",
