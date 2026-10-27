@@ -2540,11 +2540,29 @@
       "notChecked": "(ještě nezkontrolováno)",
       "lastChecked": "Naposledy zkontrolováno",
       "check": "Zkontrolovat aktualizace",
-      "downloadInstall": "Stáhnout a nainstalovat",
-      "downloadStarted": "Stahování zahájeno",
-      "openRelease": "Otevřít na GitHubu",
       "releaseNotesTitle": "Poznámky k vydání",
-      "viewOnGithub": "Zobrazit na GitHubu"
+      "viewOnGithub": "Zobrazit na GitHubu",
+      "autoUpdate": "Automatická aktualizace",
+      "downloadingVersion": "Stahuji verzi {v}",
+      "restartInstall": "Restartovat a nainstalovat",
+      "openReleasePage": "Otevřít stránku vydání",
+      "updaterError": "Aktualizaci se nepodařilo stáhnout",
+      "rateLimited": "GitHub dočasně omezil počet dotazů. Zkuste to znovu za hodinu.",
+      "checkFailed": "Kontrola aktualizací selhala (GitHub odpověděl kódem {status}).",
+      "updater": {
+        "portable": "Přenosná verze se sama neaktualizuje. Novou verzi stáhněte ze stránky vydání.",
+        "dev": "Ve vývojovém spuštění je automatická aktualizace vypnutá.",
+        "checking": "Kontroluji…",
+        "downloading": "Stahuji verzi {v} ({p} %)",
+        "downloaded": "Verze {v} je stažená a připravená k instalaci.",
+        "upToDate": "Novější verze není k dispozici.",
+        "error": "Chyba, podrobnosti níže."
+      },
+      "state": {
+        "downloaded": "Verze {v} je připravená k instalaci",
+        "downloading": "Stahuji aktualizaci ({p} %)",
+        "available": "K dispozici je verze {v}"
+      }
     },
     "danger": {
       "title": "Nebezpečná zóna",
@@ -3300,7 +3318,15 @@
       "daemonStartFailedTitle": "Daemon se nepodařilo spustit",
       "daemonStartFailedBody": "{error}",
       "daemonMigrationFailedTitle": "Upgrade databáze selhal",
-      "daemonMigrationFailedBody": "Daemon se zastavil, protože se nepodařilo upgradovat jeho databázi. Zkontrolujte log daemonu a pak použijte „Spustit daemon“ v nabídce v systémové liště."
+      "daemonMigrationFailedBody": "Daemon se zastavil, protože se nepodařilo upgradovat jeho databázi. Zkontrolujte log daemonu a pak použijte „Spustit daemon“ v nabídce v systémové liště.",
+      "noUpdateTitle": "Žádná aktualizace",
+      "noUpdateBody": "NKS WebDev Console je aktuální.",
+      "updateCheckFailedTitle": "Kontrola aktualizací selhala",
+      "updateReadyTitle": "Aktualizace je připravená",
+      "updateReadyBody": "Verze {version} je stažená.",
+      "updateReadyDetail": "Restartujte aplikaci a aktualizace se nainstaluje. Jinak se nainstaluje při příštím ukončení aplikace.",
+      "updateRestartButton": "Restartovat a nainstalovat",
+      "updateLaterButton": "Později"
     }
   },
   "mcpConnect": {

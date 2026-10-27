@@ -2540,11 +2540,29 @@
       "notChecked": "(not yet checked)",
       "lastChecked": "Last checked",
       "check": "Check for updates",
-      "downloadInstall": "Download and install",
-      "downloadStarted": "Download started",
-      "openRelease": "Open on GitHub",
       "releaseNotesTitle": "Release notes",
-      "viewOnGithub": "View on GitHub"
+      "viewOnGithub": "View on GitHub",
+      "autoUpdate": "Automatic update",
+      "downloadingVersion": "Downloading version {v}",
+      "restartInstall": "Restart and install",
+      "openReleasePage": "Open the release page",
+      "updaterError": "The update could not be downloaded",
+      "rateLimited": "GitHub is limiting requests for now. Try again in an hour.",
+      "checkFailed": "The update check failed (GitHub answered with code {status}).",
+      "updater": {
+        "portable": "The portable copy does not update itself. Download the new version from the release page.",
+        "dev": "Automatic update is off in a development run.",
+        "checking": "Checking…",
+        "downloading": "Downloading version {v} ({p}%)",
+        "downloaded": "Version {v} is downloaded and ready to install.",
+        "upToDate": "No newer version is available.",
+        "error": "Error, details below."
+      },
+      "state": {
+        "downloaded": "Version {v} is ready to install",
+        "downloading": "Downloading the update ({p}%)",
+        "available": "Version {v} is available"
+      }
     },
     "danger": {
       "title": "Danger zone",
@@ -3300,7 +3318,15 @@
       "daemonStartFailedTitle": "The daemon couldn't be started",
       "daemonStartFailedBody": "{error}",
       "daemonMigrationFailedTitle": "Database upgrade failed",
-      "daemonMigrationFailedBody": "The daemon stopped because its database couldn't be upgraded. Check the daemon log, then use \"Start daemon\" in the tray menu."
+      "daemonMigrationFailedBody": "The daemon stopped because its database couldn't be upgraded. Check the daemon log, then use \"Start daemon\" in the tray menu.",
+      "noUpdateTitle": "No update",
+      "noUpdateBody": "NKS WebDev Console is up to date.",
+      "updateCheckFailedTitle": "Update check failed",
+      "updateReadyTitle": "Update ready",
+      "updateReadyBody": "Version {version} has been downloaded.",
+      "updateReadyDetail": "Restart the app to install the update, or it installs the next time you quit the app.",
+      "updateRestartButton": "Restart and install",
+      "updateLaterButton": "Later"
     }
   },
   "mcpConnect": {

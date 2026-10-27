@@ -43,17 +43,20 @@
 
         <SettingsPanel
           :title="$t('settings.tabs.update')"
-          :subtitle="$t('settings.update.notChecked')"
+          :subtitle="updateSubtitle"
           :icon="Download"
         >
           <EasyUpdateSettings
             :t="t"
             :current-version="currentVersion"
             :update-check="updateCheck"
+            :has-update="hasUpdate"
+            :updater="updaterState"
             :format-relative-time="formatRelativeTime"
             :render-release-notes="renderReleaseNotes"
             @check="runUpdateCheck"
-            @download="downloadAndInstall"
+            @install="installUpdate"
+            @open-release="openReleasePage"
           />
         </SettingsPanel>
 
@@ -585,7 +588,7 @@
                 <div v-if="pluginCatalogStatus" class="hint">
                   Catalog: {{ pluginCatalogStatus.catalogCount }} plugin{{ pluginCatalogStatus.catalogCount === 1 ? '' : 's' }} ·
                   cached: {{ pluginCatalogStatus.cachedCount }} ·
-                  last sync: {{ pluginCatalogStatus.lastFetch ? formatAgo(pluginCatalogStatus.lastFetch) : 'never' }}
+                  last sync: {{ pluginCatalogStatus.lastFetch ? formatRelativeTime(pluginCatalogStatus.lastFetch) : 'never' }}
                 </div>
               </el-form-item>
             </el-form>
@@ -990,10 +993,13 @@
             :t="t"
             :current-version="currentVersion"
             :update-check="updateCheck"
+            :has-update="hasUpdate"
+            :updater="updaterState"
             :format-relative-time="formatRelativeTime"
             :render-release-notes="renderReleaseNotes"
             @check="runUpdateCheck"
-            @download="downloadAndInstall"
+            @install="installUpdate"
+            @open-release="openReleasePage"
           />
         </section>
         <!-- Notifications tab — visible in both Simple and Advanced. Stored
@@ -1089,7 +1095,7 @@
                 <span class="sys-label">{{ $t('settings.sso.catalog') }}</span>
                 <span class="sys-value">
                   {{ pluginCatalogStatus.lastFetch
-                      ? $t('settings.sso.catalogReachable', { ago: formatAgo(pluginCatalogStatus.lastFetch) })
+                      ? $t('settings.sso.catalogReachable', { ago: formatRelativeTime(pluginCatalogStatus.lastFetch) })
                       : $t('settings.sso.catalogNeverSynced') }}
                 </span>
                 <!-- Task 02: when catalog has never synced, surface the
@@ -1202,12 +1208,12 @@ import AccountPasswordCard from '../settings/account/AccountPasswordCard.vue'
 import AccountSimpleSyncCard from '../settings/account/AccountSimpleSyncCard.vue'
 import AccountSsoCard from '../settings/account/AccountSsoCard.vue'
 import EasyGeneralSettings from '../settings/easy/EasyGeneralSettings.vue'
-import EasyUpdateSettings from '../settings/easy/EasyUpdateSettings.vue'
+import EasyUpdateSettings, { type EasyUpdateCheck } from '../settings/easy/EasyUpdateSettings.vue'
 import SyncCloudCard from '../settings/sync/SyncCloudCard.vue'
 import SyncDeviceIdentityCard from '../settings/sync/SyncDeviceIdentityCard.vue'
 import SyncExportImportCard from '../settings/sync/SyncExportImportCard.vue'
 import SyncSnapshotsCard from '../settings/sync/SyncSnapshotsCard.vue'
-import { compareSemver } from '../../utils/semver'
+import { compareSemver, versionCore } from '../../utils/semver'
 import { pickSyncableSettings } from '../../utils/settingsSync'
 import { useAppVersion } from '../../utils/appVersion'
 
@@ -1800,14 +1806,6 @@ async function loadPluginCatalogStatus() {
   } catch { /* daemon unreachable — leave as null so the hint line hides */ }
 }
 
-function formatAgo(iso: string): string {
-  const then = new Date(iso).getTime()
-  const diffSec = Math.max(0, Math.floor((Date.now() - then) / 1000))
-  if (diffSec < 60) return `${diffSec}s ago`
-  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`
-  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`
-  return `${Math.floor(diffSec / 86400)}d ago`
-}
 const refreshingCatalog = ref(false)
 const testingCatalog = ref(false)
 const catalogStatus = ref<{ ok: boolean; message: string } | null>(null)
@@ -2746,55 +2744,39 @@ async function importSettings(event: Event) {
 }
 
 // ── Update check ──────────────────────────────────────────────────────
+// Two sources: GitHub's latest release for the version on offer and its
+// notes, and electron-updater in the main process, which downloads and
+// installs. Portable and dev builds have no updater and link to the
+// release page instead.
 const currentVersion = appVersion
 
-const updateCheck = reactive<{
-  loading: boolean
-  downloading: boolean
-  latest: string | null
-  hasUpdate: boolean
-  downloadUrl: string | null
-  lastCheckedIso: string | null
-  error: string | null
-  // Task 06: release-notes markdown body from GitHub for inline
-  // display so the user sees "what changes before clicking install.
-  releaseNotes: string | null
-  releaseUrl: string | null
-  // Task 06: download progress (from electron-updater download-progress
-  // IPC). 0–100 when actively downloading, null otherwise.
-  progressPercent: number | null
-  progressBytes: string | null
-}>({
+const updateCheck = reactive<EasyUpdateCheck>({
   loading: false,
-  downloading: false,
   latest: null,
-  hasUpdate: false,
-  downloadUrl: null,
   lastCheckedIso: localStorage.getItem('wdc-last-update-check'),
   error: null,
   releaseNotes: null,
   releaseUrl: null,
-  progressPercent: null,
-  progressBytes: null,
 })
+const updaterState = ref<AppUpdaterState | null>(null)
+let unsubscribeUpdater: (() => void) | null = null
+
+const hasUpdate = computed(() => !!updateCheck.latest
+  && compareSemver(versionCore(updateCheck.latest), versionCore(currentVersion.value)) > 0)
 
 async function runUpdateCheck() {
   updateCheck.loading = true
   updateCheck.error = null
+  if (updaterState.value && updaterState.value.status !== 'disabled') {
+    void window.electronAPI?.updaterCheck?.()
+  }
   try {
     const r = await fetch('https://api.github.com/repos/nks-hub/webdev-console/releases/latest')
-    if (!r.ok) throw new Error(`GitHub API ${r.status}`)
-    const data = await r.json() as {
-      tag_name?: string
-      html_url?: string
-      body?: string
-      assets?: Array<{ browser_download_url: string; name: string }>
-    }
-    const latest = (data.tag_name ?? '').replace(/^v/, '')
-    updateCheck.latest = latest
-    updateCheck.hasUpdate = compareSemver(latest, currentVersion.value) > 0
-    const setupAsset = (data.assets ?? []).find(a => /setup.*\.exe$/i.test(a.name))
-    updateCheck.downloadUrl = setupAsset?.browser_download_url ?? data.html_url ?? null
+    // Unauthenticated GitHub API allows 60 requests an hour per IP.
+    if (r.status === 403 || r.status === 429) throw new Error(t('settings.update.rateLimited'))
+    if (!r.ok) throw new Error(t('settings.update.checkFailed', { status: r.status }))
+    const data = await r.json() as { tag_name?: string; html_url?: string; body?: string }
+    updateCheck.latest = (data.tag_name ?? '').replace(/^v/, '') || null
     updateCheck.releaseNotes = data.body ?? null
     updateCheck.releaseUrl = data.html_url ?? null
     updateCheck.lastCheckedIso = new Date().toISOString()
@@ -2805,6 +2787,26 @@ async function runUpdateCheck() {
     updateCheck.loading = false
   }
 }
+
+async function installUpdate() {
+  await window.electronAPI?.updaterInstall?.()
+}
+
+function openReleasePage() {
+  const url = updateCheck.releaseUrl || 'https://github.com/nks-hub/webdev-console/releases/latest'
+  if (window.electronAPI?.openExternal) void window.electronAPI.openExternal(url)
+  else window.open(url, '_blank')
+}
+
+// Simple-mode panel subtitle: the current state in a few words.
+const updateSubtitle = computed(() => {
+  const u = updaterState.value
+  if (u?.status === 'downloaded') return t('settings.update.state.downloaded', { v: u.version ?? '' })
+  if (u?.status === 'downloading') return t('settings.update.state.downloading', { p: u.percent ?? 0 })
+  if (hasUpdate.value) return t('settings.update.state.available', { v: updateCheck.latest ?? '' })
+  if (updateCheck.latest) return t('settings.update.upToDate')
+  return ''
+})
 
 // Task 06: minimal safe markdown-to-HTML for GitHub release notes.
 // Intentionally conservative — only handles headings, bold/italic, code
@@ -2829,26 +2831,14 @@ function renderReleaseNotes(md: string): string {
     .replace(/\n\n/g, '<br/><br/>')
 }
 
-async function downloadAndInstall() {
-  if (!updateCheck.downloadUrl) return
-  updateCheck.downloading = true
-  try {
-    if (window.electronAPI?.openExternal) window.electronAPI.openExternal(updateCheck.downloadUrl)
-    else window.open(updateCheck.downloadUrl, '_blank')
-    ElMessage.info(t('settings.update.downloadStarted'))
-  } finally {
-    updateCheck.downloading = false
-  }
-}
-
+const relativeTime = computed(() => new Intl.RelativeTimeFormat(locale.value, { numeric: 'auto' }))
+/** "před 5 minutami" / "5 minutes ago" in the UI language. */
 function formatRelativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime()
-  const min = Math.floor(diff / 60_000)
-  if (min < 1) return t('common.justNow') || 'právě teď'
-  if (min < 60) return `${min} min`
-  const h = Math.floor(min / 60)
-  if (h < 24) return `${h} h`
-  return `${Math.floor(h / 24)} d`
+  const minutes = Math.round((new Date(iso).getTime() - Date.now()) / 60_000)
+  if (Math.abs(minutes) < 60) return relativeTime.value.format(minutes, 'minute')
+  const hours = Math.round(minutes / 60)
+  if (Math.abs(hours) < 24) return relativeTime.value.format(hours, 'hour')
+  return relativeTime.value.format(Math.round(hours / 24), 'day')
 }
 
 // Iter 29: live-refresh readiness on deploy.* settings save from another
@@ -2862,6 +2852,8 @@ onMounted(async () => {
   void loadDatabases()
   void loadPhpVersions()
   void loadRunOnStartup()
+  void window.electronAPI?.updaterGetStatus?.().then((state) => { updaterState.value = state }).catch(() => {})
+  unsubscribeUpdater = window.electronAPI?.onUpdaterStatus?.((state) => { updaterState.value = state }) ?? null
   void loadTelemetryConsent()
   void loadBackups()
   void loadDeviceId()
@@ -2914,6 +2906,8 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  unsubscribeUpdater?.()
+  unsubscribeUpdater = null
   if (unsubscribeDeploySettingsSse) {
     unsubscribeDeploySettingsSse()
     unsubscribeDeploySettingsSse = null

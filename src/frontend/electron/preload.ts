@@ -145,6 +145,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getAppVersion: (): Promise<{ version: string; gitSha: string; full: string }> =>
     ipcRenderer.invoke('app-get-version'),
 
+  // electron-updater state for Settings → Update. check() starts a check
+  // (and with it the download), install() restarts into a downloaded update.
+  updaterGetStatus: () => ipcRenderer.invoke('updater-get-status'),
+  updaterCheck: () => ipcRenderer.invoke('updater-check'),
+  updaterInstall: (): Promise<boolean> => ipcRenderer.invoke('updater-install'),
+  onUpdaterStatus: (handler: (state: unknown) => void) => {
+    const listener = (_evt: unknown, state: unknown) => handler(state)
+    ipcRenderer.on('updater-status', listener)
+    return () => ipcRenderer.removeListener('updater-status', listener)
+  },
+
   // OS login item ("Run at startup"). supported=false in portable/dev builds.
   autostartGet: (): Promise<{ supported: boolean; enabled: boolean }> =>
     ipcRenderer.invoke('autostart-get'),

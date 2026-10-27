@@ -18,6 +18,17 @@ interface ImportMetaEnv {
   readonly VITE_APP_VERSION?: string
 }
 
+/** electron-updater state from main (UpdaterState in electron/main.ts). */
+interface AppUpdaterState {
+  status: 'disabled' | 'idle' | 'checking' | 'downloading' | 'downloaded' | 'up-to-date' | 'error'
+  disabledReason: 'portable' | 'dev' | null
+  version: string | null
+  percent: number | null
+  transferred: number | null
+  total: number | null
+  error: string | null
+}
+
 /** Result of electronAPI.getMcpServerInfo() (electron/main.ts 'mcp-server-info'). */
 interface McpServerInfo {
   /** Absolute path of the MCP server entry (index.js) — expected path when missing. */
@@ -90,6 +101,11 @@ interface Window {
     getAppVersion: () => Promise<{ version: string; gitSha: string; full: string }>
     /** Bundled MCP server location + whether the daemon wrote nks-wdc-mcp.port. */
     getMcpServerInfo?: () => Promise<McpServerInfo>
+    /** electron-updater state, check, install and live status events. */
+    updaterGetStatus?: () => Promise<AppUpdaterState>
+    updaterCheck?: () => Promise<AppUpdaterState>
+    updaterInstall?: () => Promise<boolean>
+    onUpdaterStatus?: (handler: (state: AppUpdaterState) => void) => () => void
     /** OS login item ("Run at startup"); supported=false in portable/dev builds. */
     autostartGet?: () => Promise<{ supported: boolean; enabled: boolean }>
     autostartSet?: (enabled: boolean) => Promise<{ supported: boolean; enabled: boolean }>

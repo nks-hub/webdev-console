@@ -184,6 +184,26 @@ let updaterStatus = 'Idle'
 let updateDownloaded = false
 let checkingForUpdates = false
 
+// electron-updater state for Settings → Update, pushed on every change over
+// 'updater-status'. The tray keeps its own short `updaterStatus` label.
+interface UpdaterState {
+  status: 'disabled' | 'idle' | 'checking' | 'downloading' | 'downloaded' | 'up-to-date' | 'error'
+  /** Why the updater is off: portable copies and dev runs update by hand. */
+  disabledReason: 'portable' | 'dev' | null
+  version: string | null
+  percent: number | null
+  transferred: number | null
+  total: number | null
+  error: string | null
+}
+let updaterState: UpdaterState = {
+  status: 'idle', disabledReason: null, version: null, percent: null, transferred: null, total: null, error: null,
+}
+function setUpdaterState(patch: Partial<UpdaterState>) {
+  updaterState = { ...updaterState, ...patch }
+  if (win && !win.isDestroyed()) win.webContents.send('updater-status', updaterState)
+}
+
 // ── Daemon supervision ────────────────────────────────────────────────
 // A daemon that crashed used to stay dead until the user restarted the
 // whole app, and an adopted (CLI-started) or UAC-elevated daemon had no
@@ -1418,8 +1438,8 @@ async function checkForAppUpdates(showNoUpdateDialog = false) {
       if (showNoUpdateDialog) {
         await dialog.showMessageBox({
           type: 'info',
-          title: 'No updates available',
-          message: 'NKS WebDev Console is already up to date.',
+          title: notificationText('noUpdateTitle'),
+          message: notificationText('noUpdateBody'),
         })
       }
     }
@@ -1427,10 +1447,11 @@ async function checkForAppUpdates(showNoUpdateDialog = false) {
     updaterStatus = 'Update check failed'
     const message = error instanceof Error ? error.message : String(error)
     console.error('[updater] check failed:', message)
+    setUpdaterState({ status: 'error', error: message })
     if (showNoUpdateDialog) {
       await dialog.showMessageBox({
         type: 'error',
-        title: 'Update check failed',
+        title: notificationText('updateCheckFailedTitle'),
         message,
       })
     }
@@ -1461,6 +1482,7 @@ async function installUpdateAndRestart() {
 async function setupAutoUpdater() {
   if (!app.isPackaged || isPortable) {
     updaterStatus = 'Disabled'
+    setUpdaterState({ status: 'disabled', disabledReason: isPortable ? 'portable' : 'dev' })
     updateTray()
     return
   }
@@ -1478,10 +1500,13 @@ async function setupAutoUpdater() {
     autoUpdater.on('checking-for-update', () => {
       checkingForUpdates = true
       updaterStatus = 'Checking'
+      // A finished download stays ready to install across later checks.
+      if (!updateDownloaded) setUpdaterState({ status: 'checking', error: null })
       updateTray()
     })
     autoUpdater.on('update-available', (info) => {
       updaterStatus = `Downloading ${info.version}`
+      setUpdaterState({ status: 'downloading', version: info.version, percent: 0, transferred: null, total: null, error: null })
       updateTray()
       console.log('[updater] Update available:', info.version)
       // Same key as the renderer's GitHub-release check, so whichever
@@ -1499,26 +1524,34 @@ async function setupAutoUpdater() {
     autoUpdater.on('update-not-available', () => {
       checkingForUpdates = false
       updaterStatus = 'Up to date'
+      if (!updateDownloaded) setUpdaterState({ status: 'up-to-date', error: null })
       updateTray()
       console.log('[updater] No update available')
     })
     autoUpdater.on('download-progress', (progress) => {
       updaterStatus = `Downloading ${Math.round(progress.percent)}%`
+      setUpdaterState({
+        status: 'downloading',
+        percent: Math.round(progress.percent),
+        transferred: progress.transferred,
+        total: progress.total,
+      })
       updateTray()
     })
     autoUpdater.on('update-downloaded', async (info) => {
       checkingForUpdates = false
       updateDownloaded = true
       updaterStatus = `Ready to install ${info.version}`
+      setUpdaterState({ status: 'downloaded', version: info.version, percent: 100, error: null })
       updateTray()
       console.log('[updater] Update downloaded:', info.version)
 
       const result = await dialog.showMessageBox({
         type: 'info',
-        title: 'Update ready',
-        message: `Version ${info.version} has been downloaded.`,
-        detail: 'Restart now to install the update, or quit later and it will be installed automatically on exit.',
-        buttons: ['Restart and Install', 'Later'],
+        title: notificationText('updateReadyTitle'),
+        message: notificationText('updateReadyBody', { version: info.version }),
+        detail: notificationText('updateReadyDetail'),
+        buttons: [notificationText('updateRestartButton'), notificationText('updateLaterButton')],
         defaultId: 0,
         cancelId: 1,
       })
@@ -1530,6 +1563,9 @@ async function setupAutoUpdater() {
     autoUpdater.on('error', (error) => {
       checkingForUpdates = false
       updaterStatus = 'Update error'
+      // Shown in Settings → Update; before, a broken latest.yml or a missing
+      // installer only reached the log and updates failed silently.
+      setUpdaterState({ status: 'error', error: error?.message ?? String(error) })
       updateTray()
       console.error('[updater] error:', error?.message ?? error)
     })
@@ -1537,6 +1573,7 @@ async function setupAutoUpdater() {
     void checkForAppUpdates(false)
   } catch (error) {
     updaterStatus = 'Unavailable'
+    setUpdaterState({ status: 'error', error: error instanceof Error ? error.message : String(error) })
     updateTray()
     console.warn('[updater] electron-updater unavailable:', error)
   }
@@ -2184,6 +2221,17 @@ ipcMain.handle('app-get-version', async () => {
     gitSha,
     full: gitSha ? `${version}-${gitSha}` : version,
   }
+})
+
+ipcMain.handle('updater-get-status', () => updaterState)
+ipcMain.handle('updater-check', () => {
+  void checkForAppUpdates(false)
+  return updaterState
+})
+ipcMain.handle('updater-install', async () => {
+  if (!updateDownloaded) return false
+  await installUpdateAndRestart()
+  return true
 })
 
 // Renderer Sentry rides on the main-process client, so it starts only when

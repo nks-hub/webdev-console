@@ -8,7 +8,7 @@
         <span v-if="updateCheck.loading">{{ t('common.loading') }}</span>
         <span v-else-if="updateCheck.latest" class="mono">
           v{{ updateCheck.latest }}
-          <el-tag v-if="updateCheck.hasUpdate" type="warning" size="small" style="margin-left:var(--wdc-space-2)">
+          <el-tag v-if="hasUpdate" type="warning" size="small" style="margin-left:var(--wdc-space-2)">
             {{ t('settings.update.available') }}
           </el-tag>
           <el-tag v-else type="success" size="small" style="margin-left:var(--wdc-space-2)">
@@ -17,45 +17,58 @@
         </span>
         <span v-else class="text-muted">{{ t('settings.update.notChecked') }}</span>
       </el-descriptions-item>
+      <el-descriptions-item v-if="updaterLabel" :label="t('settings.update.autoUpdate')">
+        {{ updaterLabel }}
+      </el-descriptions-item>
       <el-descriptions-item v-if="updateCheck.lastCheckedIso" :label="t('settings.update.lastChecked')">
         <span class="text-muted">{{ formatRelativeTime(updateCheck.lastCheckedIso) }}</span>
       </el-descriptions-item>
     </el-descriptions>
 
-    <div class="update-actions">
-      <el-button size="small" :loading="updateCheck.loading" @click="emit('check')">
-        {{ t('settings.update.check') }}
-      </el-button>
-      <el-button
-        v-if="updateCheck.hasUpdate"
-        type="primary"
-        size="small"
-        :loading="updateCheck.downloading"
-        @click="emit('download')"
-      >
-        {{ t('settings.update.downloadInstall') }}
-      </el-button>
-      <el-link
-        v-if="updateCheck.downloadUrl"
-        :href="updateCheck.downloadUrl"
-        target="_blank"
-        type="primary"
-      >
-        {{ t('settings.update.openRelease') }} →
-      </el-link>
-    </div>
-
-    <div v-if="updateCheck.progressPercent !== null" class="update-progress">
-      <el-progress
-        :percentage="updateCheck.progressPercent"
-        :status="updateCheck.progressPercent >= 100 ? 'success' : undefined"
-        :stroke-width="10"
-      />
+    <div v-if="updater?.status === 'downloading'" class="update-progress">
+      <el-progress :percentage="updater.percent ?? 0" :stroke-width="10" />
       <div class="update-progress-meta">
-        <span>{{ updateCheck.progressPercent >= 100 ? t('common.installing') : t('common.downloading') }}</span>
-        <span v-if="updateCheck.progressBytes" class="mono">{{ updateCheck.progressBytes }}</span>
+        <span>{{ t('settings.update.downloadingVersion', { v: updater.version ?? '' }) }}</span>
+        <span v-if="updater.total" class="mono">{{ formatBytes(updater.transferred ?? 0) }} / {{ formatBytes(updater.total) }}</span>
       </div>
     </div>
+
+    <div class="update-actions">
+      <el-button
+        size="small"
+        :loading="updateCheck.loading || updater?.status === 'checking'"
+        @click="emit('check')"
+      >
+        {{ t('settings.update.check') }}
+      </el-button>
+      <el-button v-if="updater?.status === 'downloaded'" type="primary" size="small" @click="emit('install')">
+        {{ t('settings.update.restartInstall') }}
+      </el-button>
+      <!-- Portable and dev builds have no updater, and a failed updater
+           leaves only the manual route: the release page, not a bare .exe. -->
+      <el-button v-else-if="hasUpdate && manualOnly" type="primary" size="small" @click="emit('openRelease')">
+        {{ t('settings.update.openReleasePage') }}
+      </el-button>
+    </div>
+
+    <el-alert
+      v-if="updater?.status === 'error'"
+      type="error"
+      :closable="false"
+      :title="t('settings.update.updaterError')"
+      :description="updater.error ?? ''"
+      show-icon
+      style="margin-top: var(--wdc-space-3)"
+    />
+
+    <el-alert
+      v-if="updateCheck.error"
+      type="warning"
+      :closable="false"
+      :title="updateCheck.error"
+      show-icon
+      style="margin-top: var(--wdc-space-3)"
+    />
 
     <SettingsCard
       v-if="updateCheck.releaseNotes"
@@ -76,45 +89,84 @@
       <!-- eslint-disable-next-line vue/no-v-html — renderReleaseNotes escapes input first -->
       <div class="release-notes" v-html="renderReleaseNotes(updateCheck.releaseNotes)" />
     </SettingsCard>
-
-    <el-alert
-      v-if="updateCheck.error"
-      type="error"
-      :closable="false"
-      style="margin-top: var(--wdc-space-3)"
-    >
-      {{ updateCheck.error }}
-    </el-alert>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import SettingsCard from '../shared/SettingsCard.vue'
 
+/** GitHub release data: the version on offer and its notes. */
 export interface EasyUpdateCheck {
   loading: boolean
-  downloading: boolean
   latest: string | null
-  hasUpdate: boolean
   error: string | null
-  downloadUrl: string | null
   lastCheckedIso: string | null
   releaseNotes: string | null
   releaseUrl: string | null
-  progressPercent: number | null
-  progressBytes: string | null
 }
 
-defineProps<{
-  t: (key: string) => string
+const props = defineProps<{
+  t: (key: string, params?: Record<string, unknown>) => string
   currentVersion: string
   updateCheck: EasyUpdateCheck
+  hasUpdate: boolean
+  /** electron-updater in the main process; null outside Electron. */
+  updater: AppUpdaterState | null
   formatRelativeTime: (iso: string) => string
   renderReleaseNotes: (markdown: string) => string
 }>()
 
 const emit = defineEmits<{
   check: []
-  download: []
+  install: []
+  openRelease: []
 }>()
+
+const manualOnly = computed(() => !props.updater || props.updater.status === 'disabled' || props.updater.status === 'error')
+
+const updaterLabel = computed(() => {
+  const u = props.updater
+  if (!u) return ''
+  switch (u.status) {
+    case 'disabled': return props.t(u.disabledReason === 'portable' ? 'settings.update.updater.portable' : 'settings.update.updater.dev')
+    case 'checking': return props.t('settings.update.updater.checking')
+    case 'downloading': return props.t('settings.update.updater.downloading', { v: u.version ?? '', p: u.percent ?? 0 })
+    case 'downloaded': return props.t('settings.update.updater.downloaded', { v: u.version ?? '' })
+    case 'up-to-date': return props.t('settings.update.updater.upToDate')
+    case 'error': return props.t('settings.update.updater.error')
+    default: return ''
+  }
+})
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
 </script>
+
+<style scoped>
+.update-actions {
+  display: flex;
+  gap: var(--wdc-space-2);
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: var(--wdc-space-3);
+}
+
+.update-progress {
+  margin-top: var(--wdc-space-3);
+}
+
+.update-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--wdc-space-1);
+  font-size: 0.78rem;
+  color: var(--wdc-text-3);
+}
+
+.mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+</style>
