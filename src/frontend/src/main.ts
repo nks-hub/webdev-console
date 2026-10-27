@@ -1,6 +1,8 @@
 import { createApp, defineAsyncComponent } from 'vue'
 import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
+import elementCs from 'element-plus/es/locale/lang/cs'
+import elementEn from 'element-plus/es/locale/lang/en'
 import 'element-plus/dist/index.css'
 import 'element-plus/theme-chalk/dark/css-vars.css'
 // Self-hosted fonts: no runtime requests to Google, works offline.
@@ -40,7 +42,9 @@ for (const [name, component] of Object.entries(ElementPlusIcons)) {
 }
 
 app.use(createPinia())
-app.use(ElementPlus)
+// Built-in texts (dialog close, empty tables, pagination) follow the UI language;
+// App.vue switches them at runtime through el-config-provider.
+app.use(ElementPlus, { locale: i18n.global.locale.value === 'cs' ? elementCs : elementEn })
 app.use(router)
 app.use(i18n)
 app.directive('activate', vActivate)

@@ -1,4 +1,5 @@
 <template>
+  <el-config-provider :locale="elementLocale">
   <div class="app-root">
     <div class="app-body">
       <!-- Sidebar runs the full height on the left; at <960px it moves
@@ -90,6 +91,7 @@
       </div>
     </Transition>
   </div>
+  </el-config-provider>
 </template>
 
 <script setup lang="ts">
@@ -122,6 +124,8 @@ import type { DeployEventDto } from './api/deploy'
 import type { SiteApplyResultDto } from './api/daemon'
 import { useSiteApplyStore } from './stores/siteApply'
 import { i18n } from './i18n'
+import elementCs from 'element-plus/es/locale/lang/cs'
+import elementEn from 'element-plus/es/locale/lang/en'
 import { isSafeAppRoute, loadNotificationPrefs, syncNotificationLocale } from './services/osNotifications'
 import {
   notifyBackupCompleted, notifyBackupFailed, notifyDeployComplete, notifyMcpConfirm,
@@ -131,7 +135,8 @@ import {
 import { showMcpConfirmToast, closeMcpConfirmToast } from './utils/mcpConfirmToast'
 import { mcpKindLabel } from './utils/mcpKindLabel'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
+const elementLocale = computed(() => (locale.value === 'cs' ? elementCs : elementEn))
 const router = useRouter()
 const route = useRoute()
 const daemonStore = useDaemonStore()
