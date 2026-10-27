@@ -128,7 +128,7 @@
             @click="act(selected, 'start')"
           >{{ needsAttention(selected) ? t('servicesPage.fixRestart') : t('servicesPage.start') }}</el-button>
           <template v-if="selectedState !== 'notInstalled'">
-            <el-button v-if="selected.id !== 'cloudflare'" @click="router.push(`/service/${encodeURIComponent(selected.id)}/config`)">
+            <el-button v-if="!isConfigless(selected.id)" @click="router.push(`/service/${encodeURIComponent(selected.id)}/config`)">
               {{ t('servicesPage.fixConfig') }}
             </el-button>
             <el-button v-if="manageRouteOf(selected.id)" @click="router.push(manageRouteOf(selected.id)!)">
@@ -172,7 +172,7 @@ import { formatBytes, formatDuration, formatPercent } from '../../utils/format'
 import { firstErrorLine, stripStreamTag } from '../../utils/logLevel'
 import { shortServiceName as shortName, type ServiceViewState } from '../../utils/serviceState'
 import {
-  cleanError, installRouteOf, manageRouteOf, needsAttention, portsLabel, stateKeyOf, stateOf,
+  cleanError, installRouteOf, isConfigless, manageRouteOf, needsAttention, portsLabel, stateKeyOf, stateOf,
   type ServiceStateKey,
 } from '../../utils/services'
 

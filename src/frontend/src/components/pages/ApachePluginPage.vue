@@ -6,9 +6,6 @@
       :title="t('apache.title')"
       :subtitle="t('apache.subtitle')"
     >
-      <template #actions="{ state }">
-        <el-button v-if="state === 'running' && localUrl" @click="openLocalUrl">{{ t('apache.openLocal', { url: localUrl }) }}</el-button>
-      </template>
       <template #facts>
         <div><dt>{{ t('apache.sites') }}</dt><dd>{{ t('apache.sitesCount', { n: sitesStore.sites.length }, sitesStore.sites.length) }}</dd></div>
       </template>
@@ -25,10 +22,11 @@
           </el-table-column>
           <el-table-column prop="phpVersion" :label="t('sites.phpVersion')" width="140" />
           <el-table-column label="HTTPS" width="90" align="center">
-            <template #default="{ row }">{{ row.ssl ? t('common.yes') : t('common.no') }}</template>
+            <template #default="{ row }">{{ row.sslEnabled ? t('common.yes') : t('common.no') }}</template>
           </el-table-column>
-          <el-table-column :label="t('common.actions')" width="110" align="center">
+          <el-table-column :label="t('common.actions')" width="180" align="center">
             <template #default="{ row }">
+              <el-button size="small" text @click="openUrl(siteUrl(row))">{{ t('common.open') }}</el-button>
               <el-button size="small" text @click="router.push(`/sites/${row.domain}/edit`)">
                 {{ t('common.edit') }}
               </el-button>
@@ -51,6 +49,7 @@ import { useI18n } from 'vue-i18n'
 import { useDaemonStore } from '../../stores/daemon'
 import { useSitesStore } from '../../stores/sites'
 import { stateOf } from '../../utils/services'
+import { openUrl, siteUrl } from '../../utils/siteUrl'
 import LogViewer from '../shared/LogViewer.vue'
 import ServicePageHead from '../shared/ServicePageHead.vue'
 
@@ -62,21 +61,7 @@ const daemonStore = useDaemonStore()
 const sitesStore = useSitesStore()
 const activeTab = ref<'vhosts' | 'logs'>('vhosts')
 
-const service = computed(() => daemonStore.services.find(s => s.id === 'apache'))
-const installed = computed(() => stateOf(service.value) !== 'notInstalled')
-
-// HTTP port as the Apache module is configured (Settings → Ports); on
-// macOS/Linux that is usually 8080, so the link must not assume :80.
-const localUrl = computed(() => {
-  const port = service.value?.ports?.http ?? service.value?.port
-  if (!port) return ''
-  return port === 80 ? 'http://localhost/' : `http://localhost:${port}/`
-})
-
-function openLocalUrl() {
-  if (window.electronAPI?.openExternal) void window.electronAPI.openExternal(localUrl.value)
-  else window.open(localUrl.value, '_blank')
-}
+const installed = computed(() => stateOf(daemonStore.services.find(s => s.id === 'apache')) !== 'notInstalled')
 
 // Also runs on first mount: every page lives inside <keep-alive>.
 onActivated(() => { void sitesStore.load() })

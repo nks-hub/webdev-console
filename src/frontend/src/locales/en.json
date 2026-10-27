@@ -1612,7 +1612,6 @@
     "tabLogs": "Log",
     "noVhosts": "No sites yet.",
     "sitesCount": "{n} site | {n} sites",
-    "openLocal": "Open {url}",
     "sites": "Sites"
   },
   "phpPlugin": {
@@ -1737,7 +1736,8 @@
     "subtitle": "Local SMTP server that catches outgoing e-mail, with a web UI to read it",
     "openUi": "Open Mailpit",
     "tabLogs": "Log",
-    "notRunning": "Mailpit is not running. Start it to open it."
+    "notRunning": "Mailpit is not running. Start it to open it.",
+    "smtpHint": "To catch your site's e-mail here, set the SMTP server in your app to 127.0.0.1 and port {port}, with no encryption and no login."
   },
   "redisPlugin": {
     "title": "Redis",
