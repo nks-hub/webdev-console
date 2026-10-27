@@ -25,7 +25,7 @@ test.describe('MCP capabilities settings contract', () => {
     const s = readFileSync(join(srcRoot, 'components', 'pages', 'Settings.vue'), 'utf-8')
     expect(s).toMatch(/name: 'mcp', label: t\('settings\.tabs\.mcp'\)/)
     expect(s).toMatch(/<McpCapabilitiesSettings v-if="activeTab === 'mcp'" \/>/)
-    expect(s).toMatch(/activeTab !== 'mcp'" #footer/)
+    expect(s).toMatch(/activeTab !== 'mcp'[^"]*" #footer/)
   })
 
   test('every capability group has en + cs labels', () => {

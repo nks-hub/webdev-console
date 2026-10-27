@@ -58,7 +58,8 @@ test.describe('MCP approval UX contract', () => {
     const handler = app.match(/'mcp:confirm-request': \(data\) => \{([\s\S]*?)\n    \},/)
     expect(handler).not.toBeNull()
     expect(handler![1]).toContain('mcpKindLabel(evt)')
-    expect(handler![1]).toContain("t('mcp.notify.body', { kind: kindText })")
+    // The OS notification goes through osNotificationEvents with the label, not the wire id.
+    expect(handler![1]).toContain('notifyMcpConfirm({ ...evt, kindLabel: mcpKindLabel(evt) })')
     expect(handler![1]).not.toMatch(/perform \$\{evt\.kind\}/)
     const label = read('utils', 'mcpKindLabel.ts')
     expect(label).toContain('mcpKinds.labels.')

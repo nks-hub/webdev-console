@@ -15,7 +15,7 @@ const read = (...parts: string[]): string => readFileSync(join(frontendRoot, ...
 test.describe('MCP connect contract', () => {
   test('installer ships the bundled MCP server', () => {
     const builder = read('electron-builder.yml')
-    expect(builder).toMatch(/- from: resources\/mcp-server\n\s+to: mcp-server/)
+    expect(builder).toMatch(/- from: resources\/mcp-server\r?\n\s+to: mcp-server/)
     const pkg = JSON.parse(read('package.json')) as { scripts: Record<string, string> }
     expect(pkg.scripts['stage:mcp']).toContain('services/mcp-server run bundle')
     expect(pkg.scripts['stage:mcp']).toContain('resources/mcp-server')
