@@ -105,6 +105,8 @@ internal static class BackupEndpoints
                     flags = ReadContentFlagsFromSettings(settings);
                 }
 
+                // `out` may only name a new .zip in the backup folder: the
+                // archive carries state.db and TLS private keys.
                 var (path, files, size, resultFlags) = bm.CreateBackup(outPath, flags);
                 // backup:completed / backup:failed — the desktop app shows an OS
                 // notification (backup channel); same payload as BackupScheduler.
@@ -113,6 +115,14 @@ internal static class BackupEndpoints
                     trigger = "manual", path, files, size, contentFlags = resultFlags.ToString(),
                 });
                 return Results.Ok(new { path, files, size, contentFlags = resultFlags.ToString() });
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+            catch (BackupTargetExistsException ex)
+            {
+                return Results.Conflict(new { error = ex.Message });
             }
             catch (Exception ex)
             {
