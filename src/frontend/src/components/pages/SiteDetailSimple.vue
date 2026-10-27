@@ -21,14 +21,17 @@
       <div class="sd-row sd-status-row">
         <div class="sd-label-group">
           <span class="sd-label">{{ $t('sites.detail.simple.serverLabel') }}</span>
-          <HealthStatusDot :level="apacheRunning ? 'ok' : 'err'" />
+          <el-icon :size="14" class="sd-status-icon" :class="apacheRunning ? 'text-running' : 'text-stopped'" aria-hidden="true">
+            <Check v-if="apacheRunning" />
+            <Remove v-else />
+          </el-icon>
           <span class="sd-status-text" :class="apacheRunning ? 'text-running' : 'text-stopped'">
             {{ apacheRunning ? $t('sites.detail.simple.status.running') : $t('sites.detail.simple.status.stopped') }}
           </span>
         </div>
         <el-button
-          size="large"
-          :type="apacheRunning ? 'warning' : 'success'"
+          size="small"
+          :type="apacheRunning ? 'default' : 'primary'"
           :loading="startStopLoading"
           @click="toggleApache"
         >
@@ -212,7 +215,7 @@ import SiteApplyPipeline from '../sites/SiteApplyPipeline.vue'
 import HealthStatusDot from '../shared/HealthStatusDot.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { FolderOpened, Cpu, Lock, Connection, Link } from '@element-plus/icons-vue'
+import { FolderOpened, Cpu, Lock, Connection, Link, Check, Remove } from '@element-plus/icons-vue'
 
 const WarningIcon = { render: () => h('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 24 24', width: '1em', height: '1em', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [h('path', { d: 'M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z' }), h('line', { x1: '12', y1: '9', x2: '12', y2: '13' }), h('line', { x1: '12', y1: '17', x2: '12.01', y2: '17' })]  ) }
 import { useSitesStore } from '../../stores/sites'
@@ -510,11 +513,10 @@ onMounted(async () => {
 }
 
 .sd-status-row {
-  padding: var(--wdc-space-3-5);
-  border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius);
-  background: var(--wdc-surface-2);
+  padding: var(--wdc-space-2) 0 var(--wdc-space-3);
 }
+.sd-status-row > .el-button { justify-self: end; }
+.sd-status-icon { flex-shrink: 0; }
 
 .sd-label-group {
   display: flex;
@@ -568,9 +570,10 @@ onMounted(async () => {
 }
 
 .text-running {
-  color: var(--el-color-success);
+  color: var(--wdc-text);
   font-weight: 500;
 }
+.sd-status-icon.text-running { color: var(--wdc-status-running); }
 
 .text-stopped {
   color: var(--el-text-color-regular);

@@ -2933,7 +2933,7 @@
     "title": "Apply pipeline",
     "notYet": "Not applied since the app started",
     "allOk": "All steps succeeded",
-    "someFailed": "{n} step(s) failed",
+    "someFailed": "{n} step failed | {n} steps failed",
     "when": "applied {when}",
     "minutesAgo": "{n} min ago",
     "applyAgain": "Apply again",
@@ -2959,7 +2959,9 @@
       "reload": "Check the web server on the Services page — its log usually names the broken directive.",
       "php": "Install the PHP version this site uses on the Binaries page.",
       "vhost": "The web server plugin could not write the vhost; check that Apache is installed."
-    }
+    },
+    "failedStep": "The “{step}” step failed",
+    "moreFailed": "{n} more step failed. | {n} more steps failed."
   },
   "servicesPage": {
     "title": "Services",
