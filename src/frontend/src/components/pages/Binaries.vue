@@ -187,7 +187,7 @@
           <el-table-column :label="$t('binaries.col.version')" prop="version" min-width="140">
             <template #default="{ row }">
               <span class="mono col-version">{{ row.version }}</span>
-              <el-tag v-if="row.isDefault" size="small" type="success" effect="plain" class="col-tag">{{ $t('binaries.default') }}</el-tag>
+              <el-tag v-if="row.isDefault" size="small" type="success" effect="plain" class="col-tag">{{ selectedApp === 'php' ? $t('php.default') : $t('binaries.default') }}</el-tag>
               <el-tag v-if="failedInstall?.app === selectedApp && failedInstall?.version === row.version" size="small" type="danger" effect="plain" class="col-tag">{{ $t('binaries.failedTag') }}</el-tag>
               <el-tag v-else-if="row.version === suggestedVersion" size="small" type="primary" effect="plain" class="col-tag">{{ $t('binaries.suggestedTag') }}</el-tag>
             </template>
@@ -227,7 +227,7 @@
               >{{ $t('binaries.statusAvailable') }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column :label="$t('common.actions')" width="220" align="right">
+          <el-table-column :label="$t('common.actions')" width="320" align="right">
             <template #default="{ row }">
               <el-tooltip
                 v-if="!row.installed && !row.native"

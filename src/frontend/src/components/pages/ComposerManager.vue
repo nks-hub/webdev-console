@@ -48,9 +48,11 @@
       </EditCard>
 
       <!-- Section 2: Sites with Composer -->
-      <EditCard :hint="sitesWithComposer.length > 0 ? String(sitesWithComposer.length) : ''" flush-body>
-        <template #title>{{ $t('composer.sitesWithComposer') }}</template>
-
+      <EditCard
+        :title="$t('composer.sitesWithComposer')"
+        :hint="sitesWithComposer.length > 0 ? String(sitesWithComposer.length) : ''"
+        flush-body
+      >
         <div v-if="loading" class="cm-loading">
           <el-skeleton :rows="4" animated />
         </div>
