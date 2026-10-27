@@ -203,6 +203,9 @@ async function loadConfig(version: string) {
  * yet, offered switched off so they can be enabled from here. Built-in
  * modules (no file) are left out: there is nothing to toggle.
  */
+// Shipped in Windows PHP builds only for PHP's own test suite; never useful on a site.
+const PHP_TEST_EXTENSIONS = new Set(['dl_test', 'zend_test'])
+
 async function availableNotInIni(version: string, iniContent: string): Promise<ExtInfo[]> {
   const inIni = new Set(parseExtensions(iniContent).map(e => e.name.toLowerCase()))
   const majorMinor = version.split('.').slice(0, 2).join('.')
@@ -211,7 +214,8 @@ async function availableNotInIni(version: string, iniContent: string): Promise<E
     if (!r.ok) return []
     const list = await r.json() as Array<{ name: string; soFile?: string | null }>
     return list
-      .filter(e => e.soFile && /^[a-z0-9_]{1,64}$/i.test(e.name) && !inIni.has(e.name.toLowerCase()))
+      .filter(e => e.soFile && /^[a-z0-9_]{1,64}$/i.test(e.name) && !inIni.has(e.name.toLowerCase())
+        && !PHP_TEST_EXTENSIONS.has(e.name.toLowerCase()))
       .map(e => ({ name: e.name, enabled: false, zend: e.name === 'xdebug' || e.name === 'opcache' }))
   } catch {
     return []
