@@ -4,6 +4,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 import { daemonClient } from '../daemonClient.js'
 import type { RegisterOptions } from '../index.js'
+import { IntentTokenSchema, intentHeaders } from './confirmation.js'
 import { safe } from '../formatting.js'
 import { ConfirmYesSchema } from '../schemas.js'
 
@@ -79,6 +80,7 @@ export function registerBackupTools(server: McpServer, opts: RegisterOptions): v
       inputSchema: {
         path: BackupPathSchema,
         confirm: ConfirmYesSchema,
+        intentToken: IntentTokenSchema,
       },
       annotations: {
         readOnlyHint: false,
@@ -87,6 +89,7 @@ export function registerBackupTools(server: McpServer, opts: RegisterOptions): v
         openWorldHint: false,
       },
     },
-    async ({ path }) => safe(() => daemonClient.post('/api/restore', { path })),
+    async ({ path, intentToken }) =>
+      safe(() => daemonClient.post('/api/restore', { path }, intentHeaders(intentToken))),
   )
 }

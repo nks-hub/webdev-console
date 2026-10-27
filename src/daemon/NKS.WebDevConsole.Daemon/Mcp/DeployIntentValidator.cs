@@ -99,6 +99,10 @@ public sealed class DeployIntentValidator : IDeployIntentValidator
         bool allowUnconfirmed,
         CancellationToken ct)
     {
+        // X-Allow-Unconfirmed is the CI/headless escape hatch for the GUI
+        // token. An MCP-token caller (an AI agent) must never self-confirm.
+        if (McpCallerContext.IsMcpToken) allowUnconfirmed = false;
+
         if (string.IsNullOrWhiteSpace(intentToken))
             return IntentValidationResult.Deny("missing_token");
 

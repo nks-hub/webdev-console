@@ -52,21 +52,18 @@ var daemonVersion =
 
 var builder = WebApplication.CreateBuilder(args);
 
-// CORS for Electron renderer — the packaged app loads the Vue SPA from
-// a `file://` URL which gives `Origin: null`, and the dev server runs
-// on `http://localhost:5173`. Kestrel binds loopback-only (see the
-// daemon listener config below) so the daemon is unreachable from
-// anywhere but the same machine anyway — that makes a permissive CORS
-// policy safe: anything that can reach the daemon is already running
-// on this host with this user's privileges.
+// CORS for the Electron renderer: the packaged app serves the SPA from
+// app://nks-wdc and the dev server runs on a loopback http origin. Kestrel
+// binds loopback-only, but a browser on this machine can still reach it,
+// so only those origins may read responses; any web page gets no CORS
+// grant. Auth is a bearer header (no cookies), so credentials stay off.
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
         policy
-            .SetIsOriginAllowed(_ => true)
+            .SetIsOriginAllowed(DaemonCors.IsAllowedOrigin)
             .AllowAnyMethod()
-            .AllowAnyHeader()
-            .AllowCredentials());
+            .AllowAnyHeader());
 });
 
 // OpenAPI metadata so /openapi/v1.json can be consumed by NSwag/swagger-typescript-api
@@ -747,6 +744,12 @@ foreach (var p in pluginLoader.Plugins)
 // Auth token generated early so middleware can reference it
 var portFile = Path.Combine(Path.GetTempPath(), "nks-wdc-daemon.port");
 var authToken = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+// Separate token for the MCP server (AI agents), written to its own port
+// file. Requests with it are marked McpCallerContext.IsMcpToken: destructive
+// routes then require a GUI-confirmed intent, and intent approval, grants,
+// admin routes and trust-related settings are refused.
+var mcpPortFile = Path.Combine(Path.GetTempPath(), "nks-wdc-mcp.port");
+var mcpToken = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
 
 // Write port file AFTER server starts listening (avoids race condition).
 // Uses atomic temp+rename so readers on Windows never see a half-written file
@@ -757,34 +760,38 @@ app.Lifetime.ApplicationStarted.Register(() =>
 {
     var address = app.Urls.FirstOrDefault() ?? "http://localhost:5000";
     var port = new Uri(address.Replace("+", "localhost")).Port;
-    var tmpFile = portFile + ".tmp";
-    var portFileContent = $"{port}\n{authToken}";
-    if (OperatingSystem.IsWindows())
+    static void WritePortFile(string path, string content)
     {
-        // %TEMP% on Windows resolves to a per-user directory whose ACL
-        // already restricts read access to the owning user, so the default
-        // File.WriteAllText behaviour is fine here.
-        File.WriteAllText(tmpFile, portFileContent);
-    }
-    else
-    {
-        // On Linux/macOS the default umask (022) leaves the port file at
-        // 0644 inside world-readable /tmp. Any local user could then `cat`
-        // the bearer token and impersonate the daemon owner against every
-        // /api/* endpoint (sites, hosts, certs, mysql admin). Force 0600
-        // explicitly so only the WDC user ever sees the token.
-        var opts = new FileStreamOptions
+        var tmpFile = path + ".tmp";
+        if (OperatingSystem.IsWindows())
         {
-            Mode = FileMode.Create,
-            Access = FileAccess.Write,
-            Share = FileShare.None,
-            UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite,
-        };
-        using var stream = new FileStream(tmpFile, opts);
-        using var writer = new StreamWriter(stream);
-        writer.Write(portFileContent);
+            // %TEMP% on Windows resolves to a per-user directory whose ACL
+            // already restricts read access to the owning user, so the default
+            // File.WriteAllText behaviour is fine here.
+            File.WriteAllText(tmpFile, content);
+        }
+        else
+        {
+            // On Linux/macOS the default umask (022) leaves the port file at
+            // 0644 inside world-readable /tmp. Any local user could then `cat`
+            // the bearer token and impersonate the daemon owner against every
+            // /api/* endpoint (sites, hosts, certs, mysql admin). Force 0600
+            // explicitly so only the WDC user ever sees the token.
+            var opts = new FileStreamOptions
+            {
+                Mode = FileMode.Create,
+                Access = FileAccess.Write,
+                Share = FileShare.None,
+                UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite,
+            };
+            using var stream = new FileStream(tmpFile, opts);
+            using var writer = new StreamWriter(stream);
+            writer.Write(content);
+        }
+        File.Move(tmpFile, path, overwrite: true);
     }
-    File.Move(tmpFile, portFile, overwrite: true);
+    WritePortFile(portFile, $"{port}\n{authToken}");
+    WritePortFile(mcpPortFile, $"{port}\n{mcpToken}");
     Console.WriteLine($"[daemon] listening on port {port}, port file: {portFile}");
 
     // Banner: one structured line with every piece of state someone
@@ -1455,6 +1462,7 @@ app.Use(async (ctx, next) =>
 // Auth middleware for /api/* requests.
 // SECURITY: use constant-time comparison to prevent timing attacks that could leak the token.
 var authTokenBytes = System.Text.Encoding.UTF8.GetBytes(authToken);
+var mcpTokenBytes = System.Text.Encoding.UTF8.GetBytes(mcpToken);
 app.Use(async (ctx, next) =>
 {
     if (ctx.Request.Path.StartsWithSegments("/api"))
@@ -1489,12 +1497,19 @@ app.Use(async (ctx, next) =>
         }
 
         bool ok = false;
+        bool isMcp = false;
         if (!string.IsNullOrEmpty(provided))
         {
             var providedBytes = System.Text.Encoding.UTF8.GetBytes(provided);
             // FixedTimeEquals requires same length — reject different length fast
             ok = providedBytes.Length == authTokenBytes.Length
                  && System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(providedBytes, authTokenBytes);
+            if (!ok)
+            {
+                isMcp = providedBytes.Length == mcpTokenBytes.Length
+                        && System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(providedBytes, mcpTokenBytes);
+                ok = isMcp;
+            }
         }
 
         if (!ok)
@@ -1502,6 +1517,18 @@ app.Use(async (ctx, next) =>
             ctx.Response.StatusCode = 401;
             await ctx.Response.WriteAsync("Unauthorized");
             return;
+        }
+
+        McpCallerContext.IsMcpToken = isMcp;
+        if (isMcp)
+        {
+            var denied = await McpTokenPolicy.DenyReasonAsync(ctx);
+            if (denied is not null)
+            {
+                ctx.Response.StatusCode = 403;
+                await ctx.Response.WriteAsJsonAsync(new { error = "mcp_forbidden", detail = denied });
+                return;
+            }
         }
     }
     await next();
@@ -1835,6 +1862,7 @@ app.MapGet("/api/plugins/marketplace", async (IHttpClientFactory httpFactory) =>
                 var downloadUrl = item.TryGetProperty("downloadUrl", out var duEl) ? duEl.GetString() ?? "" : "";
                 var author = item.TryGetProperty("author", out var aEl) ? aEl.GetString() ?? "" : "";
                 var license = item.TryGetProperty("license", out var lEl) ? lEl.GetString() ?? "" : "";
+                var sha256 = item.TryGetProperty("sha256", out var shEl) ? shEl.GetString() : null;
                 entries.Add(new
                 {
                     id,
@@ -1842,6 +1870,7 @@ app.MapGet("/api/plugins/marketplace", async (IHttpClientFactory httpFactory) =>
                     version,
                     description,
                     downloadUrl,
+                    sha256,
                     author,
                     license,
                     installed = installedIds.Contains(id),
@@ -2073,6 +2102,7 @@ app.MapPost("/api/plugins/install", async (
     }
     var downloadUrl = body?.GetValueOrDefault("downloadUrl") ?? "";
     var pluginId = body?.GetValueOrDefault("id") ?? "";
+    var expectedSha256 = (body?.GetValueOrDefault("sha256") ?? "").Trim();
 
     if (string.IsNullOrWhiteSpace(downloadUrl))
         return Results.BadRequest(new { error = "downloadUrl required" });
@@ -2080,13 +2110,13 @@ app.MapPost("/api/plugins/install", async (
         return Results.BadRequest(new { error = "id required" });
 
     var piIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
-    if (!string.IsNullOrEmpty(piIntentToken))
+    if (!string.IsNullOrEmpty(piIntentToken) || NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken)
     {
         var piAllowUnconfirmed = string.Equals(
             ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
             StringComparison.OrdinalIgnoreCase);
         var piVerdict = await intentValidator.ValidateAndConsumeAsync(
-            piIntentToken, "plugin_install", domain: pluginId, host: "*plugin*", piAllowUnconfirmed, ct);
+            piIntentToken ?? "", "plugin_install", domain: pluginId, host: "*plugin*", piAllowUnconfirmed, ct);
         if (!piVerdict.Ok)
             return Results.Json(
                 new { error = "intent_rejected", reason = piVerdict.Reason, detail = piVerdict.Detail },
@@ -2105,9 +2135,18 @@ app.MapPost("/api/plugins/install", async (
     if (!schemeOk)
         return Results.BadRequest(new { error = "downloadUrl must be HTTPS (or HTTP localhost)" });
 
+    // A plugin DLL runs inside the daemon (elevated on Windows), so an archive
+    // from an arbitrary URL must match a SHA-256 the caller got from a trusted
+    // catalogue entry. Loopback URLs stay hash-optional for local plugin dev.
+    var isLoopbackUrl = uri.IsLoopback;
+    if (expectedSha256.Length > 0 && !System.Text.RegularExpressions.Regex.IsMatch(expectedSha256, "^[0-9a-fA-F]{64}$"))
+        return Results.BadRequest(new { error = "sha256 must be 64 hex characters" });
+    if (expectedSha256.Length == 0 && !isLoopbackUrl)
+        return Results.BadRequest(new { error = "sha256 is required for plugin downloads" });
+
     var pluginsRoot = Path.GetFullPath(pluginDir);
     var targetDir = Path.GetFullPath(Path.Combine(pluginsRoot, pluginId));
-    if (!targetDir.StartsWith(pluginsRoot, StringComparison.OrdinalIgnoreCase))
+    if (!NKS.WebDevConsole.Daemon.Config.PathContainment.IsUnder(pluginsRoot, targetDir))
         return Results.BadRequest(new { error = "Resolved path escapes plugins root" });
 
     var cacheDir = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.CacheRoot, "plugin-installs");
@@ -2124,6 +2163,18 @@ app.MapPost("/api/plugins/install", async (
             await stream.CopyToAsync(fs);
         }
 
+        if (expectedSha256.Length > 0)
+        {
+            string actualSha256;
+            using (var verify = File.OpenRead(tempZip))
+                actualSha256 = Convert.ToHexString(await System.Security.Cryptography.SHA256.HashDataAsync(verify, ct));
+            if (!actualSha256.Equals(expectedSha256, StringComparison.OrdinalIgnoreCase))
+            {
+                try { File.Delete(tempZip); } catch { /* best effort */ }
+                return Results.BadRequest(new { error = $"SHA-256 mismatch for plugin {pluginId}: expected {expectedSha256}, got {actualSha256}" });
+            }
+        }
+
         // Extract to staging dir first, then atomic rename onto target
         var stagingDir = targetDir + ".staging";
         if (Directory.Exists(stagingDir)) Directory.Delete(stagingDir, recursive: true);
@@ -2137,7 +2188,7 @@ app.MapPost("/api/plugins/install", async (
                 if (string.IsNullOrEmpty(entry.Name)) continue;
                 if (entry.FullName.Contains("..")) continue; // zip-slip defense
                 var dest = Path.GetFullPath(Path.Combine(stagingDir, entry.FullName.Replace('/', Path.DirectorySeparatorChar)));
-                if (!dest.StartsWith(Path.GetFullPath(stagingDir), StringComparison.OrdinalIgnoreCase))
+                if (!PathContainment.IsUnder(stagingDir, dest))
                     continue;
                 Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
                 using var entryStream = entry.Open();
@@ -2200,13 +2251,13 @@ app.MapDelete("/api/plugins/{id}", async (
         return Results.BadRequest(new { error = "Invalid plugin id" });
 
     var puIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
-    if (!string.IsNullOrEmpty(puIntentToken))
+    if (!string.IsNullOrEmpty(puIntentToken) || NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken)
     {
         var puAllowUnconfirmed = string.Equals(
             ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
             StringComparison.OrdinalIgnoreCase);
         var puVerdict = await intentValidator.ValidateAndConsumeAsync(
-            puIntentToken, "plugin_uninstall", domain: id, host: "*plugin*", puAllowUnconfirmed, ct);
+            puIntentToken ?? "", "plugin_uninstall", domain: id, host: "*plugin*", puAllowUnconfirmed, ct);
         if (!puVerdict.Ok)
             return Results.Json(
                 new { error = "intent_rejected", reason = puVerdict.Reason, detail = puVerdict.Detail },
@@ -2260,7 +2311,7 @@ app.MapDelete("/api/plugins/{id}", async (
 
         // A) dedicated folder
         var candidateDir = Path.GetFullPath(Path.Combine(pluginsRoot, id));
-        if (candidateDir.StartsWith(pluginsRoot, StringComparison.OrdinalIgnoreCase)
+        if (NKS.WebDevConsole.Daemon.Config.PathContainment.IsUnder(pluginsRoot, candidateDir)
             && Directory.Exists(candidateDir))
         {
             targetsToDelete.AddRange(Directory.EnumerateFiles(candidateDir, "*", SearchOption.AllDirectories));
@@ -2301,7 +2352,7 @@ app.MapDelete("/api/plugins/{id}", async (
                 if (!string.IsNullOrEmpty(asmPath) && File.Exists(asmPath))
                 {
                     var asmFull = Path.GetFullPath(asmPath);
-                    if (asmFull.StartsWith(pluginsRoot, StringComparison.OrdinalIgnoreCase))
+                    if (NKS.WebDevConsole.Daemon.Config.PathContainment.IsUnder(pluginsRoot, asmFull))
                     {
                         var baseName = Path.GetFileNameWithoutExtension(asmPath);
                         var dir = Path.GetDirectoryName(asmFull)!;
@@ -2534,13 +2585,13 @@ app.MapPost("/api/services/{id}/stop", async (
     CancellationToken ct) =>
 {
     var stopIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
-    if (!string.IsNullOrEmpty(stopIntentToken))
+    if (!string.IsNullOrEmpty(stopIntentToken) || NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken)
     {
         var stopAllowUnconfirmed = string.Equals(
             ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
             StringComparison.OrdinalIgnoreCase);
         var stopVerdict = await intentValidator.ValidateAndConsumeAsync(
-            stopIntentToken, "service_restart", domain: id, host: "*svc*", stopAllowUnconfirmed, ct);
+            stopIntentToken ?? "", "service_restart", domain: id, host: "*svc*", stopAllowUnconfirmed, ct);
         if (!stopVerdict.Ok)
             return Results.Json(
                 new { error = "intent_rejected", reason = stopVerdict.Reason, detail = stopVerdict.Detail },
@@ -2579,13 +2630,13 @@ app.MapPost("/api/services/{id}/restart", async (
     CancellationToken ct) =>
 {
     var rstIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
-    if (!string.IsNullOrEmpty(rstIntentToken))
+    if (!string.IsNullOrEmpty(rstIntentToken) || NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken)
     {
         var rstAllowUnconfirmed = string.Equals(
             ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
             StringComparison.OrdinalIgnoreCase);
         var rstVerdict = await intentValidator.ValidateAndConsumeAsync(
-            rstIntentToken, "service_restart", domain: id, host: "*svc*", rstAllowUnconfirmed, ct);
+            rstIntentToken ?? "", "service_restart", domain: id, host: "*svc*", rstAllowUnconfirmed, ct);
         if (!rstVerdict.Ok)
             return Results.Json(
                 new { error = "intent_rejected", reason = rstVerdict.Reason, detail = rstVerdict.Detail },
@@ -3766,13 +3817,13 @@ app.MapDelete("/api/sites/{domain}", async (
     CancellationToken ct) =>
 {
     var sdIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
-    if (!string.IsNullOrEmpty(sdIntentToken))
+    if (!string.IsNullOrEmpty(sdIntentToken) || NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken)
     {
         var sdAllowUnconfirmed = string.Equals(
             ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
             StringComparison.OrdinalIgnoreCase);
         var sdVerdict = await intentValidator.ValidateAndConsumeAsync(
-            sdIntentToken, "site_delete", domain, host: "*site*", sdAllowUnconfirmed, ct);
+            sdIntentToken ?? "", "site_delete", domain, host: "*site*", sdAllowUnconfirmed, ct);
         if (!sdVerdict.Ok)
             return Results.Json(
                 new { error = "intent_rejected", reason = sdVerdict.Reason, detail = sdVerdict.Detail },
@@ -4317,14 +4368,14 @@ app.MapPost("/api/sites/{domain}/rollback/{timestamp}", async (string domain, st
     var historyDir = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.GeneratedRoot, "history");
     var historyDirFull = Path.GetFullPath(historyDir);
     var historyFile = Path.GetFullPath(Path.Combine(historyDir, $"{domain}.conf.{timestamp}"));
-    if (!historyFile.StartsWith(historyDirFull, StringComparison.OrdinalIgnoreCase))
+    if (!NKS.WebDevConsole.Daemon.Config.PathContainment.IsUnder(historyDirFull, historyFile))
         return Results.BadRequest(new { error = "Resolved history path escapes history root" });
     if (!File.Exists(historyFile))
         return Results.NotFound(new { error = $"History entry {timestamp} not found" });
 
     var generatedRoot = Path.GetFullPath(NKS.WebDevConsole.Core.Services.WdcPaths.GeneratedRoot);
     var generatedFile = Path.GetFullPath(Path.Combine(generatedRoot, $"{domain}.conf"));
-    if (!generatedFile.StartsWith(generatedRoot, StringComparison.OrdinalIgnoreCase))
+    if (!NKS.WebDevConsole.Daemon.Config.PathContainment.IsUnder(generatedRoot, generatedFile))
         return Results.BadRequest(new { error = "Resolved generated path escapes generated root" });
 
     File.Copy(historyFile, generatedFile, overwrite: true);
@@ -4610,8 +4661,21 @@ app.MapGet("/api/backup/download", (BackupManager bm, string? path) =>
     return Results.File(target, "application/zip", Path.GetFileName(target));
 });
 
-app.MapPost("/api/restore", async (BackupManager bm, HttpContext ctx) =>
+app.MapPost("/api/restore", async (BackupManager bm, HttpContext ctx,
+    NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator) =>
 {
+    // Restoring replaces state.db, sites and certificates. GUI callers keep the
+    // existing confirm dialog; an MCP-token caller needs a confirmed intent.
+    var brIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
+    if (!string.IsNullOrEmpty(brIntentToken) || McpCallerContext.IsMcpToken)
+    {
+        var brVerdict = await intentValidator.ValidateAndConsumeAsync(
+            brIntentToken ?? "", "backup_restore", domain: "*backup*", host: "*backup*", allowUnconfirmed: false, ctx.RequestAborted);
+        if (!brVerdict.Ok)
+            return Results.Json(
+                new { error = "intent_rejected", reason = brVerdict.Reason, detail = brVerdict.Detail },
+                statusCode: brVerdict.Reason == "pending_confirmation" ? 425 : 403);
+    }
     // An uploaded archive holds state.db and the sites' TLS private keys. It
     // used to stay in the shared temp dir with default permissions forever;
     // write it owner-only and delete it once the restore is done.
@@ -4663,8 +4727,21 @@ app.MapPost("/api/restore", async (BackupManager bm, HttpContext ctx) =>
     }
 });
 
-app.MapPost("/api/backup/{id}/restore", (BackupManager bm, string id) =>
+app.MapPost("/api/backup/{id}/restore", async (BackupManager bm, string id, HttpContext ctx,
+    NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator) =>
 {
+    // Restoring replaces state.db, sites and certificates. GUI callers keep the
+    // existing confirm dialog; an MCP-token caller needs a confirmed intent.
+    var brIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
+    if (!string.IsNullOrEmpty(brIntentToken) || McpCallerContext.IsMcpToken)
+    {
+        var brVerdict = await intentValidator.ValidateAndConsumeAsync(
+            brIntentToken ?? "", "backup_restore", domain: "*backup*", host: "*backup*", allowUnconfirmed: false, ctx.RequestAborted);
+        if (!brVerdict.Ok)
+            return Results.Json(
+                new { error = "intent_rejected", reason = brVerdict.Reason, detail = brVerdict.Detail },
+                statusCode: brVerdict.Reason == "pending_confirmation" ? 425 : 403);
+    }
     var backupRoot = Path.GetFullPath(NKS.WebDevConsole.Core.Services.WdcPaths.BackupsRoot);
     var resolved = Path.GetFullPath(Path.Combine(backupRoot, id));
     if (!PathContainment.IsUnder(backupRoot, resolved))
@@ -6096,13 +6173,13 @@ app.MapPost("/api/binaries/install", async (
         return Results.BadRequest(new { error = "app and version required" });
 
     var biIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
-    if (!string.IsNullOrEmpty(biIntentToken))
+    if (!string.IsNullOrEmpty(biIntentToken) || NKS.WebDevConsole.Daemon.Mcp.McpCallerContext.IsMcpToken)
     {
         var biAllowUnconfirmed = string.Equals(
             ctx.Request.Headers["X-Allow-Unconfirmed"].FirstOrDefault(), "true",
             StringComparison.OrdinalIgnoreCase);
         var biVerdict = await intentValidator.ValidateAndConsumeAsync(
-            biIntentToken, "binary_install", domain: req.App, host: "*binary*",
+            biIntentToken ?? "", "binary_install", domain: req.App, host: "*binary*",
             biAllowUnconfirmed, ctx.RequestAborted);
         if (!biVerdict.Ok)
             return Results.Json(
@@ -6209,6 +6286,7 @@ app.Lifetime.ApplicationStopping.Register(() =>
             CancellationToken.None)
         .GetAwaiter()
         .GetResult();
+    try { File.Delete(mcpPortFile); } catch { /* best effort */ }
     shutdownLogger.LogInformation("Shutdown complete");
 });
 

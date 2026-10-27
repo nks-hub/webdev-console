@@ -42,6 +42,7 @@ const DANGER_OVERRIDES: Record<string, 'read' | 'mutate' | 'destructive'> = {
   wdc_deploy_lock: 'mutate',
   wdc_deploy_unlock: 'mutate',
   wdc_deploy_create_intent: 'mutate',
+  wdc_request_confirmation: 'mutate',
   wdc_create_mysql_user: 'mutate',
   wdc_set_mysql_user_password: 'mutate',
   wdc_grant_mysql_user_database: 'mutate',

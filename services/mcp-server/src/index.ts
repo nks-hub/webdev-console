@@ -30,6 +30,7 @@ import { registerBackupTools } from './tools/backup.js'
 import { registerSettingsTools } from './tools/settings.js'
 import { registerCloudflareTools } from './tools/cloudflare.js'
 import { registerDeployTools } from './tools/deploy.js'
+import { registerConfirmationTools } from './tools/confirmation.js'
 import { daemonClient } from './daemonClient.js'
 import { wrapHandler } from './auditLog.js'
 
@@ -100,6 +101,7 @@ registerBackupTools(server, opts)
 registerSettingsTools(server, opts)
 registerCloudflareTools(server, opts)
 registerDeployTools(server, opts)
+registerConfirmationTools(server, opts)
 
 const transport = new StdioServerTransport()
 await server.connect(transport)

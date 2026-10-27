@@ -4,6 +4,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 import { daemonClient } from '../daemonClient.js'
 import type { RegisterOptions } from '../index.js'
+import { IntentTokenSchema, intentHeaders } from './confirmation.js'
 import { safe } from '../formatting.js'
 import { ConfirmYesSchema } from '../schemas.js'
 
@@ -87,6 +88,7 @@ export function registerBinariesTools(server: McpServer, opts: RegisterOptions):
       inputSchema: {
         app: AppNameSchema,
         version: VersionSchema,
+        intentToken: IntentTokenSchema,
       },
       annotations: {
         readOnlyHint: false,
@@ -95,8 +97,8 @@ export function registerBinariesTools(server: McpServer, opts: RegisterOptions):
         openWorldHint: true,
       },
     },
-    async ({ app, version }) =>
-      safe(() => daemonClient.post('/api/binaries/install', { app, version })),
+    async ({ app, version, intentToken }) =>
+      safe(() => daemonClient.post('/api/binaries/install', { app, version }, intentHeaders(intentToken))),
   )
 
   server.registerTool(

@@ -2,7 +2,7 @@ import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog, protocol, n
 import { dirname, join, resolve, sep } from 'path'
 import { pathToFileURL } from 'node:url'
 import { spawn, ChildProcess } from 'child_process'
-import { readFileSync, writeFileSync, existsSync, unlinkSync, rmSync, readdirSync, lstatSync, readlinkSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, unlinkSync, rmSync, readdirSync, lstatSync, readlinkSync, statSync } from 'fs'
 import { tmpdir, homedir } from 'os'
 import http from 'http'
 import * as Sentry from '@sentry/electron/main'
@@ -155,7 +155,27 @@ let checkingForUpdates = false
 function getUpdateFeedOverride(): string | null {
   const raw = process.env.NKS_WDC_UPDATE_FEED_URL?.trim()
   if (!raw) return null
+  // Windows builds are not code-signed, so the feed's sha512 is the only
+  // integrity check on an update; never take it over plain HTTP except from
+  // a loopback test feed (scripts/serve-electron-update-feed.mjs).
+  try {
+    const u = new URL(raw)
+    const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(u.hostname)
+    if (u.protocol !== 'https:' && !(u.protocol === 'http:' && loopback)) {
+      console.warn(`[updates] ignoring NKS_WDC_UPDATE_FEED_URL ${raw}: HTTPS required`)
+      return null
+    }
+  } catch {
+    return null
+  }
   return raw.endsWith('/') ? raw : `${raw}/`
+}
+
+// Schemes the shell may open for links coming from renderer content. file:
+// is excluded on purpose: ShellExecute honours .exe/.lnk/.url associations,
+// so file:// or UNC links would launch programs without a prompt.
+function isSafeExternalUrl(url: string): boolean {
+  return /^(https?|mailto):/i.test(url)
 }
 
 // Portable mode: if portable.txt exists next to the app, redirect both
@@ -182,9 +202,25 @@ if (isPortable) {
 
 const PORT_FILE = join(tmpdir(), 'nks-wdc-daemon.port')
 
+// See preload.ts: on Unix only a port file we own with no group/other
+// permissions is trusted, so another local user cannot pre-create it.
+function isTrustedPortFile(path: string): boolean {
+  if (process.platform === 'win32' || typeof process.getuid !== 'function') return true
+  try {
+    const st = statSync(path)
+    return st.uid === process.getuid() && (st.mode & 0o077) === 0
+  } catch {
+    return false
+  }
+}
+
 function readPortFile(): { port: number; token: string } | null {
   try {
     if (!existsSync(PORT_FILE)) return null
+    if (!isTrustedPortFile(PORT_FILE)) {
+      console.warn(`[daemon] ignoring ${PORT_FILE}: not owned by this user or readable by others`)
+      return null
+    }
     const lines = readFileSync(PORT_FILE, 'utf-8').split('\n').filter(Boolean)
     if (lines.length >= 2) return { port: parseInt(lines[0], 10), token: lines[1] }
   } catch {}
@@ -564,10 +600,12 @@ async function createWindow() {
     const isEditable = params.isEditable === true
     const template: Electron.MenuItemConstructorOptions[] = []
     if (params.linkURL) {
-      template.push({
-        label: 'Open Link',
-        click: () => { void shell.openExternal(params.linkURL) },
-      })
+      if (isSafeExternalUrl(params.linkURL)) {
+        template.push({
+          label: 'Open Link',
+          click: () => { void shell.openExternal(params.linkURL) },
+        })
+      }
       template.push({
         label: 'Copy Link',
         click: () => { clipboard.writeText(params.linkURL) },
@@ -1519,8 +1557,7 @@ ipcMain.handle('open-external', async (_evt, url: string) => {
   // file://attacker.tld/share/payload.lnk also work. A renderer XSS that
   // reaches this IPC channel would otherwise have one-call RCE.
   // For "open in folder" use the dedicated revealInFolder handler.
-  const allowed = /^(https?|mailto):/i
-  if (!allowed.test(url)) return false
+  if (!isSafeExternalUrl(url)) return false
   await shell.openExternal(url)
   return true
 })

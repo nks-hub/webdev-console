@@ -4,6 +4,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 import { daemonClient } from '../daemonClient.js'
 import type { RegisterOptions } from '../index.js'
+import { IntentTokenSchema, intentHeaders } from './confirmation.js'
 import { safe } from '../formatting.js'
 import { ConfirmYesSchema, DomainSchema } from '../schemas.js'
 
@@ -243,6 +244,7 @@ export function registerCloudflareTools(server: McpServer, opts: RegisterOptions
         zoneId: ZoneIdSchema,
         recordId: RecordIdSchema,
         confirm: ConfirmYesSchema,
+        intentToken: IntentTokenSchema,
       },
       annotations: {
         readOnlyHint: false,
@@ -251,10 +253,11 @@ export function registerCloudflareTools(server: McpServer, opts: RegisterOptions
         openWorldHint: true,
       },
     },
-    async ({ zoneId, recordId }) =>
+    async ({ zoneId, recordId, intentToken }) =>
       safe(() =>
         daemonClient.delete(
           `/api/cloudflare/zones/${encodeURIComponent(zoneId)}/dns/${encodeURIComponent(recordId)}`,
+          intentHeaders(intentToken),
         ),
       ),
   )

@@ -23,10 +23,20 @@ let lastMtimeMs = 0
 // the renderer's Authorization header.
 const TOKEN_SHAPE = /^[A-Za-z0-9+/=]{16,512}$/
 
+// The port file sits in the shared temp dir on Linux. Another local user can
+// create it first and point the GUI at their own listener (which would then
+// receive our MySQL and Cloudflare credentials), so on Unix only trust a file
+// that we own and that nobody else can read or write; the daemon creates it 0600.
+function isTrustedPortFile(st: { uid: number; mode: number }): boolean {
+  if (process.platform === 'win32' || typeof process.getuid !== 'function') return true
+  return st.uid === process.getuid() && (st.mode & 0o077) === 0
+}
+
 function refreshFromPortFile(): void {
   try {
     if (!existsSync(portFilePath)) return
     const st = statSync(portFilePath)
+    if (!isTrustedPortFile(st)) return
     const mtime = st.mtimeMs
     if (mtime === lastMtimeMs && cachedPort > 0) return // unchanged
     const lines = readFileSync(portFilePath, 'utf-8').split('\n').filter(Boolean)

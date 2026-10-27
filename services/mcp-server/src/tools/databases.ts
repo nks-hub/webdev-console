@@ -9,6 +9,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 import { daemonClient } from '../daemonClient.js'
 import type { RegisterOptions } from '../index.js'
+import { IntentTokenSchema, intentHeaders } from './confirmation.js'
 import { safe, toolError } from '../formatting.js'
 import { ConfirmYesSchema, DatabaseNameSchema } from '../schemas.js'
 
@@ -225,6 +226,7 @@ export function registerDatabasesTools(server: McpServer, opts: RegisterOptions)
         database: DatabaseNameSchema,
         sql: z.string().min(1).max(65535).describe('SQL statement to execute (max 64KB)'),
         confirm: ConfirmYesSchema,
+        intentToken: IntentTokenSchema,
       },
       annotations: {
         readOnlyHint: false,
@@ -233,9 +235,9 @@ export function registerDatabasesTools(server: McpServer, opts: RegisterOptions)
         openWorldHint: false,
       },
     },
-    async ({ database, sql }) =>
+    async ({ database, sql, intentToken }) =>
       safe(() =>
-        daemonClient.post(`/api/databases/${encodeURIComponent(database)}/query`, { sql }),
+        daemonClient.post(`/api/databases/${encodeURIComponent(database)}/query`, { sql }, intentHeaders(intentToken)),
       ),
   )
 
@@ -271,6 +273,7 @@ export function registerDatabasesTools(server: McpServer, opts: RegisterOptions)
       inputSchema: {
         name: DatabaseNameSchema,
         confirm: ConfirmYesSchema,
+        intentToken: IntentTokenSchema,
       },
       annotations: {
         readOnlyHint: false,
@@ -279,7 +282,7 @@ export function registerDatabasesTools(server: McpServer, opts: RegisterOptions)
         openWorldHint: false,
       },
     },
-    async ({ name }) =>
-      safe(() => daemonClient.delete(`/api/databases/${encodeURIComponent(name)}`)),
+    async ({ name, intentToken }) =>
+      safe(() => daemonClient.delete(`/api/databases/${encodeURIComponent(name)}`, intentHeaders(intentToken))),
   )
 }

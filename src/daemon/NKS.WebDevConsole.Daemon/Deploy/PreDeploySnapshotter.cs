@@ -216,16 +216,7 @@ public sealed class PreDeploySnapshotter : IPreDeploySnapshotter
                 $"port={conn.Port}\n";
             defaultsFile = Path.Combine(Path.GetTempPath(),
                 $"wdc-mysqldump-{Guid.NewGuid():N}.cnf");
-            await File.WriteAllTextAsync(defaultsFile, defaultsContent, ct);
-            if (!OperatingSystem.IsWindows())
-            {
-                try
-                {
-                    new FileInfo(defaultsFile).UnixFileMode =
-                        UnixFileMode.UserRead | UnixFileMode.UserWrite;
-                }
-                catch { /* best effort */ }
-            }
+            await NKS.WebDevConsole.Daemon.Config.SecretFile.WriteAllTextAsync(defaultsFile, defaultsContent, ct);
 
             // Stream stdout straight into a GZipStream — avoids buffering
             // the entire dump in memory for big DBs.
@@ -235,6 +226,12 @@ public sealed class PreDeploySnapshotter : IPreDeploySnapshotter
             // --single-transaction gives a consistent snapshot on InnoDB
             // without taking table-level locks; --quick streams row-by-row
             // so big tables don't pin RAM.
+            // The database name comes from the site's .env (a cloned repo). As a
+            // positional argument, a value starting with '-' would be parsed as
+            // another option, so refuse it rather than pass it on.
+            if (string.IsNullOrWhiteSpace(conn.Database) || conn.Database.StartsWith('-')
+                || conn.Database.Any(char.IsControl))
+                throw new InvalidOperationException($"Refusing database name '{conn.Database}' from .env");
             var result = await Cli.Wrap(mysqldump)
                 .WithArguments(new[]
                 {
