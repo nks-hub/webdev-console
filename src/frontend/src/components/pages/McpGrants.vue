@@ -3,20 +3,21 @@
     <div class="page-header">
       <h2>{{ t('mcpGrants.title') }}</h2>
       <div class="actions">
-        <el-button :loading="loading" @click="refresh">
-          <el-icon><Refresh /></el-icon> {{ t('mcpGrants.refresh') }}
+        <el-button :loading="loading" @click="refresh" :icon="Refresh">
+          {{ t('mcpGrants.refresh') }}
         </el-button>
-        <el-button @click="testMatchDialogOpen = true">
-          <el-icon><Search /></el-icon> {{ t('mcpGrants.testMatch.button') }}
+        <el-button @click="testMatchDialogOpen = true" :icon="Search">
+          {{ t('mcpGrants.testMatch.button') }}
         </el-button>
         <el-button
           :disabled="grants.length === 0"
+          :icon="Download"
           @click="onExportJson"
         >
-          <el-icon><Download /></el-icon> {{ t('mcpGrants.exportJson') }}
+          {{ t('mcpGrants.exportJson') }}
         </el-button>
-        <el-button :loading="importing" @click="triggerImportPicker">
-          <el-icon><Upload /></el-icon> {{ t('mcpGrants.importJson') }}
+        <el-button :loading="importing" @click="triggerImportPicker" :icon="Upload">
+          {{ t('mcpGrants.importJson') }}
         </el-button>
         <input
           ref="importFileInput"
@@ -25,11 +26,11 @@
           style="display:none"
           @change="onImportFileChosen"
         />
-        <el-button :loading="sweeping" @click="onSweepNow">
-          <el-icon><Delete /></el-icon> {{ t('mcpGrants.sweepNow') }}
+        <el-button :loading="sweeping" @click="onSweepNow" :icon="Delete">
+          {{ t('mcpGrants.sweepNow') }}
         </el-button>
-        <el-button type="primary" @click="createDialogOpen = true">
-          <el-icon><Plus /></el-icon> {{ t('mcpGrants.newGrant') }}
+        <el-button type="primary" @click="createDialogOpen = true" :icon="Plus">
+          {{ t('mcpGrants.newGrant') }}
         </el-button>
       </div>
     </div>
@@ -156,7 +157,7 @@
       @selection-change="onSelectionChange"
     >
       <el-table-column type="selection" width="40" />
-      <el-table-column prop="scopeType" :label="t('mcpGrants.col.scope')" min-width="130">
+      <el-table-column prop="scopeType" :label="t('mcpGrants.col.scope')" min-width="190">
         <template #default="{ row }">
           <el-tag :type="scopeTagType(row.scopeType)" size="small">{{ scopeLabel(row.scopeType) }}</el-tag>
         </template>
@@ -167,22 +168,15 @@
           <span v-else class="muted">{{ t('mcpGrants.scope.everyClient') }}</span>
         </template>
       </el-table-column>
-      <el-table-column prop="kindPattern" :label="t('mcpGrants.col.kind')" min-width="100">
+      <el-table-column prop="kindPattern" :label="t('mcpGrants.col.kind')" min-width="200">
         <template #default="{ row }">
-          <!-- Phase 7.5+++ — when kindPattern is an exact kind id (no
-               wildcards), wrap in a tooltip showing the human label so
-               non-technical operators reviewing the grants table see
-               "Smazat databázi" on hover instead of just `database_drop`.
-               Wildcard patterns (`*`, `deploy*`) skip the tooltip — no
-               single matching kind to humanize. -->
-          <el-tooltip
-            v-if="exactKindLabel(row.kindPattern)"
-            :content="exactKindLabel(row.kindPattern)"
-            placement="top"
-          >
-            <code class="mono">{{ row.kindPattern }}</code>
-          </el-tooltip>
-          <code v-else class="mono">{{ row.kindPattern }}</code>
+          <!-- The human label first, the id the daemon matches below it.
+               '*' has no single label. -->
+          <template v-if="row.kindPattern === '*'">{{ t('mcpGrants.dialog.anyKind') }}</template>
+          <template v-else>
+            <div>{{ exactKindLabel(row.kindPattern) || row.kindPattern }}</div>
+            <code v-if="exactKindLabel(row.kindPattern)" class="mono kind-id">{{ row.kindPattern }}</code>
+          </template>
         </template>
       </el-table-column>
       <el-table-column prop="targetPattern" :label="t('mcpGrants.col.target')" min-width="160">
@@ -1098,15 +1092,20 @@ function cooldownActiveSec(g: McpGrantRow): number {
 </script>
 
 <style scoped>
-.page { padding: 0; display: flex; flex-direction: column; gap: 0; }
+.page { padding: 0; display: flex; flex-direction: column; gap: var(--wdc-space-3); }
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--wdc-space-3);
   padding: 0 0 var(--wdc-space-4);
   border-bottom: 1px solid var(--wdc-border);
   background: transparent;
 }
+.actions { display: flex; flex-wrap: wrap; gap: var(--wdc-space-2); }
+.kind-id { font-size: 11px; color: var(--el-text-color-secondary); }
+.actions :deep(.el-button + .el-button) { margin-left: 0; }
 .page-header h2 {
   margin: 0;
   font-size: 1.6rem;

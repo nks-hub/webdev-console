@@ -2,8 +2,8 @@
   <div class="page mcp-intents-page">
     <div class="page-header">
       <h2>{{ t('mcpIntents.title') }}</h2>
-      <el-button :loading="loading" @click="refresh">
-        <el-icon><Refresh /></el-icon> {{ t('mcpIntents.refresh') }}
+      <el-button :loading="loading" @click="refresh" :icon="Refresh">
+        {{ t('mcpIntents.refresh') }}
       </el-button>
     </div>
 
@@ -110,6 +110,7 @@
 
     <el-empty
       v-if="!entries.length && !loading"
+      :image-size="80"
       :description="t('mcpIntents.emptyNoIntents')"
     />
 
@@ -149,19 +150,19 @@
         <!-- Selection column. el-table's `type=selection` + `selectable`
              prop disables the checkbox for non-revokable rows. -->
         <el-table-column type="selection" width="40" :selectable="rowSelectable" />
-      <el-table-column :label="t('mcpIntents.col.created')" width="170">
+      <el-table-column :label="t('mcpIntents.col.created')" width="150">
         <template #default="{ row }">
           <span class="mono">{{ formatDate(row.createdAt) }}</span>
         </template>
       </el-table-column>
 
-      <el-table-column :label="t('mcpIntents.col.target')" min-width="160">
+      <el-table-column :label="t('mcpIntents.col.target')" min-width="140">
         <template #default="{ row }">
           <span v-if="mcpTargetLabel(row)">{{ mcpTargetLabel(row) }}</span>
           <span v-else class="muted">—</span>
         </template>
       </el-table-column>
-      <el-table-column prop="kind" :label="t('mcpIntents.col.kind')" min-width="180">
+      <el-table-column prop="kind" :label="t('mcpIntents.col.kind')" min-width="220">
         <template #default="{ row }">
           <!-- Phase 7.5+++ — operator-locale label via humanKindLabel
                (mirrors the helper in McpKinds, McpConfirmBanner,
@@ -170,7 +171,7 @@
                one, surface the daemon label as the title attr so plugin
                authors can verify their English shipped through. -->
           <el-tag
-            :type="row.kindDanger === 'destructive' ? 'danger' : kindTagType(row.kind)"
+            :type="kindTagType(row.kindDanger)"
             size="small"
             effect="plain"
             :title="kindTagTitle(row)"
@@ -192,7 +193,7 @@
         </template>
       </el-table-column>
 
-      <el-table-column :label="t('mcpIntents.col.expires')" width="170">
+      <el-table-column :label="t('mcpIntents.col.expires')" width="120">
         <template #default="{ row }">
           <span class="mono" :class="{ expired: row.state === 'expired' }">
             {{ formatRelative(row.expiresAt) }}
@@ -200,7 +201,7 @@
         </template>
       </el-table-column>
 
-      <el-table-column :label="t('mcpIntents.col.intentId')" width="150">
+      <el-table-column :label="t('mcpIntents.col.intentId')" width="110">
         <template #default="{ row }">
           <code
             class="mono intent-id"
@@ -212,7 +213,7 @@
         </template>
       </el-table-column>
 
-      <el-table-column :label="t('mcpIntents.col.matchedGrant')" width="170">
+      <el-table-column :label="t('mcpIntents.col.matchedGrant')" width="130">
         <template #default="{ row }">
           <code v-if="row.matchedGrantId" class="mono auto-grant"
             :title="t('mcpIntents.matchedGrantClickHint', { id: row.matchedGrantId })"
@@ -227,7 +228,7 @@
         </template>
       </el-table-column>
 
-      <el-table-column label="" width="220" align="right">
+      <el-table-column label="" width="200" align="right" fixed="right">
         <template #default="{ row }">
           <!-- Pending requests can be decided right here — e.g. one that
                arrived while WDC was closed, whose banner was never shown. -->
@@ -441,7 +442,9 @@ const filteredEntries = computed<IntentInventoryEntry[]>(() => {
   return entries.value.filter((e) => {
     if (stateFilter.value && e.state !== stateFilter.value) return false
     if (kindFilter.value && e.kind !== kindFilter.value) return false
-    if (q && !e.domain.toLowerCase().includes(q) && !e.host.toLowerCase().includes(q)) {
+    // The id lets Activity link straight to the request it used.
+    if (q && !e.domain.toLowerCase().includes(q) && !e.host.toLowerCase().includes(q)
+      && !e.intentId.toLowerCase().startsWith(q)) {
       return false
     }
     return true
@@ -555,10 +558,11 @@ function stateIcon(state: string) {
   return CircleClose // revoked, expired
 }
 
-function kindTagType(kind: string): 'danger' | 'warning' | 'info' {
-  if (kind === 'restore' || kind === 'rollback') return 'warning'
-  if (kind === 'deploy') return 'danger'
-  return 'info' // cancel
+// Colour by what the registry says about undoing it, not by the kind id.
+function kindTagType(danger: string | null): 'danger' | 'warning' | 'info' {
+  if (danger === 'destructive') return 'danger'
+  if (danger === 'reversible') return 'warning'
+  return 'info'
 }
 
 // Phase 7.5+++ — same kind-label helper as the other 4 MCP surfaces
@@ -758,10 +762,10 @@ onBeforeUnmount(() => {
 }
 .intent-decide .el-button + .el-button { margin-left: 0; }
 .mcp-intents-page {
-  padding: var(--wdc-space-4) var(--wdc-space-5);
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--wdc-space-4);
+  gap: var(--wdc-space-3);
 }
 .page-header {
   display: flex;

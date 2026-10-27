@@ -3,13 +3,15 @@
     <div class="hub-header">
       <h2>{{ t('mcpHub.title') }}</h2>
       <!-- The three words the rest of the page uses, in one sentence each. -->
-      <ul class="hub-glossary">
+      <ul v-if="advanced" class="hub-glossary">
         <li><strong>{{ t('mcpHub.tabs.requests') }}</strong>: {{ t('mcpHub.glossary.requests') }}</li>
-        <template v-if="advanced">
-          <li><strong>{{ t('mcpHub.tabs.rules') }}</strong>: {{ t('mcpHub.glossary.rules') }}</li>
-          <li><strong>{{ t('mcpHub.tabs.catalog') }}</strong>: {{ t('mcpHub.glossary.catalog') }}</li>
-        </template>
+        <li><strong>{{ t('mcpHub.tabs.rules') }}</strong>: {{ t('mcpHub.glossary.rules') }}</li>
+        <li><strong>{{ t('mcpHub.tabs.catalog') }}</strong>: {{ t('mcpHub.glossary.catalog') }}</li>
       </ul>
+      <!-- One line is not a list. -->
+      <p v-else class="hub-glossary hub-glossary--single">
+        <strong>{{ t('mcpHub.tabs.requests') }}</strong>: {{ t('mcpHub.glossary.requests') }}
+      </p>
     </div>
 
     <!-- Connect an AI client — copy-paste registration for Claude Code,
@@ -31,7 +33,20 @@
 
     <template v-else>
       <!-- Simple mode keeps the connect card, Activity and Requests; rules,
-           the action list and their tooling are advanced-mode only. -->
+           the action list and their tooling are advanced-mode only. A link
+           to /mcp/grants or /mcp/kinds says so instead of silently showing
+           Activity. -->
+      <el-alert
+        v-if="!advanced && advancedOnlyRoute"
+        type="info"
+        show-icon
+        :closable="false"
+        class="hub-simple-note"
+        data-testid="mcp-hub-simple-note"
+      >
+        <template #title>{{ t('mcpHub.simpleOnly') }}</template>
+        <el-button size="small" @click="uiMode.setUiMode('advanced')">{{ t('mcpHub.switchToAdvanced') }}</el-button>
+      </el-alert>
       <!-- Onboarding panel — first-time setup with preset profiles.
            Auto-hides after a profile is picked or after the user dismisses it. -->
       <McpOnboardingPanel v-if="advanced" />
@@ -189,6 +204,8 @@ function parseTab(): TabName {
 
 watch(advanced, () => { activeTab.value = parseTab() })
 
+const advancedOnlyRoute = computed(() => /\/mcp\/(grants|kinds)$/.test(route.path))
+
 // A toast or notification opens /mcp/intents for a waiting request; the
 // connect card and panels above would leave the table below the fold.
 async function revealPendingRequests(): Promise<void> {
@@ -295,7 +312,8 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.page { padding: 0; display: flex; flex-direction: column; gap: 0; }
+/* The global page rule pads the hub; children space themselves. */
+.mcp-hub-page { gap: 0; }
 .hub-header {
   padding: 0 0 var(--wdc-space-4);
   background: transparent;
@@ -314,6 +332,9 @@ onBeforeUnmount(() => {
   font-size: 0.87rem;
   line-height: 1.5;
 }
+.hub-glossary--single { padding-left: 0; }
+.hub-simple-note { margin-bottom: var(--wdc-space-4); }
+.hub-simple-note :deep(.el-alert__description) { margin-top: var(--wdc-space-2); }
 .hub-off {
   display: flex;
   align-items: flex-start;
@@ -325,8 +346,9 @@ onBeforeUnmount(() => {
 }
 .hub-off p { margin: var(--wdc-space-1) 0 0; }
 .muted { color: var(--wdc-text-3); }
-.hub-tabs { padding: 0 24px; }
 .hub-tabs :deep(.el-tabs__content) { padding-top: 8px; }
+/* Tab pages are sections of the hub: their titles sit below the hub title. */
+.hub-tabs :deep(.page-header h2) { font-size: 1.2rem; }
 .tab-label { display: inline-flex; align-items: center; gap: 6px; }
 .hub-stats {
   display: flex; flex-wrap: wrap; gap: 18px; margin: 4px 0 12px;
