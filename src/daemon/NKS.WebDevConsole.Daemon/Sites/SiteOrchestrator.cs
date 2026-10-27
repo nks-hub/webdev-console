@@ -39,18 +39,43 @@ public sealed class SiteOrchestrator
     }
 
     /// <summary>
+    /// Reloads Apache once if it is running; used after applying a batch of
+    /// sites with <c>reloadWebServer: false</c>. Returns false when the reload failed.
+    /// </summary>
+    public async Task<bool> ReloadWebServerAsync()
+    {
+        var apache = _sp.GetServices<IServiceModule>()
+            .FirstOrDefault(m => m.ServiceId.Equals("apache", StringComparison.OrdinalIgnoreCase));
+        if (apache is null) return true;
+        try
+        {
+            if ((await apache.GetStatusAsync(CancellationToken.None)).State != ServiceState.Running) return true;
+            await apache.ReloadAsync(CancellationToken.None);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to reload Apache after applying a batch of sites");
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Applies a site config: generate Apache vhost, ensure PHP is running, reload Apache.
     /// When <see cref="SiteConfig.Enabled"/> is false, removes all active vhosts for the
     /// site instead of generating new ones, then reloads the web server. SSL cert and
     /// php.ini writing still run (no harm, they are not routed to).
+    /// With <paramref name="reloadWebServer"/> false the Apache reload is left to
+    /// the caller (<see cref="ReloadWebServerAsync"/>), so applying many sites
+    /// restarts Apache once instead of once per site.
     /// </summary>
-    public async Task<SiteApplyResult> ApplyAsync(SiteConfig site, CancellationToken ct = default)
+    public async Task<SiteApplyResult> ApplyAsync(SiteConfig site, CancellationToken ct = default, bool reloadWebServer = true)
     {
         var gate = _applyLocks.GetOrAdd(site.Domain, static _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(ct);
         try
         {
-            return await ApplyCoreAsync(site, ct);
+            return await ApplyCoreAsync(site, ct, reloadWebServer);
         }
         finally
         {
@@ -58,7 +83,7 @@ public sealed class SiteOrchestrator
         }
     }
 
-    private async Task<SiteApplyResult> ApplyCoreAsync(SiteConfig site, CancellationToken ct)
+    private async Task<SiteApplyResult> ApplyCoreAsync(SiteConfig site, CancellationToken ct, bool reloadWebServer)
     {
         _logger.LogInformation("Orchestrating site {Domain}...", site.Domain);
         var result = new SiteApplyResult(site.Domain);
@@ -207,14 +232,19 @@ public sealed class SiteOrchestrator
         }
 
         // 3. Reload Apache if it is running so the new vhost takes effect
-        if (apacheModule is not null)
+        if (apacheModule is not null && !reloadWebServer)
+        {
+            result.Skip("reload", "Apache is reloaded once after all sites are applied");
+        }
+        else if (apacheModule is not null)
         {
             try
             {
                 var apacheStatus = await apacheModule.GetStatusAsync(ct);
                 if (apacheStatus.State == ServiceState.Running)
                 {
-                    await apacheModule.ReloadAsync(ct);
+                    // A reload is a stop + start; cancelling between them leaves Apache down.
+                    await apacheModule.ReloadAsync(CancellationToken.None);
                     result.Ok("reload");
                 }
                 else
@@ -540,7 +570,7 @@ public sealed class SiteOrchestrator
             {
                 var status = await mod.GetStatusAsync(ct);
                 if (status.State == ServiceState.Running)
-                    await mod.ReloadAsync(ct);
+                    await mod.ReloadAsync(CancellationToken.None);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
@@ -583,7 +613,7 @@ public sealed class SiteOrchestrator
                 var apacheStatus = await apacheModule.GetStatusAsync(ct);
                 if (apacheStatus.State == ServiceState.Running)
                 {
-                    await apacheModule.ReloadAsync(ct);
+                    await apacheModule.ReloadAsync(CancellationToken.None);
                 }
             }
             catch (Exception ex)

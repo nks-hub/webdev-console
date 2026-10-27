@@ -196,6 +196,13 @@ const summary = computed(() => {
     : base
 })
 
+// Declared before the computeds: the immediate watch on `selected` below
+// sorts by shortName() during setup, before later consts are initialised.
+const SHORT_NAMES: Record<string, string> = {
+  'Apache HTTP Server': 'Apache',
+  'PHP (Multi-version)': 'PHP',
+}
+
 const visible = computed(() => {
   const list = [...services.value].sort((a, b) =>
     Number(isProblem(b)) - Number(isProblem(a)) || shortName(a).localeCompare(shortName(b)))
@@ -216,10 +223,6 @@ watch(selected, (svc) => {
   if (svc && isProblem(svc) && !logs.value[svc.id] && !loadingLogs.value.has(svc.id)) void loadLogs(svc.id)
 }, { immediate: true })
 
-const SHORT_NAMES: Record<string, string> = {
-  'Apache HTTP Server': 'Apache',
-  'PHP (Multi-version)': 'PHP',
-}
 function shortName(svc: ServiceInfo): string {
   return SHORT_NAMES[svc.displayName ?? ''] || svc.displayName || svc.id
 }

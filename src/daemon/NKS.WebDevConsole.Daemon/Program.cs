@@ -1292,7 +1292,7 @@ else
                 // a timed-out apply kept running in the background (holding the
                 // hosts-file gate or an elevation prompt) while the loop moved on.
                 using var applyCts = new CancellationTokenSource(TimeSpan.FromSeconds(25));
-                var applyTask = startupOrchestrator.ApplyAsync(siteToApply, applyCts.Token);
+                var applyTask = startupOrchestrator.ApplyAsync(siteToApply, applyCts.Token, reloadWebServer: false);
                 var timeoutTask = Task.Delay(TimeSpan.FromSeconds(27));
                 var completed = await Task.WhenAny(applyTask, timeoutTask);
                 if (completed == timeoutTask || applyTask.IsCanceled)
@@ -1310,6 +1310,9 @@ else
                 Console.WriteLine($"[startup-bg] failed to re-apply site {siteToApply.Domain}: {ex.Message}");
             }
         }
+        // One Apache restart for all sites instead of one per site (36 sites used to
+        // mean 36 restarts and several minutes during which sites flapped).
+        await startupOrchestrator.ReloadWebServerAsync();
         Console.WriteLine("[startup-bg] all site re-apply complete");
     };
 }

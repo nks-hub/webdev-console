@@ -61,7 +61,7 @@ internal static class SiteMaintenanceEndpoints
                     if (site is null) continue;
                     try
                     {
-                        var r = await orchestrator.ApplyAsync(site);
+                        var r = await orchestrator.ApplyAsync(site, reloadWebServer: false);
                         applied.Add(new { domain, ok = r.Success, steps = r.Steps });
                     }
                     catch (Exception ex)
@@ -69,6 +69,7 @@ internal static class SiteMaintenanceEndpoints
                         applied.Add(new { domain, ok = false, error = ex.Message });
                     }
                 }
+                if (imported.Count > 0) await orchestrator.ReloadWebServerAsync();
                 return Results.Ok(new { count = imported.Count, imported, applied });
             }
             catch (Exception ex)
@@ -84,7 +85,7 @@ internal static class SiteMaintenanceEndpoints
             {
                 try
                 {
-                    var r = await orchestrator.ApplyAsync(site);
+                    var r = await orchestrator.ApplyAsync(site, reloadWebServer: false);
                     results.Add(new { domain = site.Domain, ok = r.Success, steps = r.Steps });
                 }
                 catch (Exception ex)
@@ -92,6 +93,7 @@ internal static class SiteMaintenanceEndpoints
                     results.Add(new { domain = site.Domain, ok = false, error = ex.Message });
                 }
             }
+            await orchestrator.ReloadWebServerAsync();
             return Results.Ok(results);
         });
     }
