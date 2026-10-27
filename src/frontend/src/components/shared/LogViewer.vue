@@ -49,6 +49,7 @@ let terminal: Terminal | null = null
 let fitAddon: FitAddon | null = null
 let searchAddon: SearchAddon | null = null
 let closeEventSource: (() => void) | null = null
+let watchTimer: ReturnType<typeof setInterval> | null = null
 let resizeObserver: ResizeObserver | null = null
 // onMounted awaits the history fetch; if the viewer is closed meanwhile,
 // it must not subscribe afterwards (the subscription would leak and keep
@@ -140,8 +141,18 @@ onMounted(async () => {
     if (unmounted) return
   }
 
-  // Subscribe to SSE log events and append matching lines
+  // Subscribe to SSE log events and append matching lines. The daemon only
+  // tails a service's log while a viewer renews its watch lease (30 s).
   if (props.serviceId) {
+    const watch = () => {
+      const token = daemonToken()
+      void fetch(`${daemonBaseUrl()}/api/services/${props.serviceId}/logs/watch`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      }).catch(() => { /* daemon restarting — the next renewal retries */ })
+    }
+    watch()
+    watchTimer = setInterval(watch, 15_000)
     // Shared /api/events connection (see subscribeEventsMap). The daemon's
     // log events carry the text as `message`; older builds used `line`.
     closeEventSource = subscribeEventsMap({
@@ -160,6 +171,8 @@ onUnmounted(() => {
   resizeObserver = null
   closeEventSource?.()
   closeEventSource = null
+  if (watchTimer) clearInterval(watchTimer)
+  watchTimer = null
   terminal?.dispose()
   terminal = null
   fitAddon = null

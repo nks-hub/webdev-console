@@ -33,7 +33,7 @@ public sealed class WebSocketLogStreamer : IDisposable
         var key = serviceId.ToLowerInvariant();
         if (!_subscribers.TryGetValue(key, out var set)) return;
 
-        foreach (var sub in set.Keys)
+        foreach (var (sub, _) in set)
         {
             sub.Channel.Writer.TryWrite(line);
         }

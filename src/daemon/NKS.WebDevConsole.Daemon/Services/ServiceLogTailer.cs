@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NKS.WebDevConsole.Core.Interfaces;
@@ -13,20 +14,23 @@ namespace NKS.WebDevConsole.Daemon.Services;
 /// output, so the log viewer showed the initial history and then stayed
 /// silent, and the per-service WebSocket stream never received a line.
 /// This tails each module's log window every couple of seconds, but only
-/// while someone is listening (SSE clients, or WebSocket subscribers for
-/// that service), and forwards the lines that are new since the last poll
+/// while someone is listening (an open log viewer that renewed its
+/// <see cref="Watch"/> lease, or WebSocket subscribers for that service),
+/// and forwards the lines that are new since the last poll
 /// as <c>log</c> SSE events and to <see cref="WebSocketLogStreamer"/>.
 /// </summary>
 public sealed class ServiceLogTailer : BackgroundService
 {
     private const int WindowLines = 200;
     private static readonly TimeSpan Interval = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan WatchLease = TimeSpan.FromSeconds(30);
 
     private readonly IServiceProvider _sp;
     private readonly SseService _sse;
     private readonly WebSocketLogStreamer _streamer;
     private readonly ILogger<ServiceLogTailer> _logger;
     private readonly Dictionary<string, IReadOnlyList<string>> _lastWindow = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, DateTime> _watchedUntil = new(StringComparer.OrdinalIgnoreCase);
 
     public ServiceLogTailer(IServiceProvider sp, SseService sse, WebSocketLogStreamer streamer, ILogger<ServiceLogTailer> logger)
     {
@@ -35,6 +39,15 @@ public sealed class ServiceLogTailer : BackgroundService
         _streamer = streamer;
         _logger = logger;
     }
+
+    /// <summary>
+    /// A log viewer for <paramref name="serviceId"/> is open; it renews this
+    /// while it stays open, and the lease lapses on its own when it closes.
+    /// </summary>
+    public void Watch(string serviceId) => _watchedUntil[serviceId] = DateTime.UtcNow + WatchLease;
+
+    private bool IsWatched(string serviceId) =>
+        _watchedUntil.TryGetValue(serviceId, out var until) && until > DateTime.UtcNow;
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
@@ -51,14 +64,15 @@ public sealed class ServiceLogTailer : BackgroundService
 
     internal async Task TickAsync(CancellationToken ct)
     {
-        // The UI log viewer consumes the shared /api/events stream and the
-        // daemon cannot tell which SSE clients have a log viewer open, so any
-        // SSE client counts as a listener; WebSocket subscribers are tracked
-        // per service.
-        var sseListening = _sse.ClientCount > 0;
+        // The UI log viewer reads the shared /api/events stream, which the
+        // app keeps open all the time, so an SSE client alone is no listener:
+        // the viewer also holds a Watch lease for its service. WebSocket
+        // subscribers are tracked per service.
+        var sseClients = _sse.ClientCount > 0;
         foreach (var module in _sp.GetServices<IServiceModule>())
         {
             var id = module.ServiceId;
+            var sseListening = sseClients && IsWatched(id);
             var wsListening = _streamer.SubscriberCount(id) > 0;
             if (!sseListening && !wsListening)
             {

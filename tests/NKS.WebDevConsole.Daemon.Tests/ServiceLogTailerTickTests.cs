@@ -95,6 +95,7 @@ public sealed class ServiceLogTailerTickTests
         sse.AddClient(new DefaultHttpContext().Response);
         using var streamer = new WebSocketLogStreamer();
         var (tailer, logger) = Build(sse, streamer, module);
+        tailer.Watch("redis");
 
         await tailer.TickAsync(CancellationToken.None);
 
@@ -102,6 +103,24 @@ public sealed class ServiceLogTailerTickTests
         Assert.Equal(LogLevel.Debug, entry.Level);
         Assert.IsType<IOException>(entry.Error);
         Assert.Contains("redis", entry.Message);
+    }
+
+    [Fact]
+    public async Task Tick_SseClientWithoutWatch_DoesNotReadLogs()
+    {
+        // The app keeps /api/events open all the time; that alone is no reason to tail.
+        var module = new FakeModule("apache");
+        var sse = new SseService();
+        sse.AddClient(new DefaultHttpContext().Response);
+        using var streamer = new WebSocketLogStreamer();
+        var (tailer, _) = Build(sse, streamer, module);
+
+        await tailer.TickAsync(CancellationToken.None);
+        Assert.Equal(0, module.LogReads);
+
+        tailer.Watch("apache");
+        await tailer.TickAsync(CancellationToken.None);
+        Assert.Equal(1, module.LogReads);
     }
 
     [Fact]
