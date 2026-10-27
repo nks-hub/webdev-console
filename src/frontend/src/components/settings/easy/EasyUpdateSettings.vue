@@ -31,7 +31,7 @@
       <el-progress :percentage="updater.percent ?? 0" :stroke-width="10" />
       <div class="update-progress-meta">
         <span>{{ t('settings.update.downloadingVersion', { v: updater.version ?? '' }) }}</span>
-        <span v-if="updater.total" class="mono">{{ formatBytes(updater.transferred ?? 0) }} / {{ formatBytes(updater.total) }}</span>
+        <span v-if="updater.total" class="mono">{{ formatSize(updater.transferred ?? 0) }} / {{ formatSize(updater.total) }}</span>
       </div>
     </div>
 
@@ -108,6 +108,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { formatBytes } from '../../../utils/format'
 import SettingsCard from '../shared/SettingsCard.vue'
 
 /** GitHub release data: the version on offer and its notes. */
@@ -156,9 +158,9 @@ const updaterLabel = computed(() => {
   }
 })
 
-function formatBytes(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+const { locale } = useI18n()
+function formatSize(bytes: number): string {
+  return formatBytes(bytes, locale.value)
 }
 </script>
 

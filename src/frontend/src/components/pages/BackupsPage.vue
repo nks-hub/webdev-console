@@ -199,6 +199,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { errorMessage } from '../../utils/errors'
+import { formatBytes } from '../../utils/format'
 import { Loading } from '@element-plus/icons-vue'
 import {
   daemonBaseUrl, daemonAuthHeaders, downloadBackup as downloadBackupFile,
@@ -514,10 +515,7 @@ function contentLabel(flags: string): string {
 }
 
 function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
-  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
+  return formatBytes(bytes, locale.value)
 }
 
 function formatDate(iso: string): string {

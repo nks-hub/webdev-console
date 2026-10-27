@@ -1081,6 +1081,7 @@ import {
   type SystemInfo,
 } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
+import { formatBytes } from '../../utils/format'
 import HealthStatusDot from '../shared/HealthStatusDot.vue'
 import SettingsPanel from '../shared/SettingsPanel.vue'
 import SettingsCard from '../settings/shared/SettingsCard.vue'
@@ -1499,7 +1500,7 @@ async function manualBackup() {
   backupCreating.value = true
   try {
     const result = await createBackup()
-    ElMessage.success(t('settingsToast.backupCreated', { files: result.files, size: formatSize(result.size) }))
+    ElMessage.success(t('settingsToast.backupCreated', { files: result.files, size: formatBytes(result.size, locale.value) }))
   } catch (e) {
     ElMessage.error(t('settingsToast.backupFailed', { err: errorMessage(e) }))
   } finally {
@@ -1514,11 +1515,6 @@ const createBackupFromSimple = manualBackup
 const httpPort = computed(() => ports.http)
 const httpsPort = computed(() => ports.https)
 const mysqlPort = computed(() => ports.mysql)
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
-}
 
 // ── Danger-zone reset operations ──────────────────────────────────────
 const resettingSettings = ref(false)
