@@ -13,7 +13,7 @@
 
 import { createHash } from 'node:crypto'
 import { daemonClient } from './daemonClient.js'
-import { SESSION_ID } from './callerIdentity.js'
+import { SESSION_ID, currentClientKeyId } from './callerIdentity.js'
 
 /**
  * Static danger map — tool name → danger level. Read calls dominate
@@ -32,7 +32,6 @@ const DANGER_OVERRIDES: Record<string, 'read' | 'mutate' | 'destructive'> = {
   wdc_enable_plugin: 'mutate',
   wdc_disable_plugin: 'mutate',
   wdc_start_service: 'mutate',
-  wdc_stop_service: 'mutate',
   wdc_toggle_php_extension: 'mutate',
   wdc_generate_cert: 'mutate',
   wdc_save_cloudflare_config: 'mutate',
@@ -74,7 +73,7 @@ const DANGER_OVERRIDES: Record<string, 'read' | 'mutate' | 'destructive'> = {
   wdc_deploy_restore_snapshot: 'destructive',
   wdc_deploy_group_start: 'destructive',
   wdc_execute: 'destructive',
-  wdc_query: 'destructive',
+  wdc_stop_service: 'destructive',
   wdc_site_rollback: 'destructive',
   wdc_restart_service: 'destructive',
   wdc_update_service_config: 'destructive',
@@ -86,7 +85,7 @@ const DANGER_OVERRIDES: Record<string, 'read' | 'mutate' | 'destructive'> = {
   wdc_stop_node_site: 'destructive',
 }
 
-function classify(toolName: string): 'read' | 'mutate' | 'destructive' {
+export function classify(toolName: string): 'read' | 'mutate' | 'destructive' {
   return DANGER_OVERRIDES[toolName] ?? 'read'
 }
 
@@ -185,7 +184,10 @@ export function wrapHandler<TArgs extends Record<string, unknown>, TResult>(
       daemonClient
         .post('/api/mcp/tool-calls', {
           toolName,
-          caller: 'mcp-server',
+          // The AI client's own name from the MCP handshake
+          // (client:claude-code, client:cursor-vscode, ...), so the
+          // Activity page can tell clients apart.
+          caller: currentClientKeyId() ?? 'mcp-server',
           sessionId: SESSION_ID,
           dangerLevel: danger,
           durationMs: duration,
