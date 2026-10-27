@@ -10,6 +10,7 @@ import { daemonClient } from '../daemonClient.js'
 import type { RegisterOptions } from '../index.js'
 import { safe } from '../formatting.js'
 import { ConfirmYesSchema, DatabaseNameSchema } from '../schemas.js'
+import { IntentTokenSchema, intentHeaders } from './confirmation.js'
 
 const MySqlUserNameSchema = z
   .string()
@@ -176,11 +177,14 @@ export function registerMysqlUsersTools(server: McpServer, opts: RegisterOptions
       description:
         'DESTRUCTIVE: Drop a MySQL user account via `DROP USER IF EXISTS`. ' +
         "Rejected for 'root' accounts. Requires confirm: \"YES\".\n\n" +
-        'You MUST show the user the exact userName@host pair before passing confirm="YES".',
+        'You MUST show the user the exact userName@host pair before passing confirm="YES". ' +
+        'With the MCP token the daemon also needs the user\'s approval: call wdc_request_confirmation ' +
+        'with operation "mysql_user_drop" and target "userName@host", then pass the returned intentToken.',
       inputSchema: {
         userName: MySqlUserNameSchema,
         host: MySqlHostSchema,
         confirm: ConfirmYesSchema,
+        intentToken: IntentTokenSchema,
       },
       annotations: {
         readOnlyHint: false,
@@ -189,8 +193,8 @@ export function registerMysqlUsersTools(server: McpServer, opts: RegisterOptions
         openWorldHint: false,
       },
     },
-    async ({ userName, host }) =>
-      safe(() => daemonClient.post('/api/plugins/mysql/users/drop', { userName, host })),
+    async ({ userName, host, intentToken }) =>
+      safe(() => daemonClient.post('/api/plugins/mysql/users/drop', { userName, host }, intentHeaders(intentToken))),
   )
 
   // Root password — change requires the current password and verifies the
@@ -228,11 +232,14 @@ export function registerMysqlUsersTools(server: McpServer, opts: RegisterOptions
         'DESTRUCTIVE: Reset the MySQL root password without knowing the current ' +
         'one. The daemon stops mysqld, spawns a skip-grant-tables instance, ' +
         'runs ALTER USER, then restarts the normal mysqld. Briefly takes the ' +
-        'database offline. Requires confirm: "YES".\n\n' +
-        'Args:\n  newPwd: New root password to set.\n  confirm: Must be "YES".',
+        'database offline. Requires confirm: "YES". With the MCP token the daemon also needs the ' +
+        'user\'s approval: call wdc_request_confirmation with operation "mysql_root_reset" first.\n\n' +
+        'Args:\n  newPwd: New root password to set.\n  confirm: Must be "YES".\n' +
+        '  intentToken: Approved intent from wdc_request_confirmation.',
       inputSchema: {
         newPwd: MySqlPasswordSchema,
         confirm: ConfirmYesSchema,
+        intentToken: IntentTokenSchema,
       },
       annotations: {
         readOnlyHint: false,
@@ -241,7 +248,7 @@ export function registerMysqlUsersTools(server: McpServer, opts: RegisterOptions
         openWorldHint: false,
       },
     },
-    async ({ newPwd }) =>
-      safe(() => daemonClient.post('/api/plugins/mysql/reset-password', { newPwd })),
+    async ({ newPwd, intentToken }) =>
+      safe(() => daemonClient.post('/api/plugins/mysql/reset-password', { newPwd }, intentHeaders(intentToken))),
   )
 }

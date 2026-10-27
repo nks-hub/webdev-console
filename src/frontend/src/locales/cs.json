@@ -502,7 +502,15 @@
       "plugin_install": "Nainstalovat nový plugin (DLL)",
       "plugin_uninstall": "Odinstalovat plugin",
       "binary_install": "Nainstalovat binárku (PHP, MySQL, …)",
-      "service_restart": "Zastavit nebo restartovat službu"
+      "service_restart": "Zastavit nebo restartovat službu",
+      "service_config_write": "Přepsat konfigurační soubor služby (httpd.conf, php.ini, …)",
+      "hosts_write": "Přepsat nebo obnovit systémový soubor hosts",
+      "node_process": "Nastavit nebo spustit startovací příkaz Node.js webu",
+      "cloudflare_credentials": "Změnit přihlašovací údaje Cloudflare nebo směrování tunelu",
+      "daemon_admin": "Restartovat, vypnout, resetovat nebo odinstalovat démona",
+      "mysql_root_reset": "Resetovat heslo uživatele root v MySQL",
+      "mysql_user_drop": "Smazat uživatelský účet MySQL",
+      "postgres_root_reset": "Resetovat heslo superuživatele PostgreSQL"
     },
     "empty": "Žádné druhy nejsou registrované",
     "col": {

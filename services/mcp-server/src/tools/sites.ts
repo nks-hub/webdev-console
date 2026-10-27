@@ -89,8 +89,7 @@ export function registerSitesTools(server: McpServer, opts: RegisterOptions): vo
     async ({ domain, limit }) => {
       const qs = new URLSearchParams()
       if (limit !== undefined) qs.set('limit', String(limit))
-      const path = `/api/sites/${encodeURIComponent(domain)}/access-log${qs.toString() ? '?' + qs.toString() : ''}`
-      return safe(() => daemonClient.get(path))
+      return safe(() => daemonClient.get(`/api/sites/${encodeURIComponent(domain)}/access-log?${qs.toString()}`))
     },
   )
 
