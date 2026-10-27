@@ -71,6 +71,7 @@ public sealed class BackupSchedulerTests : IDisposable
 
     [Theory]
     [InlineData("wdc-scheduled-20260101-120000.zip", true)]
+    [InlineData("wdc-scheduled-20260101-120000-2.zip", true)]
     [InlineData("wdc-backup-20260101-120000.zip", false)]
     [InlineData("auto-pre-restore-20260101-120000.zip", false)]
     [InlineData("wdc-scheduled-latest.zip", false)]

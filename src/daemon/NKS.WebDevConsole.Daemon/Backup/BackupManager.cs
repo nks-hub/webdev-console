@@ -55,7 +55,7 @@ public sealed class BackupManager
 
     private string UniquePath(string prefix)
     {
-        var timestamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
+        var timestamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture);
         var path = Path.Combine(_backupRoot, $"{prefix}-{timestamp}.zip");
         for (var i = 2; File.Exists(path); i++)
             path = Path.Combine(_backupRoot, $"{prefix}-{timestamp}-{i}.zip");
@@ -71,14 +71,10 @@ public sealed class BackupManager
     public const string ScheduledBackupPrefix = "wdc-scheduled-";
 
     private static readonly System.Text.RegularExpressions.Regex ScheduledBackupName =
-        new(@"^wdc-scheduled-\d{8}-\d{6}\.zip$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+        new(@"^wdc-scheduled-\d{8}-\d{6}(-\d+)?\.zip$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
 
-    /// <summary>Path for a new scheduled backup: <c>wdc-scheduled-yyyyMMdd-HHmmss.zip</c> in the backup root.</summary>
-    public string ScheduledBackupPath()
-    {
-        var timestamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture);
-        return Path.Combine(_backupRoot, $"{ScheduledBackupPrefix}{timestamp}.zip");
-    }
+    /// <summary>Path for a new scheduled backup: <c>wdc-scheduled-yyyyMMdd-HHmmss.zip</c> in the backup root (<c>-2</c>, <c>-3</c>… when that name is taken).</summary>
+    public string ScheduledBackupPath() => UniquePath("wdc-scheduled");
 
     /// <summary>True when <paramref name="path"/> names a scheduler-created backup.</summary>
     public static bool IsScheduledBackup(string path) =>

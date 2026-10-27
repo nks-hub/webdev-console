@@ -2863,7 +2863,7 @@ backupCommand.SetAction(async (parseResult, ct) =>
         Environment.ExitCode = 1;
         AnsiConsole.MarkupLine($"[red]Backup failed:[/] {Markup.Escape(ex.Message)}");
     }
-    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+    catch (Exception ex) when (destination is not null && ex is IOException or UnauthorizedAccessException or InvalidOperationException)
     {
         AnsiConsole.MarkupLine($"[red]Backup created but could not be saved to {Markup.Escape(destination ?? "?")}:[/] {Markup.Escape(ex.Message)}");
         Environment.Exit(1);
