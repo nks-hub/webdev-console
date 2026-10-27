@@ -40,7 +40,7 @@ internal static class ServiceEndpoints
             var modules = sp.GetServices<IServiceModule>().ToArray();
             var statuses = await Task.WhenAll(
                 modules.Select(m => m.GetStatusAsync(CancellationToken.None)));
-            return Results.Ok(ServiceInfoProjection.BuildAll(statuses, bm.ListInstalled(), tracker));
+            return Results.Ok(ServiceInfoProjection.BuildAll(statuses, bm.ListInstalled(), tracker, modules));
         });
 
         app.MapGet("/api/services/{id}", async (string id, IServiceProvider sp, BinaryManager bm, ServiceRunTracker tracker) =>
@@ -50,7 +50,7 @@ internal static class ServiceEndpoints
                 || m.Type.ToString().Equals(id, StringComparison.OrdinalIgnoreCase));
             if (module == null) return Results.NotFound();
             var status = await module.GetStatusAsync(CancellationToken.None);
-            return Results.Ok(ServiceInfoProjection.Build(status, bm.ListInstalled(), tracker));
+            return Results.Ok(ServiceInfoProjection.Build(status, bm.ListInstalled(), tracker, module));
         });
 
         app.MapPost("/api/services/{id}/start", async (string id, IServiceProvider sp, ILoggerFactory lf, BinaryManager bm, ServiceRunTracker tracker) =>
@@ -65,7 +65,7 @@ internal static class ServiceEndpoints
                 tracker.MarkStartRequested(module.ServiceId);
                 await module.StartAsync(CancellationToken.None);
                 var status = await module.GetStatusAsync(CancellationToken.None);
-                return Results.Ok(ServiceInfoProjection.Build(status, bm.ListInstalled(), tracker));
+                return Results.Ok(ServiceInfoProjection.Build(status, bm.ListInstalled(), tracker, module));
             }
             catch (Exception ex)
             {
@@ -115,7 +115,7 @@ internal static class ServiceEndpoints
             {
                 await module.StopAsync(CancellationToken.None);
                 var status = await module.GetStatusAsync(CancellationToken.None);
-                return Results.Ok(ServiceInfoProjection.Build(status, bm.ListInstalled(), tracker));
+                return Results.Ok(ServiceInfoProjection.Build(status, bm.ListInstalled(), tracker, module));
             }
             catch (Exception ex)
             {
@@ -164,7 +164,7 @@ internal static class ServiceEndpoints
                 tracker.MarkStartRequested(module.ServiceId);
                 await module.StartAsync(CancellationToken.None);
                 var status = await module.GetStatusAsync(CancellationToken.None);
-                return Results.Ok(ServiceInfoProjection.Build(status, bm.ListInstalled(), tracker));
+                return Results.Ok(ServiceInfoProjection.Build(status, bm.ListInstalled(), tracker, module));
             }
             catch (Exception ex)
             {

@@ -1,77 +1,15 @@
 <template>
-  <div class="cf-page">
-    <div class="page-header">
-      <div class="header-left">
-        <h1 class="page-title">{{ $t('mysqlPlugin.title') }}</h1>
-        <span class="page-subtitle">{{ $t('mysqlPlugin.subtitle') }}</span>
-      </div>
-      <div class="header-actions">
-        <el-button size="small" @click="refresh" :loading="refreshing">{{ $t('common.refresh') }}</el-button>
-        <el-button
-          size="small"
-          :type="serviceRunning ? 'danger' : 'success'"
-          :loading="toggling"
-          :disabled="!daemonStore.connected"
-          @click="toggleService"
-        >
-          {{ serviceRunning ? $t('common.stop') : $t('common.run') }} MySQL
-        </el-button>
-      </div>
-    </div>
-    <div class="page-autostart-row">
-      <PluginAutostartSwitch plugin-id="nks.wdc.mysql" />
-    </div>
+  <div class="wdc-page">
+    <ServicePageHead
+      service-id="mysql"
+      plugin-id="nks.wdc.mysql"
+      :title="t('mysqlPlugin.title')"
+      :subtitle="t('mysqlPlugin.subtitle')"
+    />
 
-    <div class="status-strip">
-      <div class="status-card" :class="{ 'status-active': serviceRunning }">
-        <el-icon class="status-icon" :class="serviceRunning ? 'icon-running' : 'icon-stopped'">
-          <CircleCheckFilled v-if="serviceRunning" /><CircleClose v-else />
-        </el-icon>
-        <div class="status-body">
-          <div class="status-title">{{ serviceRunning ? $t('common.running') : $t('common.stopped') }}</div>
-          <div class="status-meta">MySQL</div>
-        </div>
-      </div>
-      <div class="status-card">
-        <el-icon class="status-icon"><Connection /></el-icon>
-        <div class="status-body">
-          <div class="status-title">{{ $t('mysqlPlugin.port') }}: {{ mysqlPort }}</div>
-          <div class="status-meta">{{ serviceInfo?.version || $t('mysqlPlugin.versionUnknown') }}</div>
-        </div>
-      </div>
-      <div class="status-card">
-        <el-icon class="status-icon"><DataLine /></el-icon>
-        <div class="status-body">
-          <div class="status-title">{{ $t('mysqlPlugin.connections') }}: —</div>
-          <div class="status-meta">{{ $t('mysqlPlugin.connectionsMeta') }}</div>
-        </div>
-      </div>
-    </div>
+    <p v-if="installed && !running" class="hint">{{ t('mysqlPlugin.needsRunning') }}</p>
 
-    <el-tabs v-model="activeTab" class="cf-tabs">
-      <!-- Overview -->
-      <el-tab-pane name="overview">
-        <template #label>
-          <span class="tab-label"><el-icon><Monitor /></el-icon> {{ $t('mysqlPlugin.tabOverview') }}</span>
-        </template>
-        <div class="tab-content">
-          <EditCard :title="$t('mysqlPlugin.tabOverview')">
-            <el-descriptions :column="2" border size="small">
-                <el-descriptions-item :label="$t('mysqlPlugin.status')">
-                  <el-tag :type="serviceRunning ? 'success' : 'info'" size="small" effect="dark">
-                    {{ serviceRunning ? $t('common.running') : $t('common.stopped') }}
-                  </el-tag>
-                </el-descriptions-item>
-                <el-descriptions-item :label="$t('mysqlPlugin.version')">{{ serviceInfo?.version || '—' }}</el-descriptions-item>
-                <el-descriptions-item :label="$t('mysqlPlugin.port')">{{ mysqlPort }}</el-descriptions-item>
-                <el-descriptions-item :label="$t('mysqlPlugin.pid')">{{ serviceInfo?.pid ?? '—' }}</el-descriptions-item>
-                <el-descriptions-item :label="$t('mysqlPlugin.dataDir')">{{ $t('mysqlPlugin.dataDirUnknown') }}</el-descriptions-item>
-              <el-descriptions-item :label="$t('mysqlPlugin.connections')">—</el-descriptions-item>
-            </el-descriptions>
-          </EditCard>
-        </div>
-      </el-tab-pane>
-
+    <el-tabs v-if="installed" v-model="activeTab" class="cf-tabs">
       <!-- Databases -->
       <el-tab-pane name="databases">
         <template #label>
@@ -392,46 +330,12 @@
         </div>
       </el-tab-pane>
 
-      <!-- Tuning -->
-      <el-tab-pane name="tuning">
-        <template #label>
-          <span class="tab-label"><el-icon><Setting /></el-icon> {{ $t('mysqlPlugin.tabTuning') }}</span>
-        </template>
-        <div class="tab-content">
-          <el-alert
-            type="info"
-            :closable="false"
-            show-icon
-            :title="$t('mysqlPlugin.tuningPending')"
-            style="margin-bottom: var(--wdc-space-4)"
-          />
-          <EditCard :title="$t('mysqlPlugin.tuningParams')">
-            <el-form label-width="240px" size="default">
-              <el-form-item label="max_connections">
-                <el-input-number v-model="tuning.maxConnections" disabled :min="1" />
-              </el-form-item>
-              <el-form-item label="innodb_buffer_pool_size">
-                <el-input v-model="tuning.innodbBufferPoolSize" disabled style="width: 180px" />
-              </el-form-item>
-              <el-form-item label="query_cache_size">
-                <el-input v-model="tuning.queryCacheSize" disabled style="width: 180px" />
-              </el-form-item>
-            </el-form>
-            <div class="hint">{{ $t('mysqlPlugin.tuningPendingHint') }}</div>
-          </EditCard>
-        </div>
-      </el-tab-pane>
-
       <!-- Logs -->
-      <el-tab-pane name="logs">
+      <el-tab-pane name="logs" lazy>
         <template #label>
           <span class="tab-label"><el-icon><Document /></el-icon> {{ $t('mysqlPlugin.tabLogs') }}</span>
         </template>
-        <div class="tab-content">
-          <EditCard :title="$t('mysqlPlugin.tabLogs')" flush-body>
-            <LogViewer :service-id="'mysql'" />
-          </EditCard>
-        </div>
+        <LogViewer service-id="mysql" class="tab-log" />
       </el-tab-pane>
     </el-tabs>
 
@@ -484,17 +388,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onActivated, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { CircleCheckFilled, CircleClose, Connection, Monitor, Grid, Key, Setting, Document, DataLine, User, Plus } from '@element-plus/icons-vue'
+import { Grid, Key, Document, User, Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useDaemonStore } from '../../stores/daemon'
-import { daemonBaseUrl, daemonAuthHeaders as authHeaders, startService, stopService } from '../../api/daemon'
+import { daemonBaseUrl, daemonAuthHeaders as authHeaders } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
+import { stateOf } from '../../utils/services'
 import LogViewer from '../shared/LogViewer.vue'
-import PluginAutostartSwitch from '../shared/PluginAutostartSwitch.vue'
 import EditCard from '../shared/EditCard.vue'
+import ServicePageHead from '../shared/ServicePageHead.vue'
 
 defineOptions({ name: 'MySqlPluginPage' })
 
@@ -527,19 +432,17 @@ interface DatabaseTable {
   size?: string
 }
 
-type MySqlTab = 'overview' | 'databases' | 'users' | 'password' | 'tuning' | 'logs'
+type MySqlTab = 'databases' | 'users' | 'password' | 'logs'
 
 function normalizeTab(value: unknown): MySqlTab {
   const text = Array.isArray(value) ? value[0] : value
   if (text === 'root-password') return 'password'
-  return ['overview', 'databases', 'users', 'password', 'tuning', 'logs'].includes(String(text))
+  return ['databases', 'users', 'password', 'logs'].includes(String(text))
     ? String(text) as MySqlTab
-    : 'overview'
+    : 'databases'
 }
 
 const activeTab = ref<MySqlTab>(normalizeTab(route.query.tab))
-const refreshing = ref(false)
-const toggling = ref(false)
 
 const changePwd = reactive({ current: '', newPwd: '', confirm: '', passwordless: false })
 const changingPwd = ref(false)
@@ -594,11 +497,9 @@ const queryTime = ref<number | null>(null)
 const exportingDatabase = ref(false)
 const droppingDatabase = ref(false)
 
-const tuning = reactive({ maxConnections: 151, innodbBufferPoolSize: '128M', queryCacheSize: '0' })
-
-const serviceInfo = computed(() => daemonStore.services.find(s => s.id === 'mysql'))
-const serviceRunning = computed(() => serviceInfo.value?.state === 2 || serviceInfo.value?.status === 'running')
-const mysqlPort = computed(() => (serviceInfo.value as { port?: number } | undefined)?.port ?? 3306)
+const state = computed(() => stateOf(daemonStore.services.find(s => s.id === 'mysql')))
+const installed = computed(() => state.value !== 'notInstalled')
+const running = computed(() => state.value === 'running')
 const canChangePassword = computed(() =>
   (changePwd.passwordless || (changePwd.newPwd.length > 0 && changePwd.newPwd === changePwd.confirm))
 )
@@ -624,26 +525,6 @@ async function httpError(r: Response): Promise<Error> {
   return new Error(text.length > 300 ? `${text.slice(0, 300)}...` : text)
 }
 
-async function refresh() {
-  refreshing.value = true
-  try {
-    await Promise.all([loadUsers(), loadDatabases()])
-  } finally {
-    refreshing.value = false
-  }
-}
-
-async function toggleService() {
-  toggling.value = true
-  try {
-    if (serviceRunning.value) await stopService('mysql')
-    else await startService('mysql')
-  } catch (e) {
-    ElMessage.error(t(serviceRunning.value ? 'mysqlPlugin.toast.stopFailed' : 'mysqlPlugin.toast.startFailed', { err: errorMessage(e) }))
-  } finally {
-    toggling.value = false
-  }
-}
 
 async function changePassword() {
   if (changePwd.passwordless) {
@@ -1041,10 +922,15 @@ async function dropUser(row: MySqlUser) {
   }
 }
 
-onMounted(() => {
+// Databases and users need a running server: load them when the page shows
+// (also on first mount, inside <keep-alive>) and whenever MySQL comes up.
+function loadAll() {
+  if (!running.value) return
   void loadUsers()
-  void loadDatabases()
-})
+  void loadDatabases().catch(e => { databasesError.value = errorMessage(e) })
+}
+onActivated(loadAll)
+watch(running, loadAll)
 
 watch(() => route.query.tab, value => {
   activeTab.value = normalizeTab(value)
@@ -1052,29 +938,7 @@ watch(() => route.query.tab, value => {
 </script>
 
 <style scoped>
-.cf-page { min-height: 100%; background: transparent; }
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 0 var(--wdc-space-4);
-  border-bottom: 1px solid var(--wdc-border);
-  background: transparent;
-}
-.page-autostart-row { padding: 10px 0 0; width: 100%; }
-.header-left { display: flex; flex-direction: column; gap: 2px; }
-.page-title { font-size: 1.6rem; font-weight: 800; color: var(--wdc-text); margin: 0; letter-spacing: -0.02em; }
-.page-subtitle { font-size: 0.78rem; color: var(--wdc-text-3); }
-.header-actions { display: flex; gap: 8px; }
-.status-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 18px 0 4px; }
-.status-card { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--wdc-surface); border: 1px solid var(--wdc-border); border-radius: var(--wdc-radius); }
-.status-card.status-active { border-color: var(--wdc-status-running); }
-.status-icon { font-size: 1.4rem; width: 30px; text-align: center; color: var(--wdc-text-3); }
-.status-active .status-icon { color: var(--wdc-status-running); }
-.status-body { display: flex; flex-direction: column; min-width: 0; }
-.status-title { font-size: 0.92rem; font-weight: 700; color: var(--wdc-text); }
-.status-meta { font-size: 0.72rem; color: var(--wdc-text-3); }
-.cf-tabs { padding: 16px 0; }
+.tab-log { height: 460px; }
 .tab-content { display: flex; flex-direction: column; gap: 16px; }
 /* .edit-card CSS lives in EditCard shared primitive (plan §6). */
 .hint { margin-top: 6px; font-size: 0.78rem; color: var(--wdc-text-3); }
@@ -1124,11 +988,6 @@ watch(() => route.query.tab, value => {
 .danger-header { background: color-mix(in srgb, var(--el-color-danger) 8%, var(--wdc-surface-2)); border-bottom-color: var(--el-color-danger-light-5); }
 
 @media (max-width: 560px) {
-  .page-header { align-items: flex-start; flex-direction: column; gap: 12px; padding: 16px 14px 12px; }
-  .header-actions { width: 100%; flex-wrap: wrap; }
-  .page-autostart-row { padding: 10px 14px 0; max-width: none; }
-  .status-strip { grid-template-columns: 1fr; padding: 14px 14px 4px; }
-  .cf-tabs { padding-left: 14px; padding-right: 14px; }
   .cf-tabs :deep(.el-tabs__item) { padding: 0 4px; }
   .cf-tabs :deep(.el-tabs__nav-wrap.is-scrollable) { padding: 0; }
   .cf-tabs :deep(.el-tabs__nav-prev),

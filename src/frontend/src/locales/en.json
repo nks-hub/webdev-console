@@ -1306,70 +1306,39 @@
     "enableEntryAria": "Entry for {hostname} enabled"
   },
   "apache": {
-    "title": "Apache Web Server",
-    "subtitle": "Virtual hosts, MPM tuning, and access logs",
-    "uptime": "Uptime",
-    "ports": "Ports",
-    "versionUnknown": "Version unknown",
-    "vhostsActive": "vhosts",
-    "vhostsMeta": "Enabled sites",
-    "tabOverview": "Overview",
-    "tabVhosts": "Vhosts",
-    "tabTuning": "Tuning",
-    "tabLogs": "Logs",
-    "statusCard": "Service status",
-    "status": "Status",
-    "version": "Version",
-    "pid": "PID",
-    "enabledSites": "Enabled sites",
-    "noVhosts": "No sites configured",
-    "recentErrors": "Recent errors",
-    "recentErrorsHint": "Last entries from error log",
-    "mpm": "MPM settings",
-    "mpmModule": "MPM module",
-    "tuningPending": "Backend endpoint pending",
-    "tuningPendingHint": "Tuning form is read-only until /api/plugins/apache/tuning is implemented."
+    "title": "Apache",
+    "subtitle": "The web server your sites run on",
+    "tabVhosts": "Sites",
+    "tabLogs": "Log",
+    "noVhosts": "No sites yet.",
+    "sitesCount": "{n} site | {n} sites",
+    "openLocal": "Open {url}",
+    "sites": "Sites"
   },
   "phpPlugin": {
-    "title": "PHP Manager",
-    "subtitle": "Versions, extensions, and php.ini",
+    "title": "PHP",
+    "subtitle": "Versions, extensions and php.ini",
     "defaultVersion": "Default version",
-    "versionsInstalled": "versions installed",
-    "versionsMeta": "Managed by WDC",
-    "extensions": "extensions enabled",
-    "extensionsMeta": "For selected version",
-    "fpmStatus": "FPM status",
-    "fpmUnknown": "Unknown",
-    "extensionsLoaded": "Extensions loaded",
-    "tabOverview": "Overview",
     "tabVersions": "Versions",
     "tabExtensions": "Extensions",
-    "tabIni": "INI",
-    "tabLogs": "Logs",
-    "selectVersion": "No version selected",
-    "selectVersionHint": "Select a PHP version in the Versions tab first.",
-    "noExtensions": "No extensions found in php.ini."
+    "tabLogs": "Log",
+    "selectVersionHint": "Pick a PHP version on the Versions tab first.",
+    "noExtensions": "The php.ini of this version lists no extensions.",
+    "noDefault": "Not set",
+    "configFailed": "Could not load php.ini: {err}",
+    "installedVersions": "Installed",
+    "loadFailed": "Could not load PHP versions: {err}",
+    "versionsCount": "{n} version | {n} versions"
   },
   "mysqlPluginAuthCol": "Authentication",
   "mysqlPluginDatabasesAria": "MySQL databases",
   "mysqlPlugin": {
-    "title": "MySQL Server",
-    "subtitle": "Databases, root password, and tuning",
-    "port": "Port",
-    "versionUnknown": "Version unknown",
-    "connections": "Connections",
-    "connectionsMeta": "Active connections",
-    "tabOverview": "Overview",
+    "title": "MySQL",
+    "subtitle": "Databases, users and the root password",
     "tabDatabases": "Databases",
     "tabUsers": "Users",
     "tabPassword": "Root password",
-    "tabTuning": "Tuning",
-    "tabLogs": "Logs",
-    "status": "Status",
-    "version": "Version",
-    "pid": "PID",
-    "dataDir": "Data directory",
-    "dataDirUnknown": "—",
+    "tabLogs": "Log",
     "openDatabasesPage": "Open Databases page",
     "databasesEmbedHint": "This panel manages local MySQL databases directly. Use the main Databases page when you need the wider workspace.",
     "databasesCount": "databases",
@@ -1379,8 +1348,6 @@
     "databaseDropped": "Database {name} dropped",
     "toast": {
       "passwordsDontMatch": "Passwords do not match",
-      "startFailed": "Start failed: {err}",
-      "stopFailed": "Stop failed: {err}",
       "changePasswordFailed": "Change password failed: {err}",
       "rootResetTitle": "Reset root password",
       "rootResetConfirmEmpty": "This will reset all root accounts to an empty password. Continue?",
@@ -1441,37 +1408,19 @@
     "resetDescription": "Stops MySQL, restarts in safe mode (--skip-grant-tables), resets all root accounts to the new password, then restarts normally.",
     "newRootPassword": "New root password",
     "resetPasswordBtn": "Reset root password",
-    "tuningParams": "MySQL parameters",
-    "tuningPending": "Backend endpoint pending",
-    "tuningPendingHint": "Tuning form is read-only until /api/plugins/mysql/tuning is implemented."
+    "needsRunning": "Databases and users show up once MySQL is running."
   },
   "postgresPlugin": {
-    "title": "PostgreSQL Server",
-    "subtitle": "Local PostgreSQL runtime, database tools, tuning, and logs",
+    "title": "PostgreSQL",
+    "subtitle": "PostgreSQL database server",
     "toast": {
       "passwordsDontMatch": "Passwords do not match",
-      "resetFailed": "PostgreSQL password reset failed: {err}",
-      "startFailed": "PostgreSQL start failed: {err}",
-      "stopFailed": "PostgreSQL stop failed: {err}"
+      "resetFailed": "PostgreSQL password reset failed: {err}"
     },
-    "port": "Port",
-    "versionUnknown": "Version unknown",
-    "databaseUser": "User",
-    "localTrust": "Local trust authentication",
-    "tabOverview": "Overview",
     "tabDatabases": "Databases",
-    "tabTuning": "Tuning",
-    "tabLogs": "Logs",
-    "runtime": "Runtime",
-    "status": "Status",
-    "version": "Version",
-    "pid": "PID",
-    "dataDir": "Data directory",
-    "logFile": "Log file",
-    "databaseTools": "Database tools",
-    "openBinaries": "Open Binaries",
-    "databaseToolsHint": "The list is read directly from the local PostgreSQL service managed by WDC. Destructive actions such as drop/import stay outside this panel.",
-    "noDatabases": "No PostgreSQL databases or the service is not running.",
+    "tabLogs": "Log",
+    "databaseTools": "Databases",
+    "noDatabases": "No databases yet.",
     "resetPassword": "Reset postgres user password",
     "resetWarning": "Changes the local PostgreSQL postgres user password. It does not delete databases.",
     "newPassword": "New password",
@@ -1479,43 +1428,19 @@
     "resetPasswordBtn": "Reset password",
     "resetConfirm": "Reset the local PostgreSQL postgres user password?",
     "resetSuccess": "PostgreSQL password was changed",
-    "localOnly": "Local service",
-    "tuningParams": "PostgreSQL parameters",
-    "tuningHint": "These runtime defaults are read-only until PostgreSQL config editing is exposed by the service plugin."
+    "needsRunning": "The database list is available only while PostgreSQL is running."
   },
   "mailpitPlugin": {
     "title": "Mailpit",
-    "subtitle": "Local SMTP server and email testing UI",
-    "status": "Status",
-    "smtpPort": "SMTP port",
-    "httpPort": "HTTP port",
-    "messages": "Messages",
-    "messagesMeta": "Stored messages",
-    "maxMessages": "Max messages",
-    "openUi": "Open Mailpit UI",
-    "tabOverview": "Overview",
-    "tabConfig": "Config",
-    "tabLogs": "Logs",
-    "configParams": "Mailpit parameters",
-    "configPending": "Backend endpoint pending",
-    "configPendingHint": "Config form is read-only until /api/plugins/mailpit/config is implemented."
+    "subtitle": "Local SMTP server that catches outgoing e-mail, with a web UI to read it",
+    "openUi": "Open Mailpit",
+    "tabLogs": "Log",
+    "notRunning": "Mailpit is not running. Start it to open it."
   },
   "redisPlugin": {
     "title": "Redis",
-    "subtitle": "In-memory data store",
-    "status": "Status",
-    "port": "Port",
-    "versionUnknown": "Version unknown",
-    "version": "Version",
-    "pid": "PID",
-    "usedMemory": "Used memory",
-    "clients": "Clients",
-    "tabOverview": "Overview",
-    "tabConfig": "Config",
-    "tabLogs": "Logs",
-    "configParams": "Redis parameters",
-    "configPending": "Backend endpoint pending",
-    "configPendingHint": "Config form is read-only until /api/plugins/redis/config is implemented."
+    "subtitle": "In-memory data store for caches and queues",
+    "tabLogs": "Log"
   },
   "cloudflareSite": {
     "title": "Cloudflare Tunnel",
@@ -2251,7 +2176,12 @@
       "search": "Search…",
       "find": "Find",
       "copy": "Copy",
-      "clear": "Clear"
+      "clear": "Clear",
+      "levelLabel": "Log level",
+      "copied": "Copied to clipboard",
+      "loadFailed": "Could not load the log: {err}",
+      "noLog": "The log does not exist yet or is empty. The service has not written anything to it.",
+      "copyFailed": "Could not copy the log: {err}"
     },
     "errors": {
       "timestamp": "Timestamp",
@@ -2281,10 +2211,7 @@
     "configlessSummary": "{name} is configured differently",
     "noConfigSummary": "No config file found for {name}",
     "configless": {
-      "hint": "Configuration for this service is passed via CLI arguments, per-site TOML config, or environment variables. There are no individual files to edit here.",
-      "daemonLooked": "The daemon looked for {paths}. Check that the binary is installed via",
-      "daemonLookedBinaries": "Binaries",
-      "daemonLookedAnd": "and that the service has been started at least once."
+      "hint": "Configuration for this service is passed via CLI arguments, per-site TOML config, or environment variables. There are no individual files to edit here."
     }
   },
   "serviceConfig": {
@@ -2295,27 +2222,39 @@
     "closeTip": "Close (Esc)",
     "noFiles": "No config files found for this service.",
     "linesSuffix": "lines",
-    "openFile": "Open file",
     "saveApply": "Save & Apply",
     "revert": "Revert",
     "validate": "Validate",
     "meta": {
       "path": "Path",
       "size": "Size",
-      "lines": "Lines",
-      "format": "Format"
+      "lines": "Lines"
     },
     "status": {
       "ready": "Ready",
       "validating": "Validating…",
       "passed": "Passed",
-      "failed": "Failed"
+      "failed": "Failed",
+      "passedLong": "The configuration is valid."
     },
     "unsavedConfirm": {
       "title": "Unsaved changes",
       "message": "You have unsaved changes. Reload anyway?",
-      "reload": "Reload"
-    }
+      "reload": "Reload",
+      "leave": "You have unsaved configuration changes. Leaving drops them.",
+      "discard": "Discard changes"
+    },
+    "notInstalled": "{name} is not installed yet, so it has no configuration. Once it is installed you can edit it here.",
+    "saveFailed": "Could not save the configuration: {err}",
+    "savedApplied": "Saved. {name} now uses the new configuration.",
+    "unsaved": "Unsaved",
+    "pluginLocations": "in the folders the service plugin uses",
+    "savedNotApplied": "Saved, but {name} could not reload it: {msg}",
+    "details": "Details",
+    "lookedIn": "WDC looked for files here: {paths}",
+    "loadFailed": "Could not load the configuration: {err}",
+    "unsavedHint": "You have unsaved changes. Save them with Save & Apply or Ctrl+S.",
+    "noConfigHint": "The config file is usually created the first time the service starts. Start it, then reload this page."
   },
   "settingsDb": {
     "tabDesc": "MySQL databases managed by NKS WDC.",
@@ -3068,34 +3007,78 @@
   },
   "servicesPage": {
     "title": "Services",
-    "summary": "{running} of {total} running",
-    "filterLabel": "Filter services",
+    "summary": "{total} service, {running} running | {total} services, {running} running",
+    "filterLabel": "Service filter",
     "filter": {
       "all": "All",
       "running": "Running",
-      "problems": "Crashed"
+      "problems": "Problems",
+      "notInstalled": "Not installed"
     },
-    "empty": "No services registered yet",
-    "noProblems": "No service has crashed.",
-    "whyTitle": "Why is it not running?",
+    "empty": "No services yet. Service programs are installed on the Binaries page.",
+    "noProblems": "No service has a problem.",
     "showLog": "Show log",
-    "logEmpty": "The service log is empty.",
+    "logEmpty": "The service log is empty. The service has not written anything yet.",
     "fixRestart": "Start again",
     "fixConfig": "Edit configuration",
     "showAll": "Show all",
     "explain": {
-      "running": "Running and answering.",
-      "stopped": "Stopped. It does not run until you start it.",
-      "starting": "Starting…",
-      "stopping": "Stopping…",
-      "crashed": "Crashed: the process ended on its own. The end of its log usually says why.",
-      "disabled": "Disabled; its plugin is turned off."
+      "running": "The service is running.",
+      "stopped": "The service is not running. Start it when you need it.",
+      "starting": "The service is starting…",
+      "stopping": "The service is stopping…",
+      "crashed": "The service crashed: its process exited on its own. The end of the log usually says why.",
+      "disabled": "The service crashed several times in a row, so WDC stopped restarting it. The end of the log says why.",
+      "notInstalled": "{name} is not installed yet. Install it on the Binaries page, then it can be started.",
+      "startFailed": "The service did not start: its process exited before it was up. The end of the log says why."
     },
     "facts": {
-      "uptime": "Running for"
+      "uptime": "Uptime",
+      "version": "Version",
+      "ports": "Ports"
     },
-    "logTitle": "End of the log",
-    "stop": "Stop"
+    "logTitle": "End of log",
+    "stop": "Stop",
+    "toast": {
+      "start": "Started: {name}",
+      "stop": "Stopped: {name}",
+      "restart": "Restarted: {name}",
+      "startFailed": "{name} could not be started.",
+      "stopFailed": "{name} could not be stopped.",
+      "restartFailed": "{name} could not be restarted."
+    },
+    "lastError": {
+      "title": "The last action failed",
+      "copy": "Copy",
+      "copied": "Copied to clipboard",
+      "openPorts": "Change port"
+    },
+    "summaryProblems": "{n} has a problem | {n} have a problem",
+    "emptyFilter": "No service matches this filter.",
+    "hiddenByPlugins": "{n} more service belongs to a disabled plugin. | {n} more services belong to disabled plugins.",
+    "logFailed": "Could not load the log: {err}",
+    "manage": "Manage",
+    "status": {
+      "running": "Running",
+      "stopped": "Stopped",
+      "starting": "Starting",
+      "stopping": "Stopping",
+      "crashed": "Crashed",
+      "disabled": "Off after crashes",
+      "notInstalled": "Not installed",
+      "startFailed": "Failed to start"
+    },
+    "restart": "Restart",
+    "openPlugins": "Plugins",
+    "unknown": "{name} is missing from the service list. Check on the Plugins page that its plugin is enabled.",
+    "cause": {
+      "port": "The port is taken by another program. Change the service port in Settings, or stop the program that holds it.",
+      "config": "The service configuration is invalid. Fix it in the configuration editor."
+    },
+    "start": "Start",
+    "install": "Install",
+    "summaryNotInstalled": "{n} not installed | {n} not installed",
+    "openBinaries": "Open Binaries"
   },
   "overview": {
     "summary": "{running} of {total} services running · {sites} site | {running} of {total} services running · {sites} sites",
@@ -3417,5 +3400,13 @@
   "app": {
     "name": "NKS WebDev Console",
     "short": "WDC"
+  },
+  "pageError": {
+    "title": "This page could not be shown",
+    "lead": "Something went wrong while showing this page. The rest of the app keeps working. Reload the page or pick another one in the menu. If it keeps happening, copy the error text and send it to the developers.",
+    "reload": "Reload",
+    "copy": "Copy error",
+    "copied": "Copied to clipboard",
+    "copyFailed": "Could not copy the error text."
   }
 }

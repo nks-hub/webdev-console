@@ -24,6 +24,10 @@ export interface ServiceInfo {
   binaryApp?: string | null
   /** For crashed services: `startFailed` never reached running, `exited` ran and stopped. */
   crashKind?: 'startFailed' | 'exited' | null
+  /** Primary listen port from the module's config (HTTP for web servers and Mailpit). */
+  port?: number
+  /** All configured ports by role: port, http, https, smtp. */
+  ports?: Record<string, number>
 }
 
 export interface StatusResponse {

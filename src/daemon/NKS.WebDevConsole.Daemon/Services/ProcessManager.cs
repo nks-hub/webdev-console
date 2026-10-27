@@ -378,14 +378,20 @@ public sealed class ProcessManager
 
     private async Task BroadcastState(ServiceUnit unit)
     {
+        // The UI replaces its row with this payload, so it carries the same
+        // fields as GET /api/services (state, displayName, installed, uptimeSeconds).
         await _sse.BroadcastAsync("service", new
         {
             id = unit.Id,
             name = unit.DisplayName,
+            displayName = unit.DisplayName,
             status = unit.State.ToString().ToLowerInvariant(),
+            state = unit.State,
             pid = unit.Pid,
             port = unit.Port,
             startedAt = unit.StartedAt,
+            uptimeSeconds = unit.StartedAt is { } started ? (long?)(DateTime.UtcNow - started).TotalSeconds : null,
+            installed = unit.Executable is null || File.Exists(unit.Executable),
             restartCount = unit.RestartCount
         });
     }

@@ -1306,70 +1306,39 @@
     "enableEntryAria": "Záznam pro {hostname} zapnutý"
   },
   "apache": {
-    "title": "Apache Web Server",
-    "subtitle": "Virtuální hosté, MPM tunning a přístupové logy",
-    "uptime": "Doba běhu",
-    "ports": "Porty",
-    "versionUnknown": "Verze neznámá",
-    "vhostsActive": "vhostů",
-    "vhostsMeta": "Aktivní weby",
-    "tabOverview": "Přehled",
-    "tabVhosts": "Vhosty",
-    "tabTuning": "Ladění",
-    "tabLogs": "Logy",
-    "statusCard": "Stav služby",
-    "status": "Stav",
-    "version": "Verze",
-    "pid": "PID",
-    "enabledSites": "Aktivní weby",
-    "noVhosts": "Žádné weby nenakonfigurovány",
-    "recentErrors": "Nedávné chyby",
-    "recentErrorsHint": "Poslední záznamy z error logu",
-    "mpm": "Nastavení MPM",
-    "mpmModule": "MPM modul",
-    "tuningPending": "Backend endpoint zatím neexistuje",
-    "tuningPendingHint": "Formulář ladění je pouze pro čtení, dokud není implementován /api/plugins/apache/tuning."
+    "title": "Apache",
+    "subtitle": "Webový server, přes který běží vaše weby",
+    "tabVhosts": "Weby",
+    "tabLogs": "Log",
+    "noVhosts": "Zatím tu nejsou žádné weby.",
+    "sitesCount": "{n} web | {n} weby | {n} webů",
+    "openLocal": "Otevřít {url}",
+    "sites": "Weby"
   },
   "phpPlugin": {
-    "title": "PHP Manager",
+    "title": "PHP",
     "subtitle": "Verze, rozšíření a php.ini",
     "defaultVersion": "Výchozí verze",
-    "versionsInstalled": "verzí nainstalováno",
-    "versionsMeta": "Spravuje WDC",
-    "extensions": "rozšíření povoleno",
-    "extensionsMeta": "Pro vybranou verzi",
-    "fpmStatus": "Stav FPM",
-    "fpmUnknown": "Neznámý",
-    "extensionsLoaded": "Načtená rozšíření",
-    "tabOverview": "Přehled",
     "tabVersions": "Verze",
     "tabExtensions": "Rozšíření",
-    "tabIni": "INI",
-    "tabLogs": "Logy",
-    "selectVersion": "Verze nevybrána",
-    "selectVersionHint": "Nejprve vyberte PHP verzi na záložce Verze.",
-    "noExtensions": "V php.ini nenalezena žádná rozšíření."
+    "tabLogs": "Log",
+    "selectVersionHint": "Nejprve vyberte verzi PHP na záložce Verze.",
+    "noExtensions": "V php.ini této verze nejsou žádná rozšíření.",
+    "noDefault": "Není nastavená",
+    "configFailed": "Soubor php.ini se nepodařilo načíst: {err}",
+    "installedVersions": "Nainstalováno",
+    "loadFailed": "Verze PHP se nepodařilo načíst: {err}",
+    "versionsCount": "{n} verze | {n} verze | {n} verzí"
   },
   "mysqlPluginAuthCol": "Autentizace",
   "mysqlPluginDatabasesAria": "MySQL databáze",
   "mysqlPlugin": {
-    "title": "MySQL Server",
-    "subtitle": "Databáze, root heslo a ladění",
-    "port": "Port",
-    "versionUnknown": "Verze neznámá",
-    "connections": "Připojení",
-    "connectionsMeta": "Aktivní připojení",
-    "tabOverview": "Přehled",
+    "title": "MySQL",
+    "subtitle": "Databáze, uživatelé a root heslo",
     "tabDatabases": "Databáze",
     "tabUsers": "Uživatelé",
     "tabPassword": "Root heslo",
-    "tabTuning": "Ladění",
-    "tabLogs": "Logy",
-    "status": "Stav",
-    "version": "Verze",
-    "pid": "PID",
-    "dataDir": "Adresář dat",
-    "dataDirUnknown": "—",
+    "tabLogs": "Log",
     "openDatabasesPage": "Otevřít stránku Databáze",
     "databasesEmbedHint": "Tento panel spravuje lokální MySQL databáze přímo. Hlavní stránku Databáze použijte pro širší pracovní prostor.",
     "databasesCount": "databází",
@@ -1379,8 +1348,6 @@
     "databaseDropped": "Databáze {name} smazána",
     "toast": {
       "passwordsDontMatch": "Hesla se neshodují",
-      "startFailed": "Spuštění selhalo: {err}",
-      "stopFailed": "Zastavení selhalo: {err}",
       "changePasswordFailed": "Změna hesla selhala: {err}",
       "rootResetTitle": "Reset root hesla",
       "rootResetConfirmEmpty": "Toto resetuje všechny root účty na prázdné heslo. Pokračovat?",
@@ -1441,37 +1408,19 @@
     "resetDescription": "Zastaví MySQL, spustí v safe módu (--skip-grant-tables), resetuje všechny root účty na nové heslo a poté normálně restartuje.",
     "newRootPassword": "Nové root heslo",
     "resetPasswordBtn": "Resetovat root heslo",
-    "tuningParams": "MySQL parametry",
-    "tuningPending": "Backend endpoint zatím neexistuje",
-    "tuningPendingHint": "Formulář ladění je pouze pro čtení, dokud není implementován /api/plugins/mysql/tuning."
+    "needsRunning": "Databáze a uživatele uvidíte, až MySQL poběží."
   },
   "postgresPlugin": {
-    "title": "PostgreSQL Server",
-    "subtitle": "Lokální PostgreSQL runtime, databázové nástroje, ladění a logy",
+    "title": "PostgreSQL",
+    "subtitle": "Databázový server PostgreSQL",
     "toast": {
       "passwordsDontMatch": "Hesla se neshodují",
-      "resetFailed": "Reset PostgreSQL hesla selhal: {err}",
-      "startFailed": "Spuštění PostgreSQL selhalo: {err}",
-      "stopFailed": "Zastavení PostgreSQL selhalo: {err}"
+      "resetFailed": "Reset PostgreSQL hesla selhal: {err}"
     },
-    "port": "Port",
-    "versionUnknown": "Verze neznámá",
-    "databaseUser": "Uživatel",
-    "localTrust": "Lokální trust autentizace",
-    "tabOverview": "Přehled",
     "tabDatabases": "Databáze",
-    "tabTuning": "Ladění",
-    "tabLogs": "Logy",
-    "runtime": "Runtime",
-    "status": "Stav",
-    "version": "Verze",
-    "pid": "PID",
-    "dataDir": "Adresář dat",
-    "logFile": "Log soubor",
-    "databaseTools": "Databázové nástroje",
-    "openBinaries": "Otevřít Binárky",
-    "databaseToolsHint": "Seznam databází se načítá přímo z lokálního PostgreSQL běžícího pod WDC. Destruktivní akce jako drop/import zůstávají mimo tento panel.",
-    "noDatabases": "Žádné PostgreSQL databáze nebo služba neběží.",
+    "tabLogs": "Log",
+    "databaseTools": "Databáze",
+    "noDatabases": "Zatím tu nejsou žádné databáze.",
     "resetPassword": "Reset hesla uživatele postgres",
     "resetWarning": "Změní heslo lokálního PostgreSQL uživatele postgres. Databáze nemaže.",
     "newPassword": "Nové heslo",
@@ -1479,43 +1428,19 @@
     "resetPasswordBtn": "Resetovat heslo",
     "resetConfirm": "Opravdu změnit heslo lokálního PostgreSQL uživatele postgres?",
     "resetSuccess": "PostgreSQL heslo bylo změněno",
-    "localOnly": "Lokální služba",
-    "tuningParams": "PostgreSQL parametry",
-    "tuningHint": "Tyto runtime výchozí hodnoty jsou zatím jen pro čtení, dokud PostgreSQL plugin nevystaví editaci konfigurace."
+    "needsRunning": "Seznam databází je k dispozici, jen když PostgreSQL běží."
   },
   "mailpitPlugin": {
     "title": "Mailpit",
-    "subtitle": "Lokální SMTP server a UI pro testování e-mailů",
-    "status": "Stav",
-    "smtpPort": "SMTP port",
-    "httpPort": "HTTP port",
-    "messages": "Zprávy",
-    "messagesMeta": "Uložené zprávy",
-    "maxMessages": "Max zpráv",
-    "openUi": "Otevřít Mailpit UI",
-    "tabOverview": "Přehled",
-    "tabConfig": "Konfigurace",
-    "tabLogs": "Logy",
-    "configParams": "Parametry Mailpit",
-    "configPending": "Backend endpoint zatím neexistuje",
-    "configPendingHint": "Formulář konfigurace je pouze pro čtení, dokud není implementován /api/plugins/mailpit/config."
+    "subtitle": "Lokální SMTP server, který zachytí odeslané e-maily, a webové rozhraní k jejich prohlížení",
+    "openUi": "Otevřít Mailpit",
+    "tabLogs": "Log",
+    "notRunning": "Mailpit neběží. Po spuštění půjde otevřít."
   },
   "redisPlugin": {
     "title": "Redis",
-    "subtitle": "In-memory datové úložiště",
-    "status": "Stav",
-    "port": "Port",
-    "versionUnknown": "Verze neznámá",
-    "version": "Verze",
-    "pid": "PID",
-    "usedMemory": "Využitá paměť",
-    "clients": "Klienti",
-    "tabOverview": "Přehled",
-    "tabConfig": "Konfigurace",
-    "tabLogs": "Logy",
-    "configParams": "Redis parametry",
-    "configPending": "Backend endpoint zatím neexistuje",
-    "configPendingHint": "Formulář konfigurace je pouze pro čtení, dokud není implementován /api/plugins/redis/config."
+    "subtitle": "Úložiště dat v paměti pro cache a fronty",
+    "tabLogs": "Log"
   },
   "cloudflareSite": {
     "title": "Cloudflare Tunnel",
@@ -2251,7 +2176,12 @@
       "search": "Hledat…",
       "find": "Najít",
       "copy": "Kopírovat",
-      "clear": "Vyčistit"
+      "clear": "Vyčistit",
+      "levelLabel": "Úroveň záznamů",
+      "copied": "Zkopírováno do schránky",
+      "loadFailed": "Log se nepodařilo načíst: {err}",
+      "noLog": "Log zatím neexistuje nebo je prázdný. Služba do něj ještě nic nezapsala.",
+      "copyFailed": "Log se nepodařilo zkopírovat: {err}"
     },
     "errors": {
       "timestamp": "Čas",
@@ -2282,9 +2212,7 @@
     "noConfigSummary": "Žádný konfigurační soubor pro {name}",
     "configless": {
       "hint": "Nastavení pro tuto službu se předává přes CLI argumenty, per-site TOML konfiguraci nebo proměnné prostředí. Žádné soubory k úpravě tu nejsou.",
-      "daemonLooked": "Démon hledal {paths}. Zkontrolujte, že je program nainstalovaný přes",
-      "daemonLookedBinaries": "Binárky",
-      "daemonLookedAnd": "a že služba byla alespoň jednou spuštěná."
+      "daemonLooked": "Démon hledal {paths}. Zkontrolujte, že je program nainstalovaný přes"
     }
   },
   "serviceConfig": {
@@ -2295,27 +2223,39 @@
     "closeTip": "Zavřít (Esc)",
     "noFiles": "Pro tuto službu nebyly nalezeny žádné konfigurační soubory.",
     "linesSuffix": "řádků",
-    "openFile": "Otevřít soubor",
     "saveApply": "Uložit a použít",
     "revert": "Vrátit",
     "validate": "Ověřit",
     "meta": {
       "path": "Cesta",
       "size": "Velikost",
-      "lines": "Řádky",
-      "format": "Formát"
+      "lines": "Řádky"
     },
     "status": {
       "ready": "Připraveno",
       "validating": "Ověřování…",
       "passed": "OK",
-      "failed": "Selhalo"
+      "failed": "Selhalo",
+      "passedLong": "Konfigurace je v pořádku."
     },
     "unsavedConfirm": {
       "title": "Neuložené změny",
       "message": "Máte neuložené změny. Přesto znovu načíst?",
-      "reload": "Znovu načíst"
-    }
+      "reload": "Znovu načíst",
+      "leave": "Máte neuložené změny konfigurace. Když odejdete, ztratíte je.",
+      "discard": "Zahodit změny"
+    },
+    "notInstalled": "Služba {name} zatím není nainstalovaná, a proto nemá žádnou konfiguraci. Po instalaci ji tu budete moct upravit.",
+    "saveFailed": "Konfiguraci se nepodařilo uložit: {err}",
+    "savedApplied": "Uloženo. Služba {name} používá novou konfiguraci.",
+    "unsaved": "Neuloženo",
+    "pluginLocations": "ve složkách, které používá plugin služby",
+    "savedNotApplied": "Uloženo, ale službu {name} se nepodařilo znovu načíst: {msg}",
+    "details": "Podrobnosti",
+    "lookedIn": "WDC hledalo soubory tady: {paths}",
+    "loadFailed": "Konfiguraci se nepodařilo načíst: {err}",
+    "unsavedHint": "Máte neuložené změny. Uložte je tlačítkem Uložit a použít nebo zkratkou Ctrl+S.",
+    "noConfigHint": "Konfigurační soubor obvykle vznikne při prvním spuštění služby. Spusťte ji a potom stránku obnovte."
   },
   "settingsDb": {
     "tabDesc": "MySQL databáze spravované NKS WDC.",
@@ -3068,34 +3008,78 @@
   },
   "servicesPage": {
     "title": "Služby",
-    "summary": "Běží {running} z {total}",
+    "summary": "{total} služba, běží {running} | {total} služby, běží {running} | {total} služeb, běží {running}",
     "filterLabel": "Filtr služeb",
     "filter": {
       "all": "Vše",
-      "running": "Běžící",
-      "problems": "Spadlé"
+      "running": "Běží",
+      "problems": "Problémy",
+      "notInstalled": "Nenainstalované"
     },
-    "empty": "Zatím nejsou registrované žádné služby",
-    "noProblems": "Žádná služba nespadla.",
-    "whyTitle": "Proč neběží?",
+    "empty": "Zatím nemáte žádnou službu. Programy služeb se instalují v Binárkách.",
+    "noProblems": "Žádná služba nemá problém.",
     "showLog": "Zobrazit log",
-    "logEmpty": "Log služby je prázdný.",
+    "logEmpty": "Log služby je prázdný. Služba zatím nic nezapsala.",
     "fixRestart": "Spustit znovu",
     "fixConfig": "Upravit konfiguraci",
     "showAll": "Zobrazit vše",
     "explain": {
-      "running": "Běží a odpovídá.",
-      "stopped": "Zastaveno. Nepoběží, dokud ji nespustíte.",
-      "starting": "Spouští se…",
-      "stopping": "Zastavuje se…",
-      "crashed": "Spadla: proces skončil sám od sebe. Důvod obvykle najdete na konci logu.",
-      "disabled": "Vypnuto; její plugin je vypnutý."
+      "running": "Služba běží.",
+      "stopped": "Služba neběží. Spusťte ji, až ji budete potřebovat.",
+      "starting": "Služba se spouští…",
+      "stopping": "Služba se zastavuje…",
+      "crashed": "Služba spadla: proces skončil sám od sebe. Důvod obvykle najdete na konci logu.",
+      "disabled": "Služba několikrát za sebou spadla, proto ji WDC přestalo samo restartovat. Důvod najdete na konci logu.",
+      "notInstalled": "Služba {name} zatím není nainstalovaná. Nainstalujte ji v Binárkách, potom ji půjde spustit.",
+      "startFailed": "Službu se nepodařilo spustit: proces skončil dřív, než se rozběhl. Důvod najdete na konci logu."
     },
     "facts": {
-      "uptime": "Běží"
+      "uptime": "Doba běhu",
+      "version": "Verze",
+      "ports": "Porty"
     },
     "logTitle": "Konec logu",
-    "stop": "Zastavit"
+    "stop": "Zastavit",
+    "toast": {
+      "start": "Spuštěno: {name}",
+      "stop": "Zastaveno: {name}",
+      "restart": "Restartováno: {name}",
+      "startFailed": "Službu {name} se nepodařilo spustit.",
+      "stopFailed": "Službu {name} se nepodařilo zastavit.",
+      "restartFailed": "Službu {name} se nepodařilo restartovat."
+    },
+    "lastError": {
+      "title": "Poslední akce se nepodařila",
+      "copy": "Kopírovat",
+      "copied": "Zkopírováno do schránky",
+      "openPorts": "Změnit port"
+    },
+    "summaryProblems": "{n} má problém | {n} mají problém | {n} má problém",
+    "emptyFilter": "Tomuto filtru neodpovídá žádná služba.",
+    "hiddenByPlugins": "{n} další služba patří k vypnutému pluginu. | {n} další služby patří k vypnutým pluginům. | {n} dalších služeb patří k vypnutým pluginům.",
+    "logFailed": "Log se nepodařilo načíst: {err}",
+    "manage": "Spravovat",
+    "status": {
+      "running": "Běží",
+      "stopped": "Zastaveno",
+      "starting": "Spouští se",
+      "stopping": "Zastavuje se",
+      "crashed": "Spadlo",
+      "disabled": "Vypnuto po pádech",
+      "notInstalled": "Nenainstalováno",
+      "startFailed": "Nenaběhlo"
+    },
+    "restart": "Restartovat",
+    "openPlugins": "Pluginy",
+    "unknown": "Služba {name} v seznamu služeb chybí. Zkontrolujte v Pluginech, že je její plugin zapnutý.",
+    "cause": {
+      "port": "Port je obsazený jiným programem. Změňte port služby v Nastavení, nebo ukončete program, který ho drží.",
+      "config": "Konfigurace služby je neplatná. Opravte ji v editoru konfigurace."
+    },
+    "start": "Spustit",
+    "install": "Instalovat",
+    "summaryNotInstalled": "{n} není nainstalovaná | {n} nejsou nainstalované | {n} není nainstalovaných",
+    "openBinaries": "Otevřít Binárky"
   },
   "overview": {
     "summary": "Běží {running} z {total} služeb · {sites} web | Běží {running} z {total} služeb · {sites} weby | Běží {running} z {total} služeb · {sites} webů",
@@ -3417,5 +3401,13 @@
   "app": {
     "name": "NKS WebDev Console",
     "short": "WDC"
+  },
+  "pageError": {
+    "title": "Tuto stránku se nepodařilo zobrazit",
+    "lead": "Při zobrazení stránky nastala chyba. Zbytek aplikace funguje dál. Zkuste stránku načíst znovu nebo přejděte jinam v menu. Pokud se chyba opakuje, zkopírujte její text a pošlete ho vývojářům.",
+    "reload": "Načíst znovu",
+    "copy": "Kopírovat chybu",
+    "copied": "Zkopírováno do schránky",
+    "copyFailed": "Text chyby se nepodařilo zkopírovat."
   }
 }
