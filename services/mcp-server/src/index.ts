@@ -38,6 +38,7 @@ import { daemonClient } from './daemonClient.js'
 import { setClientName } from './callerIdentity.js'
 import { wrapHandler } from './auditLog.js'
 import { SERVER_INSTRUCTIONS } from './instructions.js'
+import { selectModules, type ModuleName } from './modules.js'
 
 export interface RegisterOptions {
   readonly: boolean
@@ -52,6 +53,7 @@ export interface RegisterOptions {
 }
 
 const READONLY = process.argv.includes('--readonly')
+const { modules: MODULES, unknown: UNKNOWN_MODULES } = selectModules(process.argv)
 
 const server = new McpServer(
   {
@@ -95,24 +97,33 @@ const opts: RegisterOptions = { readonly: READONLY, deployScopes }
 
 // Each module's register function calls server.registerTool(...) for its
 // tools. The READONLY flag is forwarded so mutation tools can opt out of
-// registration when running in observe-only mode.
-registerSitesTools(server, opts)
-registerServicesTools(server, opts)
-registerSystemTools(server, opts)
-registerDatabasesTools(server, opts)
-registerMysqlUsersTools(server, opts)
-registerSslTools(server, opts)
-registerPhpTools(server, opts)
-registerBinariesTools(server, opts)
-registerPluginsTools(server, opts)
-registerBackupTools(server, opts)
-registerSettingsTools(server, opts)
-registerCloudflareTools(server, opts)
-registerDeployTools(server, opts)
-registerConfirmationTools(server, opts)
-registerComposerTools(server, opts)
-registerNodeTools(server, opts)
-registerHostsTools(server, opts)
+// registration when running in observe-only mode; --modules picks which
+// modules register at all.
+const REGISTRARS: Record<ModuleName, (s: McpServer, o: RegisterOptions) => void> = {
+  sites: registerSitesTools,
+  services: registerServicesTools,
+  system: registerSystemTools,
+  databases: registerDatabasesTools,
+  mysql: registerMysqlUsersTools,
+  ssl: registerSslTools,
+  php: registerPhpTools,
+  binaries: registerBinariesTools,
+  plugins: registerPluginsTools,
+  backup: registerBackupTools,
+  settings: registerSettingsTools,
+  cloudflare: registerCloudflareTools,
+  deploy: registerDeployTools,
+  confirmation: registerConfirmationTools,
+  composer: registerComposerTools,
+  node: registerNodeTools,
+  hosts: registerHostsTools,
+}
+for (const [name, register] of Object.entries(REGISTRARS) as [ModuleName, (s: McpServer, o: RegisterOptions) => void][]) {
+  if (MODULES.has(name)) register(server, opts)
+}
+if (UNKNOWN_MODULES.length > 0) {
+  process.stderr.write(`[nks-wdc-mcp-server] unknown --modules entries ignored: ${UNKNOWN_MODULES.join(', ')}\n`)
+}
 
 // The initialize handshake names the AI client (claude-code, Claude Desktop,
 // Cursor, ...). Its name becomes X-Mcp-Api-Key-Id on daemon requests so an
@@ -126,5 +137,6 @@ await server.connect(transport)
 
 process.stderr.write(
   `[nks-wdc-mcp-server] connected via stdio${READONLY ? ' (read-only)' : ''} ` +
+  `[modules: ${MODULES.size === Object.keys(REGISTRARS).length ? 'all' : [...MODULES].join(',')}] ` +
   `[deploy-scopes: ${deployScopes.join(',') || 'none'}]\n`,
 )

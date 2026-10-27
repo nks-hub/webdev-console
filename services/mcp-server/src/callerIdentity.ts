@@ -72,6 +72,11 @@ export function setClientName(name: string | undefined | null): void {
   clientKeyId = clientKeyIdFromName(name)
 }
 
+/** `client:<name>` of the connected AI client, once the handshake named it. */
+export function currentClientKeyId(): string | undefined {
+  return clientKeyId
+}
+
 /** Headers attached to every daemon request. */
 export function identityHeaders(): Record<string, string> {
   if (instanceIdCache === undefined) instanceIdCache = resolveInstanceId(instanceIdPathOverride)

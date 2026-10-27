@@ -47,9 +47,6 @@
         <template #title>{{ t('mcpHub.simpleOnly') }}</template>
         <el-button size="small" @click="uiMode.setUiMode('advanced')">{{ t('mcpHub.switchToAdvanced') }}</el-button>
       </el-alert>
-      <!-- Onboarding panel — first-time setup with preset profiles.
-           Auto-hides after a profile is picked or after the user dismisses it. -->
-      <McpOnboardingPanel v-if="advanced" />
 
       <!-- Suggested grants — nudges based on repeated manual approvals.
            Cross-tab so it surfaces regardless of which subview the user
@@ -136,6 +133,10 @@
                 <el-badge v-if="counts.grants > 0" :value="counts.grants" type="success" class="tab-badge" />
               </span>
             </template>
+            <!-- Profiles are rules, so they live on the Rules tab: above
+                 the tabs they pushed Activity off the first screen. Hides
+                 once a profile is picked or the panel is dismissed. -->
+            <McpOnboardingPanel />
             <McpGrants />
           </el-tab-pane>
 

@@ -423,7 +423,7 @@
   },
   "mcpOnboarding": {
     "title": "Kolik toho smí AI udělat bez ptaní?",
-    "hint": "Vyberte profil. Pravidla pak můžete upravit v záložce Pravidla.",
+    "hint": "Vyberte profil. Pravidla pak můžete upravit níže.",
     "dismiss": "Přeskočit",
     "recommended": "doporučeno",
     "applied": "Profil {profile} je nastavený",
@@ -3952,7 +3952,7 @@
       },
       "cursor": {
         "title": "Cursor",
-        "where": "Do .cursor/mcp.json v projektu, nebo do ~/.cursor/mcp.json pro všechny projekty. Když v něm už jiné servery máte, přidejte jen položku nks-wdc do mcpServers."
+        "where": "Do .cursor/mcp.json v projektu, nebo do ~/.cursor/mcp.json pro všechny projekty. Když v něm už jiné servery máte, přidejte jen položku nks-wdc do mcpServers. Cursor nad 40 nástrojů některé vynechá, proto ukázka načte jen základní sadu (--modules=essential: weby, služby, databáze a stav)."
       }
     },
     "copy": "Kopírovat",
@@ -3966,7 +3966,8 @@
       "seconds": "před {n} s",
       "minutes": "před {n} min",
       "hours": "před {n} h",
-      "days": "před {n} d"
+      "days": "před {n} d",
+      "justNow": "právě teď"
     },
     "runtime": {
       "label": "Server spouštět přes",

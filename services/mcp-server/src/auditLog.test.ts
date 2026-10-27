@@ -19,7 +19,11 @@ vi.mock('./daemonClient.js', () => ({
 }))
 
 // Import AFTER vi.mock so the wrap module sees the mocked client.
-import { REDACTED, isSecretKey, redactedJson, wrapHandler } from './auditLog.js'
+import { REDACTED, classify, isSecretKey, redactedJson, wrapHandler } from './auditLog.js'
+import { resetIdentityForTests, setClientName } from './callerIdentity.js'
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { daemonClient } from './daemonClient.js'
 
 const mockPost = vi.mocked(daemonClient.post)
@@ -222,5 +226,37 @@ describe('audit summary redaction', () => {
     await wrapped({ currentPwd: 'other-1', newPwd: 'other-2', intentToken: 'intent.token.sig' })
     await flush()
     expect(auditBody().argsHash).toBe(body.argsHash)
+  })
+})
+
+describe('audit caller and danger levels', () => {
+  it('records the AI client named in the handshake as the caller', async () => {
+    setClientName('Claude Code')
+    try {
+      await wrapHandler('wdc_get_status', vi.fn(async () => ({ content: [] })))({})
+      await flush()
+      expect(auditBody().caller).toBe('client:claude-code')
+    } finally {
+      resetIdentityForTests()
+    }
+  })
+
+  // The Activity page counts and colours calls by these levels; they must
+  // match the Type column of the README tool catalog.
+  it('matches the tool types in the README', () => {
+    const readme = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'README.md'), 'utf8')
+    const mismatches: string[] = []
+    let seen = 0
+    for (const line of readme.split(/\r?\n/)) {
+      if (!line.startsWith('| `wdc_')) continue
+      const cells = line.split('|').map((c) => c.trim()).filter(Boolean)
+      const type = cells[cells.length - 1].replace(/\*/g, '').split(/[\s(,]/)[0]
+      for (const [, tool] of cells[0].matchAll(/`(wdc_\w+)`/g)) {
+        seen++
+        if (classify(tool) !== type) mismatches.push(`${tool}: README ${type}, audit ${classify(tool)}`)
+      }
+    }
+    expect(seen).toBeGreaterThan(100)
+    expect(mismatches).toEqual([])
   })
 })

@@ -156,8 +156,13 @@ test.describe('MCP approval UX contract', () => {
     expect(hub).not.toMatch(/\.page \{ padding: 0/)
     expect(hub).toContain('data-testid="mcp-hub-simple-note"')
     const card = read('components', 'mcp', 'McpConnectCard.vue')
-    // Opened on Requests, Rules or Actions, the setup steps start collapsed.
-    expect(card).toContain('const expanded = ref(!/\\/mcp\\/(intents|grants|kinds)$/.test(route.path))')
+    // On Requests, Rules or Actions the setup steps collapse, also when the
+    // kept-alive hub only changes route (round 3).
+    expect(card).toContain('const expanded = ref(!onTabRoute())')
+    expect(card).toContain("watch(() => route.path, () => { if (onTabRoute()) expanded.value = false })")
+    // The profile panel sits on the Rules tab, not above the tabs (round 3).
+    expect(hub).toMatch(/<el-tab-pane v-if="advanced" name="grants" lazy>[\s\S]*?<McpOnboardingPanel \/>\s*<McpGrants \/>/)
+    expect(read('components', 'pages', 'McpActivity.vue')).toContain("caller.startsWith('client:')")
     const panel = read('components', 'mcp', 'McpOnboardingPanel.vue')
     expect(panel).toContain("MCP_PROFILES.filter((p) => p.id !== 'custom')")
 

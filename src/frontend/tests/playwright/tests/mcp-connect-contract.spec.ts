@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path'
 import {
   appLaunch,
   claudeCodeCommand,
+  cursorLaunch,
   mcpServerEntryJson,
   mcpServersJson,
   nodeLaunch,
@@ -54,6 +55,9 @@ test.describe('MCP connect contract', () => {
     // The entry alone pastes into an existing mcpServers object.
     expect(JSON.parse(`{${mcpServerEntryJson(nodeLaunch(server))}}`))
       .toEqual({ 'nks-wdc': { command: 'node', args: [server] } })
+    // Cursor gets the 39-tool set: it leaves out tools above 40.
+    expect(JSON.parse(mcpServersJson(cursorLaunch(nodeLaunch(server)))).mcpServers['nks-wdc'].args)
+      .toEqual([server, '--modules=essential'])
   })
 
   test('without Node.js the snippets start the server with the WDC binary', () => {
