@@ -63,9 +63,12 @@ claude mcp add --scope user nks-wdc -- node "$(pwd)/dist/index.js"
 
 ### Enabling MCP
 
-Approval requests (`wdc_request_confirmation`) need MCP enabled in WDC — the
-switch on the MCP card, or Settings → Advanced → MCP. While it is off the
-daemon answers `404 mcp_disabled` with a hint saying where to turn it on.
+Nothing works until MCP is enabled in WDC: the switch on the **AI clients
+(MCP)** page or in Settings → AI clients (MCP). While it is off the daemon
+refuses every request made with the MCP token (`403 mcp_disabled`, the
+`/api/mcp/*` routes answer `404 mcp_disabled`) with a hint saying where to
+turn it on. Turning MCP off also cuts an MCP server that is already
+running; it works again once MCP is back on.
 
 ### Read-only mode
 
