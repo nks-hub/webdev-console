@@ -2875,10 +2875,6 @@
       "factoryConfirmButton": "Ano, smazat všechno"
     },
     "mcp": {
-      "title": "Připojení AI asistentů (MCP)",
-      "description": "Umožní AI asistentům (Claude, Cursor a další) ovládat NKS WebDev Console přes protokol MCP. Akce, které nejdou vrátit, třeba obnova zálohy, mazání nebo nasazení, čekají na vaše schválení v okně aplikace.",
-      "warning": "Nechte vypnuté, pokud žádného AI asistenta s aplikací nepoužíváte.",
-      "enableLabel": "Povolit MCP",
       "strictKindsLabel": "Jen známé akce",
       "strictKindsHint": "AI smí žádat jen o akce, které aplikace nebo nainstalované pluginy znají. O neznámou akci požádat nejde. Výchozí stav je vypnuto.",
       "alwaysConfirmKindsLabel": "Vždy se ptát na tyto akce",
