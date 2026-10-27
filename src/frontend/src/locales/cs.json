@@ -3452,7 +3452,7 @@
   },
   "servicesPage": {
     "title": "Služby",
-    "summary": "{total} služba, běží {running} | {total} služby, běží {running} | {total} služeb, běží {running}",
+    "summary": "{total} nainstalovaná služba, běží {running} | {total} nainstalované služby, běží {running} | {total} nainstalovaných služeb, běží {running}",
     "filterLabel": "Filtr služeb",
     "filter": {
       "all": "Vše",
@@ -3475,7 +3475,7 @@
       "crashed": "Služba spadla: proces skončil sám od sebe. Důvod obvykle najdete na konci logu.",
       "disabled": "Služba několikrát za sebou spadla, proto ji WDC přestalo samo restartovat. Důvod najdete na konci logu.",
       "notInstalled": "Služba {name} zatím není nainstalovaná. Nainstalujte ji v Binárkách, potom ji půjde spustit.",
-      "startFailed": "Službu se nepodařilo spustit: proces skončil dřív, než se rozběhl. Důvod najdete na konci logu."
+      "startFailed": "Službu se nepodařilo spustit. Důvod najdete níže nebo na konci logu."
     },
     "facts": {
       "uptime": "Doba běhu",
@@ -3496,7 +3496,9 @@
       "title": "Poslední akce se nepodařila",
       "copy": "Kopírovat",
       "copied": "Zkopírováno do schránky",
-      "openPorts": "Změnit port"
+      "openPorts": "Změnit port",
+      "startTitle": "Spuštění se nepodařilo",
+      "fromLog": "Chyba z logu služby"
     },
     "summaryProblems": "{n} má problém | {n} mají problém | {n} má problém",
     "emptyFilter": "Tomuto filtru neodpovídá žádná služba.",

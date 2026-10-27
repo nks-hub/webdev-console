@@ -36,7 +36,7 @@ import { SearchAddon } from '@xterm/addon-search'
 import '@xterm/xterm/css/xterm.css'
 import { daemonBaseUrl, daemonToken, subscribeEventsMap } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
-import { matchesLogLevel, type LogLevelFilter } from '../../utils/logLevel'
+import { matchesLogLevel, stripStreamTag, type LogLevelFilter } from '../../utils/logLevel'
 import { resolveToken, rgba } from '../../utils/themeColors'
 
 const { t } = useI18n()
@@ -67,14 +67,14 @@ let live = false
 function append(line: string) {
   lines.push(line)
   if (lines.length > MAX_LINES) lines = lines.slice(-MAX_LINES)
-  if (matchesLogLevel(line, logLevel.value)) terminal?.writeln(line)
+  if (matchesLogLevel(line, logLevel.value)) terminal?.writeln(stripStreamTag(line))
 }
 
 function redraw() {
   if (!terminal) return
   terminal.clear()
   terminal.reset()
-  for (const line of lines) if (matchesLogLevel(line, logLevel.value)) terminal.writeln(line)
+  for (const line of lines) if (matchesLogLevel(line, logLevel.value)) terminal.writeln(stripStreamTag(line))
 }
 watch(logLevel, redraw)
 
@@ -91,7 +91,7 @@ function searchInTerminal() {
 async function copyLogs() {
   if (!terminal) return
   const text = terminal.getSelection()
-    || lines.filter(l => matchesLogLevel(l, logLevel.value)).join('\n').trimEnd()
+    || lines.filter(l => matchesLogLevel(l, logLevel.value)).map(stripStreamTag).join('\n').trimEnd()
   try {
     await navigator.clipboard.writeText(text)
     ElMessage.success(t('logs.viewer.copied'))

@@ -3452,7 +3452,7 @@
   },
   "servicesPage": {
     "title": "Services",
-    "summary": "{total} service, {running} running | {total} services, {running} running",
+    "summary": "{total} installed service, {running} running | {total} installed services, {running} running",
     "filterLabel": "Service filter",
     "filter": {
       "all": "All",
@@ -3475,7 +3475,7 @@
       "crashed": "The service crashed: its process exited on its own. The end of the log usually says why.",
       "disabled": "The service crashed several times in a row, so WDC stopped restarting it. The end of the log says why.",
       "notInstalled": "{name} is not installed yet. Install it on the Binaries page, then it can be started.",
-      "startFailed": "The service did not start: its process exited before it was up. The end of the log says why."
+      "startFailed": "The service did not start. The reason is below or at the end of the log."
     },
     "facts": {
       "uptime": "Uptime",
@@ -3496,7 +3496,9 @@
       "title": "The last action failed",
       "copy": "Copy",
       "copied": "Copied to clipboard",
-      "openPorts": "Change port"
+      "openPorts": "Change port",
+      "startTitle": "The service failed to start",
+      "fromLog": "Error from the service log"
     },
     "summaryProblems": "{n} has a problem | {n} have a problem",
     "emptyFilter": "No service matches this filter.",
