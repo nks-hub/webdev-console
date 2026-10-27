@@ -27,7 +27,7 @@
         :value="`${runningServices}/${totalServices}`"
         icon="Monitor"
         :variant="runningServices < totalServices ? 'warning' : 'success'"
-        :interactive="false"
+        @click="router.push('/services')"
       />
       <SimpleMetricTile
         :label="t('dashboard.simple.tiles.hits')"

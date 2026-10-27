@@ -16,6 +16,10 @@
         <span class="nav-icon-shell"><el-icon :size="18"><Link /></el-icon></span>
         <span class="nav-label">{{ $t('nav.sites') }}</span>
       </div>
+      <div v-activate:link :aria-current="isActive('/services') ? 'page' : undefined" class="nav-item" :class="{ active: isActive('/services') }" @click="navigate('/services')">
+        <span class="nav-icon-shell"><el-icon :size="18"><Monitor /></el-icon></span>
+        <span class="nav-label">{{ $t('nav.services') }}</span>
+      </div>
     </div>
 
     <!-- Simple-mode services rail: a single compact section with just
@@ -187,6 +191,11 @@
           class="nav-badge mono"
         >{{ exposedSiteCount }}</span>
       </div>
+      <!-- Databases sits with the other tools (was in the bottom block). -->
+      <div v-activate:link :aria-current="isActive('/databases') ? 'page' : undefined" class="nav-item" :class="{ active: isActive('/databases') }" @click="navigate('/databases')">
+        <span class="nav-icon-shell"><el-icon :size="18"><Coin /></el-icon></span>
+        <span class="nav-label">{{ $t('nav.databases') }}</span>
+      </div>
       <div v-activate:link :aria-current="isActive('/binaries') ? 'page' : undefined" class="nav-item" :class="{ active: isActive('/binaries') }" @click="navigate('/binaries')">
         <span class="nav-icon-shell"><el-icon :size="18"><Download /></el-icon></span>
         <span class="nav-label">{{ $t('nav.binaries') }}</span>
@@ -197,9 +206,8 @@
     <div class="sidebar-spacer" />
 
     <div class="sidebar-bottom">
-      <div v-activate:link :aria-current="isActive('/databases') ? 'page' : undefined" v-if="uiModeStore.isAdvanced" class="nav-item" :class="{ active: isActive('/databases') }" @click="navigate('/databases')">
-        <span class="nav-icon-shell"><el-icon :size="18"><Coin /></el-icon></span>
-        <span class="nav-label">{{ $t('nav.databases') }}</span>
+      <div class="section-label section-label-system">
+        <span>{{ $t('nav.system') }}</span>
       </div>
       <!-- PHP entry removed from bottom nav: per-runtime managers get crowded
            fast once we add Node/Go/Python/Ruby. Users still reach PHP via the
@@ -298,7 +306,7 @@
 <script setup lang="ts">
 import { computed, onMounted, markRaw, type Component } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { Link, Download, Box, Setting, Coin, Lock, Cpu, House, Connection, Document, Files, QuestionFilled, User, UserFilled, Key, Operation, MagicStick } from '@element-plus/icons-vue'
+import { Link, Download, Box, Setting, Coin, Lock, Cpu, House, Connection, Document, Files, QuestionFilled, User, UserFilled, Key, Operation, MagicStick, Monitor } from '@element-plus/icons-vue'
 import ServiceIcon from '../shared/ServiceIcon.vue'
 import { useDaemonStore } from '../../stores/daemon'
 import { useSitesStore } from '../../stores/sites'

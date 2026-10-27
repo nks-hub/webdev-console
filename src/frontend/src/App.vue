@@ -118,6 +118,8 @@ import { useFeatureFlagsStore } from './stores/featureFlags'
 import { useUiModeStore } from './stores/uiMode'
 import { fetchSettings, subscribeEventsMap } from './api/daemon'
 import type { DeployEventDto } from './api/deploy'
+import type { SiteApplyResultDto } from './api/daemon'
+import { useSiteApplyStore } from './stores/siteApply'
 import { osNotify } from './services/osNotifications'
 import { showMcpConfirmToast, closeMcpConfirmToast } from './utils/mcpConfirmToast'
 
@@ -135,6 +137,7 @@ const authStore = useAuthStore()
 const deployStore = useDeployStore()
 const mcpConfirmStore = useMcpConfirmStore()
 const featureFlagsStore = useFeatureFlagsStore()
+const siteApplyStore = useSiteApplyStore()
 const uiMode = useUiModeStore()
 useThemeStore()
 
@@ -153,6 +156,8 @@ function startDeploySse(): void {
     // mcp.enabled / deploy.enabled toggled in Settings (or by another window).
     // HealthMonitor saw a service change state (crash, external stop/start).
     'service:state': () => { void daemonStore.poll() },
+    // Per-step outcome of a site apply (SiteApplyPipeline on the site page).
+    'site:applied': (data) => siteApplyStore.record(data as SiteApplyResultDto),
     'mcp:settings-changed': () => { void featureFlagsStore.load() },
     'deploy:settings-changed': () => { void featureFlagsStore.load() },
     'deploy:phase': (data) =>

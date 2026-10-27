@@ -30,7 +30,8 @@
     "startAll": "Spustit všechny služby",
     "stopAll": "Zastavit všechny služby",
     "openSite": "Otevřít {domain}",
-    "editSite": "Upravit {domain}"
+    "editSite": "Upravit {domain}",
+    "gotoServices": "Přejít na Služby"
   },
   "common": {
     "save": "Uložit",
@@ -149,7 +150,8 @@
     "serviceStarted": "{name} spuštěno",
     "serviceStopped": "{name} zastaveno",
     "signedInAsTitle": "Přihlášen jako {name} — kliknutím se odhlásíte",
-    "signInTitle": "Přihlásit se přes SSO"
+    "signInTitle": "Přihlásit se přes SSO",
+    "system": "Systém"
   },
   "versions": {
     "active": "Aktivní",
@@ -2882,5 +2884,54 @@
     "applyFailed": "Aplikace selhala: {err}",
     "copied": "Zkopírováno: {url}",
     "clipboardUnavailable": "Schránka nedostupná — URL: {url}"
+  },
+  "siteApply": {
+    "title": "Průběh nasazení konfigurace",
+    "notYet": "Od spuštění aplikace zatím neaplikováno",
+    "allOk": "Všechny kroky proběhly",
+    "someFailed": "Selhalo kroků: {n}",
+    "when": "aplikováno {when}",
+    "minutesAgo": "před {n} min",
+    "applyAgain": "Aplikovat znovu",
+    "appliedOk": "Web aplikován",
+    "status": {
+      "ok": "hotovo",
+      "skipped": "přeskočeno",
+      "failed": "selhalo"
+    },
+    "steps": {
+      "ssl": "Certifikát",
+      "phpIni": "Nastavení PHP",
+      "vhost": "Virtual host",
+      "php": "PHP runtime",
+      "reload": "Reload webserveru",
+      "node": "Proces Node.js",
+      "hosts": "Soubor hosts",
+      "cloudflare": "Cloudflare tunel"
+    },
+    "hints": {
+      "hosts": "Potvrďte výzvu správce, nebo spusťte WDC jako správce, a aplikujte znovu.",
+      "ssl": "Na stránce SSL nainstalujte mkcert a jeho CA, pak aplikujte znovu.",
+      "reload": "Zkontrolujte webserver na stránce Služby — jeho log obvykle ukáže vadnou direktivu.",
+      "php": "Na stránce Binárky nainstalujte verzi PHP, kterou web používá.",
+      "vhost": "Plugin webserveru nemohl zapsat vhost; ověřte, že je Apache nainstalovaný."
+    }
+  },
+  "servicesPage": {
+    "title": "Služby",
+    "summary": "Běží {running} z {total}",
+    "filterLabel": "Filtr služeb",
+    "filter": {
+      "all": "Vše",
+      "running": "Běžící",
+      "problems": "Vyžaduje pozornost"
+    },
+    "empty": "Zatím nejsou registrované žádné služby",
+    "noProblems": "Všechny služby běží",
+    "whyTitle": "Proč neběží?",
+    "showLog": "Zobrazit log",
+    "logEmpty": "Log služby je prázdný.",
+    "fixRestart": "Spustit znovu",
+    "fixConfig": "Upravit konfiguraci"
   }
 }

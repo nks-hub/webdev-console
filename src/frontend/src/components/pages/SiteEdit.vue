@@ -44,6 +44,7 @@
 
     <!-- Content with tabs -->
     <div v-else class="edit-body">
+      <SiteApplyPipeline :domain="domain" class="site-apply" />
       <el-tabs v-model="activeTab" class="site-tabs">
         <!-- ── General ──────────────────────────── -->
         <el-tab-pane name="general">
@@ -606,6 +607,7 @@ import {
   InfoFilled, Upload,
 } from '@element-plus/icons-vue'
 import DeploySiteTab from '../deploy/DeploySiteTab.vue'
+import SiteApplyPipeline from '../sites/SiteApplyPipeline.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import { useSitesStore } from '../../stores/sites'
@@ -1549,6 +1551,7 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.site-apply { margin-bottom: var(--wdc-space-4); }
 .site-edit-page {
   display: flex;
   flex-direction: column;

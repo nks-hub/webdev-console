@@ -570,6 +570,28 @@ export const stopService = (id: string) =>
 export const restartService = (id: string) =>
   json<{ ok: boolean }>(`/api/services/${id}/restart`, { method: 'POST' })
 
+/** Last `lines` log lines of a service (plugin-managed log file). */
+export const fetchServiceLogs = (id: string, lines = 30): Promise<string[]> =>
+  json(`/api/services/${encodeURIComponent(id)}/logs?lines=${lines}`)
+
+/** One step of a site apply — mirrors SiteApplyStep on the daemon. */
+export interface SiteApplyStepDto {
+  name: string
+  status: 'ok' | 'skipped' | 'failed'
+  detail?: string | null
+}
+
+/** Outcome of a site apply, from POST /api/sites/{domain}/apply or the site:applied event. */
+export interface SiteApplyResultDto {
+  domain: string
+  success: boolean
+  steps: SiteApplyStepDto[]
+}
+
+/** Re-runs the apply pipeline for one site and returns the per-step result. */
+export const applySite = (domain: string): Promise<SiteApplyResultDto> =>
+  json(`/api/sites/${encodeURIComponent(domain)}/apply`, { method: 'POST' })
+
 // Sites
 export const fetchSites = (): Promise<SiteInfo[]> =>
   json('/api/sites')
