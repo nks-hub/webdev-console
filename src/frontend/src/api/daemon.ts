@@ -1149,7 +1149,8 @@ export const restorePlugin = (id: string) =>
 export async function waitForDaemon(timeoutMs = 15000, previousToken?: string): Promise<boolean> {
   const start = Date.now()
   while (Date.now() - start < timeoutMs) {
-    if (previousToken && daemonToken() === previousToken) {
+    // Outside Electron the token comes from ?token= and never rotates.
+    if (previousToken && window.daemonApi && daemonToken() === previousToken) {
       await new Promise(res => setTimeout(res, 400))
       continue
     }

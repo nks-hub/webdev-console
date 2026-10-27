@@ -1292,7 +1292,7 @@ watch(() => uiModeStore.isSimple, (simple) => {
 const route = useRoute()
 function applyDeepLink(): void {
   const tabParam = typeof route.query.tab === 'string' ? route.query.tab : ''
-  if (tabParam) {
+  if (tabParam && settingsSections.value.some(s => s.name === tabParam)) {
     if (uiModeStore.isSimple && ADVANCED_ONLY_TABS.has(tabParam)) return
     activeTab.value = tabParam
   }

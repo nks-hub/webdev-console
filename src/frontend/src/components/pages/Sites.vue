@@ -54,7 +54,7 @@
               <span class="site-status" :class="`ss-${siteState(site)}`">
                 <el-icon :size="14" aria-hidden="true">
                   <Close v-if="siteState(site) === 'failed'" />
-                  <Remove v-else-if="siteState(site) === 'disabled'" />
+                  <Remove v-else-if="siteState(site) === 'disabled' || siteState(site) === 'stopped'" />
                   <Check v-else />
                 </el-icon>
                 {{ $t(`sites.list.state.${siteState(site)}`) }}
@@ -114,7 +114,7 @@
             <span class="site-status" :class="`ss-${siteState(row)}`" :title="failedStepsTitle(row)">
               <el-icon :size="14" aria-hidden="true">
                 <Close v-if="siteState(row) === 'failed'" />
-                <Remove v-else-if="siteState(row) === 'disabled'" />
+                <Remove v-else-if="siteState(row) === 'disabled' || siteState(row) === 'stopped'" />
                 <Check v-else />
               </el-icon>
               {{ $t(`sites.list.state.${siteState(row)}`) }}
@@ -598,12 +598,16 @@ function applyTemplate(tplName: string) {
   Object.assign(newSite, tpl.fields)
 }
 
-// Per-site state for the list: disabled, last apply failed, or fine.
-type SiteListState = 'ok' | 'failed' | 'disabled'
+// Per-site state for the list: disabled, last apply failed, not served
+// because Apache is down (same rule as the Simple list), or fine.
+type SiteListState = 'ok' | 'failed' | 'stopped' | 'disabled'
+const apacheRunning = computed(() =>
+  daemonStore.services.some(s => s.id === 'apache' && (s.state === 2 || s.status === 'running')))
 function siteState(site: SiteInfo): SiteListState {
   if (site.enabled === false) return 'disabled'
   const rec = siteApplyStore.results[site.domain]
-  return rec && rec.steps.some(st => st.status === 'failed') ? 'failed' : 'ok'
+  if (rec && rec.steps.some(st => st.status === 'failed')) return 'failed'
+  return apacheRunning.value ? 'ok' : 'stopped'
 }
 function failedStepsTitle(site: SiteInfo): string {
   const rec = siteApplyStore.results[site.domain]
@@ -617,7 +621,7 @@ function portSuffix(site: SiteInfo): string {
 
 const stateFilter = ref<'all' | SiteListState>('all')
 const stateCounts = computed(() => {
-  const c = { ok: 0, failed: 0, disabled: 0 }
+  const c = { ok: 0, failed: 0, stopped: 0, disabled: 0 }
   for (const site of sitesStore.sites) c[siteState(site)]++
   return c
 })
@@ -1043,7 +1047,8 @@ function handleRowAction(cmd: string, row: SiteInfo) {
 }
 .ss-ok .el-icon { color: var(--wdc-status-running); }
 .ss-failed { color: var(--wdc-status-error); }
-.ss-disabled { color: var(--wdc-text-3); }
+.ss-disabled,
+.ss-stopped { color: var(--wdc-text-3); }
 
 .cell-runtime { color: var(--wdc-text-2); font-size: 0.82rem; }
 .cell-address {

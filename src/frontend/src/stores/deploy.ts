@@ -145,7 +145,7 @@ export const useDeployStore = defineStore('deploy', () => {
     deployId: string; success: boolean; error?: string | null; kind?: string
   }): void {
     let phase: DeployEventDto['phase']
-    if (evt.kind === 'rollback') phase = evt.success ? 'RolledBack' : 'Failed'
+    if (evt.kind === 'rollback' || evt.kind === 'rollback-to') phase = evt.success ? 'RolledBack' : 'Failed'
     else if (evt.success) phase = 'Done'
     else phase = evt.error === 'cancelled' ? 'Cancelled' : 'Failed'
     handleSseEvent({

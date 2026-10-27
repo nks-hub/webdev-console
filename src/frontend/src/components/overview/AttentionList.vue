@@ -122,7 +122,8 @@ const items = computed<AttentionItem[]>(() => {
 
   for (const rec of Object.values(siteApplyStore.results)) {
     const failed = rec.steps.filter(s => s.status === 'failed')
-    if (!failed.length) continue
+    // A deleted site's last apply result stays in the store; skip it.
+    if (!failed.length || !sitesStore.sites.some(s => s.domain === rec.domain)) continue
     out.push({
       key: `apply:${rec.domain}`,
       tone: 'err',
