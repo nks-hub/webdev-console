@@ -314,6 +314,14 @@
       "toastRevokeFailed": "Odvolání selhalo: {error}",
       "toastIdCopied": "ID intentu zkopírováno",
       "toastCopyFail": "Kopírování selhalo — schránka odepřena"
+    },
+    "approve": "Schválit",
+    "reject": "Odmítnout",
+    "approveAria": "Schválit tuto žádost AI",
+    "rejectAria": "Odmítnout a odvolat tuto žádost AI, aby ji AI nemohla provést",
+    "approveDialog": {
+      "title": "Schválit žádost AI?",
+      "message": "AI chce provést {kind} na {target}. Uvedený důvod: {prompt}"
     }
   },
   "mcpHub": {
@@ -384,6 +392,16 @@
         ],
         "cta": "Použít Vyvážený"
       },
+      "localDev": {
+        "name": "Lokální vývoj",
+        "desc": "Restart služeb a změny v databázích *_dev bez ptaní",
+        "bullets": [
+          "Auto-schválení: zastavení a restart služeb",
+          "Auto-schválení: smazání, SQL a import u databází s názvem *_dev",
+          "Vše ostatní se dál ptá"
+        ],
+        "cta": "Použít Lokální vývoj"
+      },
       "permissive": {
         "name": "Plná důvěra",
         "desc": "AI smí vše bez ptaní — jen pro testovací prostředí",
@@ -404,7 +422,8 @@
         ],
         "cta": "Otevřít Pravidla"
       }
-    }
+    },
+    "default": "výchozí"
   },
   "mcpActivity": {
     "stats": {
@@ -2731,6 +2750,11 @@
       "toastTrustedFor": "Oprávnění na {minutes} min uloženo — další shodné požadavky banner přeskočí",
       "toastAlwaysTrusted": "Trvalé oprávnění uloženo — další shodné požadavky banner přeskočí",
       "toastGrantFailed": "Nepodařilo se uložit oprávnění: {error}"
+    },
+    "notify": {
+      "title": "NKS WDC — žádost AI čeká na schválení",
+      "body": "AI chce provést: {kind}. Otevři WDC a žádost schval, nebo odmítni.",
+      "bodyGeneric": "AI chce spustit destruktivní operaci. Otevři WDC a žádost schval, nebo odmítni."
     }
   },
   "footer": {

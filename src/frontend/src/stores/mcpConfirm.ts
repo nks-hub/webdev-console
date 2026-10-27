@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { confirmIntent } from '../api/daemon'
+import { confirmIntent, fetchPendingIntents, revokeIntent, type IntentInventoryEntry } from '../api/daemon'
 
 /**
  * Pinia store for MCP destructive-operation confirmation banners (Phase 5.5
@@ -13,6 +13,12 @@ import { confirmIntent } from '../api/daemon'
  * intent. Approved entries are removed on the daemon's 200 response;
  * dismissed entries are removed locally — the underlying intent expires
  * naturally and the IntentSweeperService GCs the row within a day.
+ *
+ * Entries are also removed when the daemon reports the intent settled
+ * (`mcp:intent-changed` confirmed / revoked / consumed / expired), whichever
+ * surface settled it, and the queue is reloaded from the daemon on app start
+ * and every reconnect so requests that arrived while WDC was closed are not
+ * lost.
  */
 export interface PendingConfirm {
   intentId: string
@@ -61,6 +67,9 @@ export interface PendingConfirm {
   alwaysConfirm?: boolean
 }
 
+/** `mcp:intent-changed` change values after which nobody needs to approve the intent. */
+export const SETTLED_CHANGES: ReadonlySet<string> = new Set(['confirmed', 'revoked', 'consumed', 'expired'])
+
 export const useMcpConfirmStore = defineStore('mcpConfirm', () => {
   const pending = ref<Map<string, PendingConfirm>>(new Map())
 
@@ -101,8 +110,81 @@ export const useMcpConfirmStore = defineStore('mcpConfirm', () => {
     pending.value = next
   }
 
-  /** Approve via the daemon endpoint, then drop from local queue. */
-  async function approve(intentId: string): Promise<void> {
+  /**
+   * Replace the queue with the daemon's list of requests still waiting for
+   * the operator. Called on app start and on every daemon reconnect so a
+   * request that arrived while WDC was closed or reloading can still be
+   * approved. Entries the daemon no longer lists as pending are dropped.
+   * MCP disabled (404) or an unreachable daemon leaves the queue untouched.
+   */
+  async function loadPending(): Promise<void> {
+    const startedAt = Date.now()
+    let entries: IntentInventoryEntry[]
+    try {
+      entries = (await fetchPendingIntents()).entries ?? []
+    } catch {
+      return
+    }
+    const next = new Map<string, PendingConfirm>()
+    for (const e of entries) {
+      if (e.state !== 'pending_confirmation') continue
+      const existing = pending.value.get(e.intentId)
+      const created = Date.parse(e.confirmRequestedAt ?? e.createdAt)
+      next.set(e.intentId, existing ?? {
+        intentId: e.intentId,
+        prompt: e.prompt ?? undefined,
+        receivedAt: Number.isNaN(created) ? Date.now() : created,
+        expiresAt: e.expiresAt,
+        kind: e.kind,
+        kindLabel: e.kindLabel ?? undefined,
+        kindDanger: e.kindDanger ?? undefined,
+        kindPluginId: e.kindPluginId ?? undefined,
+        domain: e.domain,
+        host: e.host,
+        alwaysConfirm: e.alwaysConfirm === true,
+      })
+    }
+    // Keep banners whose SSE event arrived while the fetch was in flight.
+    for (const [id, item] of pending.value) {
+      if (!next.has(id) && item.receivedAt >= startedAt) next.set(id, item)
+    }
+    pending.value = next
+  }
+
+  /**
+   * Daemon lifecycle event for an intent. Any settled state closes the
+   * banner, whichever surface (toast, Intents page, grant, agent) settled it.
+   */
+  function handleIntentChanged(evt: { intentId?: string; change?: string } | null | undefined): void {
+    if (!evt?.intentId) return
+    if (evt.change && SETTLED_CHANGES.has(evt.change)) remove(evt.intentId)
+  }
+
+  /**
+   * Reject: revoke server-side so the agent cannot fire it, then drop
+   * locally. Resolves false when the intent was already settled elsewhere.
+   */
+  async function reject(intentId: string): Promise<boolean> {
+    let rejected = true
+    try {
+      await revokeIntent(intentId)
+    } catch (err) {
+      // 409 already_used / 404 gone: the intent is settled either way.
+      const msg = err instanceof Error ? err.message : String(err)
+      if (!/HTTP (409|404|410)\b/.test(msg)) throw err
+      rejected = false
+    }
+    remove(intentId)
+    return rejected
+  }
+
+  /**
+   * Approve via the daemon endpoint, then drop from local queue. Resolves
+   * false when the intent was already settled (approved, revoked, expired)
+   * elsewhere, so callers can say so instead of claiming the approval.
+   */
+  async function approve(intentId: string): Promise<boolean> {
+    let approved = true
     try {
       await confirmIntent(intentId)
     } catch (err) {
@@ -113,8 +195,10 @@ export const useMcpConfirmStore = defineStore('mcpConfirm', () => {
       // request quietly expires.
       const msg = err instanceof Error ? err.message : String(err)
       if (!/HTTP (409|404|410)\b/.test(msg)) throw err
+      approved = false
     }
     remove(intentId)
+    return approved
   }
 
   /** User dismissed the banner without approving — token expires naturally. */
@@ -134,7 +218,11 @@ export const useMcpConfirmStore = defineStore('mcpConfirm', () => {
     list,
     count,
     addPending,
+    loadPending,
+    handleIntentChanged,
     approve,
+    reject,
     dismiss,
+    remove,
   }
 })

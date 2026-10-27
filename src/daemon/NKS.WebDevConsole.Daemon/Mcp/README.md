@@ -82,14 +82,19 @@ Banners that appear above the tabs based on state:
 
 ### Onboarding panel
 Shown on first visit (zero grants AND `localStorage["mcp.onboarding.dismissed.v1"]` not set).
-Four preset profiles:
+Five preset profiles. Strict (Minimal) is the default: nothing is
+auto-approved until the operator picks another profile.
 
-| Profile        | Grants created                              | Notes                                |
-|----------------|---------------------------------------------|--------------------------------------|
-| 🛡️ Minimal      | none                                        | Every destructive op asks            |
-| ⚖️ Balanced ⭐ | `deploy/*`, `rollback/*`                    | Reversible auto, destructive asks    |
-| 🚀 Full Trust  | `*/*`                                       | Test envs only — pair with Always-ask|
-| 🎯 Manual      | none — opens Rules tab                      | Build your own                       |
+| Profile             | Grants created                                                        | Notes                                 |
+|---------------------|-----------------------------------------------------------------------|---------------------------------------|
+| 🛡️ Minimal (default) | none                                                                  | Every destructive op asks             |
+| ⚖️ Balanced          | `deploy/*`, `rollback/*`                                              | Reversible auto, destructive asks     |
+| 🧪 Local development | `service_restart/*`, `database_drop`/`database_query`/`database_import` on `*_dev` | Local services and dev databases only |
+| 🚀 Full Trust        | `*/*`                                                                 | Test envs only — pair with Always-ask |
+| 🎯 Manual            | none — opens Rules tab                                                | Build your own                        |
+
+Grant target patterns accept `*` as a wildcard (`*_dev`), matched
+case-insensitively.
 
 ### Suggested grants
 Yellow banner. Polls `/api/mcp/grants/suggested` (last 7 d, ≥ 3 manual
@@ -98,9 +103,16 @@ an `always` grant matching `kind × domain/*`.
 
 ### Inline approve toast
 Element Plus `ElNotification` in `bottom-right`, 60 s duration, three
-buttons: **Approve** / **Reject** / **Detail**. Auto-dismisses on
-`mcp:intent-changed` SSE so the toast disappears when the operator
-resolves the intent through any other surface.
+buttons: **Approve** / **Reject** / **Detail**. Toast and banner close on
+`mcp:intent-changed` (`confirmed` / `revoked` / `consumed` / `expired`), so
+both disappear when the intent is settled through any surface.
+
+### Missed requests
+`confirm-request` records `confirm_requested_at` and the agent's prompt on the
+intent. On start and on every daemon reconnect the GUI loads
+`GET /api/mcp/intents?pendingOnly=true` into the banner queue, so a request
+that arrived while WDC was closed can still be approved — from the banner or
+with **Approve** / **Reject** on the Requests tab.
 
 ## Daemon REST endpoints
 

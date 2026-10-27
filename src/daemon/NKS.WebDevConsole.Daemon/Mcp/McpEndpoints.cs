@@ -233,6 +233,19 @@ public static class McpEndpoints
                     kind = (string?)meta.kind;
                     domain = (string?)meta.domain;
                     host = (string?)meta.host;
+                    // Record that this intent is waiting for the operator, so a
+                    // WDC window that missed the SSE event (closed, reloading)
+                    // can still load the request on start / reconnect.
+                    await Dapper.SqlMapper.ExecuteAsync(conn,
+                        "UPDATE deploy_intents SET " +
+                        "confirm_requested_at = COALESCE(confirm_requested_at, @Now), prompt = @Prompt " +
+                        "WHERE id = @Id",
+                        new
+                        {
+                            Id = intentId,
+                            Now = DateTimeOffset.UtcNow.ToString("o"),
+                            Prompt = prompt is { Length: > 1000 } ? prompt[..1000] : prompt,
+                        });
                 }
             }
             catch { /* best-effort; banner still renders without metadata */ }
@@ -374,8 +387,10 @@ public static class McpEndpoints
             HttpContext ctx,
             NKS.WebDevConsole.Daemon.Data.Database db,
             NKS.WebDevConsole.Core.Interfaces.IDestructiveOperationKinds kindsRegistry,
+            SettingsStore settings,
             int limit = 100,
-            string? matchedGrantId = null) =>
+            string? matchedGrantId = null,
+            bool pendingOnly = false) =>
         {
             if (!IsMcpEnabled(ctx)) return Results.NotFound(new { error = "mcp_disabled" });
             using var conn = db.CreateConnection();
@@ -384,15 +399,25 @@ public static class McpEndpoints
             // intents this grant approved" drilldown. Server-side WHERE clause
             // is faster than fetching the full inventory and filtering client-
             // side, and lets the limit param scope the response correctly.
+            // pendingOnly narrows to requests still waiting for the operator
+            // (asked via confirm-request, not confirmed, not used); expired
+            // rows are dropped below because expires_at is not stored in a
+            // format SQLite can compare reliably.
+            var where = new List<string>();
+            if (!string.IsNullOrWhiteSpace(matchedGrantId)) where.Add("matched_grant_id = @MatchedGrantId");
+            if (pendingOnly)
+                where.Add("confirm_requested_at IS NOT NULL AND confirmed_at IS NULL AND used_at IS NULL");
             var sql = "SELECT id, domain, host, release_id, kind, expires_at, used_at, " +
-                      "confirmed_at, created_at, matched_grant_id " +
+                      "confirmed_at, created_at, matched_grant_id, confirm_requested_at, prompt " +
                       "FROM deploy_intents " +
-                      (string.IsNullOrWhiteSpace(matchedGrantId)
-                          ? ""
-                          : "WHERE matched_grant_id = @MatchedGrantId ") +
+                      (where.Count == 0 ? "" : "WHERE " + string.Join(" AND ", where) + " ") +
                       "ORDER BY created_at DESC LIMIT @Limit";
             var rows = await Dapper.SqlMapper.QueryAsync<dynamic>(conn, sql,
                 new { Limit = Math.Clamp(limit, 1, 500), MatchedGrantId = matchedGrantId });
+            var alwaysConfirmKinds = new HashSet<string>(
+                (settings.GetString("mcp", "always_confirm_kinds") ?? "")
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+                StringComparer.OrdinalIgnoreCase);
             // Phase 7.5+ — enrich the inventory with the registry-resolved label
             // + danger so the McpIntents page can render "Restore database
             // snapshot (destructive)" instead of bare "restore". Lookup is
@@ -419,13 +444,20 @@ public static class McpEndpoints
                     // this intent (NULL = manually confirmed via banner OR
                     // allowUnconfirmed CI path).
                     matchedGrantId = (string?)r.matched_grant_id,
+                    // Set when the agent asked the operator to approve this
+                    // intent (confirm-request), with the description it gave.
+                    confirmRequestedAt = (string?)r.confirm_requested_at,
+                    prompt = (string?)r.prompt,
+                    alwaysConfirm = alwaysConfirmKinds.Contains(kindId),
                     // Derived state for UI rendering convenience.
                     state = ComputeIntentState(
                         (string?)r.used_at,
                         (string?)r.confirmed_at,
                         (string)r.expires_at),
                 };
-            }).ToList();
+            })
+            .Where(e => !pendingOnly || e.state == "pending_confirmation")
+            .ToList();
             return Results.Ok(new { count = entries.Count, entries });
         });
 

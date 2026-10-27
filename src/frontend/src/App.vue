@@ -119,6 +119,8 @@ import type { SiteApplyResultDto } from './api/daemon'
 import { useSiteApplyStore } from './stores/siteApply'
 import { osNotify } from './services/osNotifications'
 import { showMcpConfirmToast, closeMcpConfirmToast } from './utils/mcpConfirmToast'
+import { mcpKindLabel } from './utils/mcpKindLabel'
+import { i18n } from './i18n'
 
 const router = useRouter()
 const route = useRoute()
@@ -176,20 +178,26 @@ function startDeploySse(): void {
       void showMcpConfirmToast(evt)
       // #147 — fire OS notification so the operator sees the request
       // even when the WDC window is in the background.
+      // Same human kind label the banner shows ("Drop a database"), not
+      // the wire id ("database_drop").
+      const kindText = mcpKindLabel(evt)
       void osNotify({
-        title: 'NKS WDC — MCP confirmation needed',
-        body: evt.kind
-          ? `Claude wants to perform ${evt.kind} — open WDC to approve.`
-          : 'Claude wants to run a destructive operation — open WDC to approve.',
+        title: i18n.global.t('mcp.notify.title'),
+        body: kindText
+          ? i18n.global.t('mcp.notify.body', { kind: kindText })
+          : i18n.global.t('mcp.notify.bodyGeneric'),
         urgency: 'critical',
         channel: 'mcp',
       })
     },
-    // Auto-dismiss the toast when the intent is resolved through the
-    // banner or another surface (used_at / revoked / matched grant).
+    // The intent was settled somewhere (banner, toast, Intents page, a
+    // trust grant, the agent consuming it, expiry): close its toast and
+    // drop its banner so nothing stale stays on screen.
     'mcp:intent-changed': (data) => {
-      const evt = data as { intentId?: string }
-      if (evt.intentId) closeMcpConfirmToast(evt.intentId)
+      const evt = data as { intentId?: string; change?: string }
+      if (!evt.intentId) return
+      closeMcpConfirmToast(evt.intentId)
+      mcpConfirmStore.handleIntentChanged(evt)
     },
     // #147 — surface deploy completion in OS notification center so a
     // long-running deploy doesn't require the operator to keep the
@@ -368,6 +376,10 @@ onMounted(() => {
   // the moment the backend is up instead of staying empty until manual reload.
   unsubscribeConnect = daemonStore.onConnect(() => {
     void featureFlagsStore.load()
+    // Reload MCP requests still waiting for approval — the SSE event for
+    // one that arrived while WDC was closed or the daemon was restarting
+    // was never seen, and without this it could not be approved at all.
+    void mcpConfirmStore.loadPending()
     void pluginsStore.loadAll()
     void sitesStore.load()
     // Retry token mirror on every daemon (re)connect — covers the case
