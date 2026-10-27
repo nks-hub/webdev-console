@@ -108,7 +108,30 @@ const sentryEnvironment = (
   || process.env.SENTRY_ENVIRONMENT_DEFAULT
   || (app.isPackaged ? 'production' : 'development')
 )
-if (sentryDsn) {
+// Crash reports leave the machine only after the user opted in under
+// Settings → General → Privacy. The daemon stores that choice in
+// <data dir>/data/telemetry-consent.json (TelemetryConsent.cs). Read lazily:
+// the portable data dir is only known after the portable block below.
+let crashReportConsent: boolean | null = null
+function hasCrashReportConsent(): boolean {
+  if (crashReportConsent === null) {
+    try {
+      const file = join(process.env.WDC_DATA_DIR || join(homedir(), '.wdc'), 'data', 'telemetry-consent.json')
+      const consent = JSON.parse(readFileSync(file, 'utf-8')) as { enabled?: unknown; crashReports?: unknown }
+      crashReportConsent = consent.enabled === true && consent.crashReports === true
+    } catch {
+      crashReportConsent = false
+    }
+  }
+  return crashReportConsent
+}
+
+// Started at most once, before app 'ready' (the SDK registers its IPC
+// scheme then), so turning crash reports on applies from the next launch.
+let sentryStarted = false
+function startSentryIfConsented(): void {
+  if (sentryStarted || !sentryDsn || !hasCrashReportConsent()) return
+  sentryStarted = true
   Sentry.init({
     dsn: sentryDsn,
     // Release tag populated from CFBundleShortVersionString (macOS) /
@@ -121,9 +144,13 @@ if (sentryDsn) {
     // Strip anything identifying. Runtime env can still override per-call
     // via Sentry.setUser if the user explicitly opts in.
     beforeSend(event) {
+      if (!hasCrashReportConsent()) return null
       if (event.user) event.user = { id: undefined, email: undefined, username: undefined, ip_address: undefined }
       if (event.server_name) event.server_name = ''
       return event
+    },
+    beforeSendTransaction(event) {
+      return hasCrashReportConsent() ? event : null
     },
     // Electron-specific extras: bundle native crash reports (minidump)
     // when the main process is killed by the OS, and preload renderer
@@ -147,6 +174,8 @@ if (sentryDsn) {
   app.on('window-all-closed', () => Sentry.addBreadcrumb({ category: 'app', message: 'window-all-closed', level: 'info' }))
 }
 
+const startedAtLogin = process.argv.includes('--hidden')
+  || (process.platform === 'darwin' && app.getLoginItemSettings().wasOpenedAtLogin)
 let win: BrowserWindow | null = null
 let tray: Tray | null = null
 let daemon: ChildProcess | null = null
@@ -155,6 +184,26 @@ let isQuitting = false
 let updaterStatus = 'Idle'
 let updateDownloaded = false
 let checkingForUpdates = false
+
+// electron-updater state for Settings → Update, pushed on every change over
+// 'updater-status'. The tray keeps its own short `updaterStatus` label.
+interface UpdaterState {
+  status: 'disabled' | 'idle' | 'checking' | 'downloading' | 'downloaded' | 'up-to-date' | 'error'
+  /** Why the updater is off: portable copies and dev runs update by hand. */
+  disabledReason: 'portable' | 'dev' | null
+  version: string | null
+  percent: number | null
+  transferred: number | null
+  total: number | null
+  error: string | null
+}
+let updaterState: UpdaterState = {
+  status: 'idle', disabledReason: null, version: null, percent: null, transferred: null, total: null, error: null,
+}
+function setUpdaterState(patch: Partial<UpdaterState>) {
+  updaterState = { ...updaterState, ...patch }
+  if (win && !win.isDestroyed()) win.webContents.send('updater-status', updaterState)
+}
 
 // ── Daemon supervision ────────────────────────────────────────────────
 // A daemon that crashed used to stay dead until the user restarted the
@@ -245,6 +294,8 @@ if (isPortable) {
   console.log('[portable]   electron userData:', portableDir)
   console.log('[portable]   daemon WDC_DATA_DIR:', portableWdcDir)
 }
+
+startSentryIfConsented()
 
 // OS notification identity (Windows AppUserModelID, app name for macOS /
 // libnotify). Runs after the portable block because it pins the userData
@@ -596,7 +647,7 @@ async function spawnDaemonInner() {
   // user env always wins; only set the fallback from the Vite-baked CI
   // secret when nothing else is present. Backend gets its own DSN because
   // it's a separate Sentry project from the Electron one (27 vs 28).
-  if (!daemonEnv.SENTRY_DSN && daemonSentryDsn) {
+  if (!daemonEnv.SENTRY_DSN && daemonSentryDsn && hasCrashReportConsent()) {
     daemonEnv.SENTRY_DSN = daemonSentryDsn
   }
   if (!daemonEnv.SENTRY_ENVIRONMENT) {
@@ -899,7 +950,10 @@ async function createWindow() {
     }
   })
 
-  win.once('ready-to-show', () => win?.show())
+  // Launched by the login item: start in the tray, like after closing.
+  win.once('ready-to-show', () => {
+    if (!startedAtLogin) win?.show()
+  })
 
   // Minimize to tray on close instead of quitting
   win.on('close', (e) => {
@@ -1385,8 +1439,8 @@ async function checkForAppUpdates(showNoUpdateDialog = false) {
       if (showNoUpdateDialog) {
         await dialog.showMessageBox({
           type: 'info',
-          title: 'No updates available',
-          message: 'NKS WebDev Console is already up to date.',
+          title: notificationText('noUpdateTitle'),
+          message: notificationText('noUpdateBody'),
         })
       }
     }
@@ -1394,10 +1448,11 @@ async function checkForAppUpdates(showNoUpdateDialog = false) {
     updaterStatus = 'Update check failed'
     const message = error instanceof Error ? error.message : String(error)
     console.error('[updater] check failed:', message)
+    setUpdaterState({ status: 'error', error: message })
     if (showNoUpdateDialog) {
       await dialog.showMessageBox({
         type: 'error',
-        title: 'Update check failed',
+        title: notificationText('updateCheckFailedTitle'),
         message,
       })
     }
@@ -1428,6 +1483,7 @@ async function installUpdateAndRestart() {
 async function setupAutoUpdater() {
   if (!app.isPackaged || isPortable) {
     updaterStatus = 'Disabled'
+    setUpdaterState({ status: 'disabled', disabledReason: isPortable ? 'portable' : 'dev' })
     updateTray()
     return
   }
@@ -1445,10 +1501,13 @@ async function setupAutoUpdater() {
     autoUpdater.on('checking-for-update', () => {
       checkingForUpdates = true
       updaterStatus = 'Checking'
+      // A finished download stays ready to install across later checks.
+      if (!updateDownloaded) setUpdaterState({ status: 'checking', error: null })
       updateTray()
     })
     autoUpdater.on('update-available', (info) => {
       updaterStatus = `Downloading ${info.version}`
+      setUpdaterState({ status: 'downloading', version: info.version, percent: 0, transferred: null, total: null, error: null })
       updateTray()
       console.log('[updater] Update available:', info.version)
       // Same key as the renderer's GitHub-release check, so whichever
@@ -1466,26 +1525,34 @@ async function setupAutoUpdater() {
     autoUpdater.on('update-not-available', () => {
       checkingForUpdates = false
       updaterStatus = 'Up to date'
+      if (!updateDownloaded) setUpdaterState({ status: 'up-to-date', error: null })
       updateTray()
       console.log('[updater] No update available')
     })
     autoUpdater.on('download-progress', (progress) => {
       updaterStatus = `Downloading ${Math.round(progress.percent)}%`
+      setUpdaterState({
+        status: 'downloading',
+        percent: Math.round(progress.percent),
+        transferred: progress.transferred,
+        total: progress.total,
+      })
       updateTray()
     })
     autoUpdater.on('update-downloaded', async (info) => {
       checkingForUpdates = false
       updateDownloaded = true
       updaterStatus = `Ready to install ${info.version}`
+      setUpdaterState({ status: 'downloaded', version: info.version, percent: 100, error: null })
       updateTray()
       console.log('[updater] Update downloaded:', info.version)
 
       const result = await dialog.showMessageBox({
         type: 'info',
-        title: 'Update ready',
-        message: `Version ${info.version} has been downloaded.`,
-        detail: 'Restart now to install the update, or quit later and it will be installed automatically on exit.',
-        buttons: ['Restart and Install', 'Later'],
+        title: notificationText('updateReadyTitle'),
+        message: notificationText('updateReadyBody', { version: info.version }),
+        detail: notificationText('updateReadyDetail'),
+        buttons: [notificationText('updateRestartButton'), notificationText('updateLaterButton')],
         defaultId: 0,
         cancelId: 1,
       })
@@ -1497,6 +1564,9 @@ async function setupAutoUpdater() {
     autoUpdater.on('error', (error) => {
       checkingForUpdates = false
       updaterStatus = 'Update error'
+      // Shown in Settings → Update; before, a broken latest.yml or a missing
+      // installer only reached the log and updates failed silently.
+      setUpdaterState({ status: 'error', error: error?.message ?? String(error) })
       updateTray()
       console.error('[updater] error:', error?.message ?? error)
     })
@@ -1504,6 +1574,7 @@ async function setupAutoUpdater() {
     void checkForAppUpdates(false)
   } catch (error) {
     updaterStatus = 'Unavailable'
+    setUpdaterState({ status: 'error', error: error instanceof Error ? error.message : String(error) })
     updateTray()
     console.warn('[updater] electron-updater unavailable:', error)
   }
@@ -1826,6 +1897,9 @@ app.on('second-instance', (_evt, argv) => {
   if (deepLink) forwardSsoCallback(deepLink)
   if (win) {
     if (win.isMinimized()) win.restore()
+    // A second launch while the window sits in the tray (after closing it,
+    // or after a login-item start) should bring it back.
+    win.show()
     win.focus()
   }
 })
@@ -2188,6 +2262,47 @@ ipcMain.handle('app-get-version', async () => {
     gitSha,
     full: gitSha ? `${version}-${gitSha}` : version,
   }
+})
+
+ipcMain.handle('updater-get-status', () => updaterState)
+ipcMain.handle('updater-check', () => {
+  void checkForAppUpdates(false)
+  return updaterState
+})
+ipcMain.handle('updater-install', async () => {
+  if (!updateDownloaded) return false
+  await installUpdateAndRestart()
+  return true
+})
+
+// Renderer Sentry rides on the main-process client, so it starts only when
+// main did. The Settings privacy switch reports changes here: switching off
+// stops reporting at once, switching on applies from the next launch.
+ipcMain.handle('crash-reports-state', () => ({ active: sentryStarted, consent: hasCrashReportConsent() }))
+ipcMain.handle('telemetry-consent-changed', async () => {
+  crashReportConsent = null
+  if (sentryStarted && !hasCrashReportConsent()) {
+    await Sentry.close().catch(() => false)
+    sentryStarted = false
+  }
+  return { active: sentryStarted, consent: hasCrashReportConsent() }
+})
+
+// "Run at startup" is the OS login item itself, not a stored setting.
+// Portable copies move with their folder and dev runs launch electron.exe,
+// so neither registers one; Linux has no login-item API in Electron.
+const LOGIN_ITEM_ARGS = ['--hidden']
+const autostartSupported = app.isPackaged && !isPortable && process.platform !== 'linux'
+function autostartState() {
+  return {
+    supported: autostartSupported,
+    enabled: autostartSupported && app.getLoginItemSettings({ args: LOGIN_ITEM_ARGS }).openAtLogin,
+  }
+}
+ipcMain.handle('autostart-get', () => autostartState())
+ipcMain.handle('autostart-set', (_evt, enabled: unknown) => {
+  if (autostartSupported) app.setLoginItemSettings({ openAtLogin: enabled === true, args: LOGIN_ITEM_ARGS })
+  return autostartState()
 })
 
 app.whenReady().then(async () => {

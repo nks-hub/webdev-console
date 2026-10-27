@@ -18,6 +18,17 @@ interface ImportMetaEnv {
   readonly VITE_APP_VERSION?: string
 }
 
+/** electron-updater state from main (UpdaterState in electron/main.ts). */
+interface AppUpdaterState {
+  status: 'disabled' | 'idle' | 'checking' | 'downloading' | 'downloaded' | 'up-to-date' | 'error'
+  disabledReason: 'portable' | 'dev' | null
+  version: string | null
+  percent: number | null
+  transferred: number | null
+  total: number | null
+  error: string | null
+}
+
 /** Result of electronAPI.getMcpServerInfo() (electron/main.ts 'mcp-server-info'). */
 interface McpServerInfo {
   /** Absolute path of the MCP server entry (index.js) — expected path when missing. */
@@ -97,5 +108,17 @@ interface Window {
     getMcpServerInfo?: () => Promise<McpServerInfo>
     /** Starts the MCP server like an AI client and calls wdc_get_status ('mcp-server-selftest'). */
     testMcpServer?: (runtime: 'node' | 'app') => Promise<{ started: boolean; ok: boolean; message: string }>
+    /** electron-updater state, check, install and live status events. */
+    updaterGetStatus?: () => Promise<AppUpdaterState>
+    updaterCheck?: () => Promise<AppUpdaterState>
+    updaterInstall?: () => Promise<boolean>
+    onUpdaterStatus?: (handler: (state: AppUpdaterState) => void) => () => void
+    /** OS login item ("Run at startup"); supported=false in portable/dev builds. */
+    autostartGet?: () => Promise<{ supported: boolean; enabled: boolean }>
+    autostartSet?: (enabled: boolean) => Promise<{ supported: boolean; enabled: boolean }>
+    /** Whether main started Sentry (only with crash-report consent). */
+    crashReportsState?: () => Promise<{ active: boolean; consent: boolean }>
+    /** Tell main the telemetry consent file changed. */
+    telemetryConsentChanged?: () => Promise<{ active: boolean; consent: boolean }>
   }
 }

@@ -28,6 +28,14 @@ namespace NKS.WebDevConsole.Daemon.Services;
 /// </summary>
 internal static class SyncEndpoints
 {
+    // The renderer sends its login token in X-Catalog-Token. The CLI has no
+    // login of its own and GET /api/settings no longer hands out the token,
+    // so fall back to the copy the renderer mirrored into settings.
+    private static string? CatalogToken(HttpContext ctx, SettingsStore settings) =>
+        ctx.Request.Headers["X-Catalog-Token"].FirstOrDefault() is { Length: > 0 } header
+            ? header
+            : settings.GetString("sync", "accountToken");
+
     public static void MapSyncEndpoints(this WebApplication app)
     {
         // Task 36: catalog sync status — exposes persisted lastSyncAt / ok /
@@ -68,7 +76,7 @@ internal static class SyncEndpoints
             if (string.IsNullOrWhiteSpace(deviceId))
                 return Results.BadRequest(new { error = "device_id required" });
 
-            var catalogToken = ctx.Request.Headers["X-Catalog-Token"].FirstOrDefault();
+            var catalogToken = CatalogToken(ctx, settings);
             var baseUrl = settings.CatalogUrl.TrimEnd('/');
 
             using var client = httpFactory.CreateClient("sync-proxy");
@@ -102,7 +110,7 @@ internal static class SyncEndpoints
 
         app.MapPost("/api/sync/push", async (HttpContext ctx, IHttpClientFactory httpFactory, SettingsStore settings, ILogger<Program> logger) =>
         {
-            var catalogToken = ctx.Request.Headers["X-Catalog-Token"].FirstOrDefault();
+            var catalogToken = CatalogToken(ctx, settings);
             var baseUrl = settings.CatalogUrl.TrimEnd('/');
 
             string rawBody;
@@ -148,7 +156,7 @@ internal static class SyncEndpoints
             if (string.IsNullOrWhiteSpace(deviceId))
                 return Results.BadRequest(new { error = "device_id required" });
 
-            var catalogToken = ctx.Request.Headers["X-Catalog-Token"].FirstOrDefault();
+            var catalogToken = CatalogToken(ctx, settings);
             var baseUrl = settings.CatalogUrl.TrimEnd('/');
 
             using var client = httpFactory.CreateClient("sync-proxy");

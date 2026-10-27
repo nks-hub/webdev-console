@@ -36,8 +36,20 @@ internal static class SettingsEndpoints
             using var conn = db.CreateConnection();
             var settings = await conn.QueryAsync<dynamic>("SELECT category, key, value FROM settings");
             var dict = new Dictionary<string, string>();
-            foreach (var s in settings) dict[$"{s.category}.{s.key}"] = s.value;
+            foreach (var s in settings)
+            {
+                string name = $"{s.category}.{s.key}";
+                if (!SettingsKeys.Secret.Contains(name)) dict[name] = s.value;
+            }
             return Results.Ok(dict);
+        });
+
+        // Settings → Ports asks before saving a port another process listens on.
+        app.MapGet("/api/ports/check", (int port) =>
+        {
+            if (port is < 1 or > 65535) return Results.BadRequest(new { error = "port must be 1-65535" });
+            var conflict = PortConflictDetector.CheckPort(port);
+            return Results.Ok(new { port, inUse = conflict is not null, ownerPid = conflict?.OwnerPid, ownerName = conflict?.OwnerProcessName });
         });
 
         app.MapPut("/api/settings", async (
@@ -60,6 +72,10 @@ internal static class SettingsEndpoints
                 return Results.BadRequest(new { error = $"Invalid JSON body: {ex.Message}" });
             }
             if (raw == null) return Results.BadRequest();
+
+            var malformed = raw.Keys.Where(k => !SettingsKeys.TrySplit(k, out _, out _)).ToList();
+            if (malformed.Count > 0)
+                return Results.BadRequest(new { error = $"Setting names must look like category.key: {string.Join(", ", malformed)}" });
 
             var settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var (k, v) in raw)
@@ -85,13 +101,17 @@ internal static class SettingsEndpoints
             // settings table with a half-applied snapshot where some keys are
             // from the new device and others are stale.
             using var tx = conn.BeginTransaction();
+            HashSet<string> changed;
             try
             {
+                var stored = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var row in await conn.QueryAsync<dynamic>("SELECT category, key, value FROM settings", transaction: tx))
+                    stored[$"{row.category}.{row.key}"] = (string)row.value;
+                changed = SettingsKeys.Changed(stored, settings);
+
                 foreach (var (compositeKey, value) in settings)
                 {
-                    var parts = compositeKey.Split('.', 2);
-                    var category = parts.Length > 1 ? parts[0] : "general";
-                    var key = parts.Length > 1 ? parts[1] : parts[0];
+                    SettingsKeys.TrySplit(compositeKey, out var category, out var key);
                     await conn.ExecuteAsync(
                         "INSERT INTO settings (category, key, value) VALUES (@Category, @Key, @Value) ON CONFLICT(category, key) DO UPDATE SET value = @Value, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')",
                         new { Category = category, Key = key, Value = value },
@@ -135,14 +155,14 @@ internal static class SettingsEndpoints
             // its config (regenerate httpd.conf etc). Reflection is used because
             // IServiceModule lives in Core but each plugin's module type is
             // cross-ALC — we only need the ReloadAsync method to be callable.
-            var changedCategories = settings.Keys
-                .Select(k => k.Split('.', 2)[0])
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-            if (changedCategories.Contains("ports"))
+            // Only ports whose value actually changed count: a save that
+            // re-sends the current ports must not regenerate every vhost and
+            // reload Apache, MySQL, Redis and Mailpit.
+            var portKeys = changed.Where(k => k.StartsWith("ports.", StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (portKeys.Length > 0)
             {
                 var sp = ctx.RequestServices;
                 var modules = sp.GetServices<IServiceModule>().ToArray();
-                var portKeys = settings.Keys.Where(k => k.StartsWith("ports.", StringComparison.OrdinalIgnoreCase)).ToArray();
                 foreach (var module in modules)
                 {
                     // Heuristic: match `ports.<serviceId>` or any port key that

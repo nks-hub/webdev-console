@@ -1,3 +1,10 @@
+/** `0.5.0-6e25b70` → `0.5.0`. App builds carry the git SHA after the dash,
+ *  which semver reads as a pre-release, so `0.5.0` would outrank the very
+ *  build it was cut from. Compare release versions on the X.Y.Z core. */
+export function versionCore(v: string): string {
+  return v.match(/^\d+\.\d+\.\d+/)?.[0] ?? v
+}
+
 /** Compare two semver strings. Returns 1 if a > b, -1 if a < b, 0 if equal.
  *  Handles pre-release suffixes per semver spec: 1.0.0 > 1.0.0-beta.1.
  *

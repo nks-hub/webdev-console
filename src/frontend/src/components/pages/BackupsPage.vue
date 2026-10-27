@@ -11,10 +11,14 @@
     </div>
 
     <div class="page-body">
-      <el-tabs v-model="activeTab" class="backup-tabs">
+      <SettingsShell
+        v-model="activeTab"
+        :sections="sections"
+        :aria-label="$t('nav.backups')"
+      >
 
         <!-- ═══ OVERVIEW ════════════════════════════════════════════════════ -->
-        <el-tab-pane :label="$t('backupsPage.tabs.overview')" name="overview">
+        <section v-show="activeTab === 'overview'">
           <div class="tab-content">
             <div class="overview-grid">
               <div class="stat-card">
@@ -39,6 +43,7 @@
               <el-button
                 type="primary"
                 :loading="backingUp"
+                :disabled="noContentSelected"
                 @click="runBackupNow"
               >
                 {{ $t('backupsPage.overview.backupNow') }}
@@ -71,13 +76,13 @@
               @close="errorMsg = ''"
             />
           </div>
-        </el-tab-pane>
+        </section>
 
         <!-- ═══ SNAPSHOTS ═══════════════════════════════════════════════════ -->
-        <el-tab-pane :label="$t('backupsPage.tabs.snapshots')" name="snapshots">
+        <section v-show="activeTab === 'snapshots'">
           <div class="tab-content">
             <div class="snapshots-header">
-              <span class="snapshots-count" v-if="backups.length">{{ $t('backupsPage.snapshots.count', { n: backups.length }) }}</span>
+              <span class="snapshots-count" v-if="backups.length">{{ $t('backupsPage.snapshots.count', backups.length) }}</span>
               <el-button size="small" @click="loadAll" :loading="loading">{{ $t('backupsPage.overview.refresh') }}</el-button>
             </div>
 
@@ -99,7 +104,7 @@
                 <div class="snapshot-info">
                   <span class="snapshot-date">{{ formatDate(b.createdUtc) }}</span>
                   <span class="snapshot-size">{{ formatSize(b.size) }}</span>
-                  <span class="snapshot-flags">{{ b.contentFlags }}</span>
+                  <span class="snapshot-flags">{{ contentLabel(b.contentFlags) }}</span>
                 </div>
                 <div class="snapshot-name mono">{{ fileName(b.path) }}</div>
                 <div class="snapshot-actions">
@@ -121,10 +126,10 @@
               </div>
             </div>
           </div>
-        </el-tab-pane>
+        </section>
 
         <!-- ═══ SCHEDULE ════════════════════════════════════════════════════ -->
-        <el-tab-pane :label="$t('backupsPage.tabs.schedule')" name="schedule">
+        <section v-show="activeTab === 'schedule'">
           <div class="tab-content">
             <SettingsCard :title="$t('backupsPage.schedule.cardTitle')">
               <el-form label-position="left" label-width="290px" size="small">
@@ -152,10 +157,10 @@
               </el-button>
             </SettingsCard>
           </div>
-        </el-tab-pane>
+        </section>
 
         <!-- ═══ CONTENT ══════════════════════════════════════════════════════ -->
-        <el-tab-pane :label="$t('backupsPage.tabs.content')" name="content">
+        <section v-show="activeTab === 'content'">
           <div class="tab-content">
             <SettingsCard :title="$t('backupsPage.content.cardTitle')">
               <div class="content-flags">
@@ -169,28 +174,47 @@
                     </div>
                   </div>
                 </div>
-              <el-button type="primary" size="small" @click="saveContent" :loading="saving" style="margin-top: var(--wdc-space-4)">
+              <div v-if="noContentSelected" class="form-hint content-empty-hint">{{ $t('backupsPage.content.noneSelected') }}</div>
+              <el-button
+                type="primary"
+                size="small"
+                :loading="saving"
+                :disabled="noContentSelected"
+                style="margin-top: var(--wdc-space-4)"
+                @click="saveContent"
+              >
                 {{ $t('backupsPage.content.save') }}
               </el-button>
             </SettingsCard>
           </div>
-        </el-tab-pane>
+        </section>
 
-      </el-tabs>
+      </SettingsShell>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { errorMessage } from '../../utils/errors'
 import { Loading } from '@element-plus/icons-vue'
-import { daemonBaseUrl, daemonAuthHeaders, downloadBackup as downloadBackupFile } from '../../api/daemon'
+import {
+  daemonBaseUrl, daemonAuthHeaders, downloadBackup as downloadBackupFile,
+  fetchSettings, saveSettings, restartDaemon, subscribeEventsMap,
+} from '../../api/daemon'
 import SettingsCard from '../settings/shared/SettingsCard.vue'
+import SettingsShell, { type SettingsSection } from '../settings/SettingsShell.vue'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
+
+const sections = computed<SettingsSection[]>(() => [
+  { name: 'overview', label: t('backupsPage.tabs.overview'), group: 'backups' },
+  { name: 'snapshots', label: t('backupsPage.tabs.snapshots'), group: 'backups' },
+  { name: 'schedule', label: t('backupsPage.tabs.schedule'), group: 'backups' },
+  { name: 'content', label: t('backupsPage.tabs.content'), group: 'backups' },
+])
 
 // ── types ─────────────────────────────────────────────────────────────────
 
@@ -247,6 +271,8 @@ const contentFlags = ref<Record<string, boolean>>({
 
 // ── computed ───────────────────────────────────────────────────────────────
 
+const noContentSelected = computed(() => !Object.values(contentFlags.value).some(Boolean))
+
 const nextScheduledLabel = computed(() => {
   if (scheduleHours.value === 0) return t('backupsPage.overview.off')
   if (!stats.value.lastCreatedUtc) return t('backupsPage.overview.soon')
@@ -261,9 +287,21 @@ const nextScheduledLabel = computed(() => {
 
 // ── lifecycle ──────────────────────────────────────────────────────────────
 
+// Scheduled backups finish in the background; the daemon announces them
+// over SSE so the list and the overview stay current without a reload.
+let unsubscribeBackupEvents: (() => void) | null = null
+
 onMounted(() => {
   void loadAll()
   void loadSettings()
+  unsubscribeBackupEvents = subscribeEventsMap({
+    'backup:completed': () => { void loadAll() },
+  })
+})
+
+onBeforeUnmount(() => {
+  unsubscribeBackupEvents?.()
+  unsubscribeBackupEvents = null
 })
 
 // ── data loading ───────────────────────────────────────────────────────────
@@ -292,9 +330,7 @@ async function loadAll() {
 
 async function loadSettings() {
   try {
-    const res = await fetch(`${daemonBaseUrl()}/api/settings`, { headers: daemonAuthHeaders() })
-    if (!res.ok) return
-    const s: Record<string, string> = await res.json()
+    const s = await fetchSettings()
     if (s['backup.scheduleHours'] !== undefined)
       scheduleHours.value = parseInt(s['backup.scheduleHours']) || 24
     if (s['backup.retainCount'] !== undefined)
@@ -314,18 +350,16 @@ async function runBackupNow() {
   backupResult.value = null
   errorMsg.value = ''
   try {
-    const flags = Object.fromEntries(
-      Object.entries(contentFlags.value).filter(([, v]) => v)
-    )
+    // Send every flag, switched-off ones included: the daemon fills a
+    // missing vhosts/pluginConfigs/ssl key with `true`, so dropping the
+    // false entries put SSL private keys into backups the user had
+    // excluded them from.
     const res = await fetch(`${daemonBaseUrl()}/api/backup`, {
       method: 'POST',
       headers: { ...daemonAuthHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contentFlags: flags }),
+      body: JSON.stringify({ contentFlags: { ...contentFlags.value } }),
     })
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ title: 'Záloha selhala' }))
-      throw new Error(err.title ?? err.error ?? t('backupsPage.snapshots.backupFailed'))
-    }
+    if (!res.ok) throw new Error(await responseError(res, t('backupsPage.snapshots.backupFailed')))
     backupResult.value = await res.json()
     await loadAll()
     ElMessage.success(t('backupsPage.toast.completed'))
@@ -371,16 +405,23 @@ async function restoreBackup(b: BackupEntry) {
       method: 'POST',
       headers: daemonAuthHeaders(),
     })
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ title: t('backupsPage.snapshots.restoreFailed') }))
-      throw new Error(err.title ?? err.error ?? t('backupsPage.snapshots.restoreFailed'))
-    }
+    if (!res.ok) throw new Error(await responseError(res, t('backupsPage.snapshots.restoreFailed')))
     const data = await res.json()
-    ElMessage.success(t('backupsPage.toast.restored', { files: data.restored, safety: fileName(data.safetyBackup) }))
-    await loadAll()
+    ElMessage.success({
+      message: t('backupsPage.toast.restored', { files: data.restored, safety: fileName(data.safetyBackup) }),
+      duration: 3500,
+    })
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : String(e))
+    return
   }
+  // The restore replaced state.db and the site files under a running
+  // daemon, which still holds the old sites and settings in memory.
+  // Restart it and reload the window, the same way the settings reset does.
+  try { await restartDaemon() } catch { /* the daemon exits mid-response */ }
+  await new Promise(resolve => setTimeout(resolve, 3500))
+  if (window.electronAPI?.restartRenderer) await window.electronAPI.restartRenderer()
+  else window.location.reload()
 }
 
 async function deleteBackup(b: BackupEntry) {
@@ -398,7 +439,7 @@ async function deleteBackup(b: BackupEntry) {
       method: 'DELETE',
       headers: daemonAuthHeaders(),
     })
-    if (!res.ok) throw new Error(t('backupsPage.snapshots.deleteFailed'))
+    if (!res.ok) throw new Error(await responseError(res, t('backupsPage.snapshots.deleteFailed')))
     ElMessage.success(t('backupsPage.toast.deleted'))
     await loadAll()
   } catch (e) {
@@ -407,49 +448,61 @@ async function deleteBackup(b: BackupEntry) {
 }
 
 async function saveSchedule() {
-  saving.value = true
-  try {
-    await Promise.all([
-      putSetting('backup', 'scheduleHours', String(scheduleHours.value)),
-      putSetting('backup', 'retainCount', String(retainCount.value)),
-    ])
-    ElMessage.success(t('backupsPage.toast.scheduleSaved'))
-  } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : String(e))
-  } finally {
-    saving.value = false
-  }
+  await persist({
+    'backup.scheduleHours': String(scheduleHours.value),
+    'backup.retainCount': String(retainCount.value),
+  }, t('backupsPage.toast.scheduleSaved'))
 }
 
 async function saveContent() {
+  await persist(Object.fromEntries(
+    contentFlagDefs.map(f => [`backup.content.${f.key}`, contentFlags.value[f.key] ? 'true' : 'false']),
+  ), t('backupsPage.toast.contentSaved'))
+}
+
+// One PUT with flat "category.key" names — the only body shape the
+// settings endpoint accepts.
+async function persist(patch: Record<string, string>, successText: string) {
   saving.value = true
   try {
-    await Promise.all(
-      contentFlagDefs.map(f =>
-        putSetting('backup', `content.${f.key}`, contentFlags.value[f.key] ? 'true' : 'false')
-      )
-    )
-    ElMessage.success(t('backupsPage.toast.contentSaved'))
+    await saveSettings(patch)
+    ElMessage.success(successText)
   } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : String(e))
+    ElMessage.error(t('backupsPage.toast.settingsSaveFailed', { err: errorMessage(e) }))
   } finally {
     saving.value = false
   }
-}
-
-async function putSetting(category: string, key: string, value: string) {
-  const res = await fetch(`${daemonBaseUrl()}/api/settings`, {
-    method: 'PUT',
-    headers: { ...daemonAuthHeaders(), 'Content-Type': 'application/json' },
-    body: JSON.stringify({ category, key, value }),
-  })
-  if (!res.ok) throw new Error(t('backupsPage.toast.settingsSaveFailed', { key: `${category}.${key}` }))
 }
 
 // ── utils ──────────────────────────────────────────────────────────────────
 
+// Daemon errors come as { error } or as ProblemDetails, whose `title` is a
+// generic English sentence — the actual cause sits in `detail`.
+async function responseError(res: Response, fallback: string): Promise<string> {
+  const body = await res.json().catch(() => null) as { detail?: string; error?: string; title?: string } | null
+  return body?.detail || body?.error || body?.title || fallback
+}
+
 function fileName(path: string): string {
   return path.replace(/\\/g, '/').split('/').pop() ?? path
+}
+
+// BackupContentFlags.ToString() on the daemon: "Vhosts, Ssl", "Default", "All, Binaries"…
+const FLAG_KEYS: Record<string, string[]> = {
+  Vhosts: ['vhosts'],
+  PluginConfigs: ['pluginConfigs'],
+  Ssl: ['ssl'],
+  Databases: ['databases'],
+  Docroots: ['docroots'],
+  Default: ['vhosts', 'pluginConfigs', 'ssl'],
+  All: ['vhosts', 'pluginConfigs', 'ssl', 'databases', 'docroots'],
+}
+
+function contentLabel(flags: string): string {
+  return flags.split(',')
+    .flatMap(f => FLAG_KEYS[f.trim()] ?? [])
+    .map(k => t(`backupsPage.content.short.${k}`))
+    .join(', ')
 }
 
 function formatSize(bytes: number): string {
@@ -460,7 +513,7 @@ function formatSize(bytes: number): string {
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString('cs-CZ', {
+  return new Date(iso).toLocaleString(locale.value, {
     day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
   })
@@ -503,10 +556,6 @@ function formatDate(iso: string): string {
   color: var(--wdc-text-3);
   font-size: 0.88rem;
   margin: 0;
-}
-
-.backup-tabs :deep(.el-tabs__header) {
-  margin-bottom: var(--wdc-space-4-5);
 }
 
 .tab-content {
@@ -624,6 +673,10 @@ function formatDate(iso: string): string {
   margin-left: var(--wdc-space-2-5);
   font-size: 0.8rem;
   color: var(--wdc-text-3);
+}
+.content-empty-hint {
+  margin: var(--wdc-space-3) 0 0;
+  color: var(--wdc-status-error);
 }
 
 /* ── Content flags ── */

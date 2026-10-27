@@ -9,6 +9,18 @@
 
     <div class="page-body">
       <div v-if="uiModeStore.isSimple" class="simple-settings-grid">
+        <el-alert
+          v-if="hiddenTabRequested"
+          type="info"
+          :closable="false"
+          show-icon
+          class="simple-hidden-tab"
+          :title="$t('settings.simple.hiddenTab')"
+        >
+          <el-button size="small" type="primary" @click="openAdvancedTab(hiddenTabRequested)">
+            {{ $t('settings.simple.switchToAdvanced') }}
+          </el-button>
+        </el-alert>
         <SettingsPanel
           panel-class="simple-settings-panel-main"
           :title="$t('settings.tabs.general')"
@@ -21,6 +33,7 @@
             :theme-mode="themeStore.mode"
             :is-advanced="uiModeStore.isAdvanced"
             :run-on-startup="runOnStartup"
+            :run-on-startup-supported="runOnStartupSupported"
             :default-php="defaultPhp"
             :php-versions="phpVersions"
             :flushing-dns="flushingDns"
@@ -31,10 +44,10 @@
             @update:locale="onLocaleChange"
             @update:theme-mode="themeStore.setMode"
             @update:ui-mode="uiModeStore.setUiMode"
-            @update:run-on-startup="runOnStartup = $event"
-            @update:default-php="defaultPhp = $event"
-            @update:telemetry-enabled="telemetryEnabled = $event"
-            @update:telemetry-crash-reports="telemetryCrashReports = $event"
+            @update:run-on-startup="setRunOnStartup"
+            @update:default-php="saveDefaultPhp"
+            @update:telemetry-enabled="setTelemetryConsent({ enabled: $event })"
+            @update:telemetry-crash-reports="setTelemetryConsent({ crashReports: $event })"
             @flush-dns="flushDns"
             @discover-mamp="discoverMamp"
           />
@@ -42,17 +55,20 @@
 
         <SettingsPanel
           :title="$t('settings.tabs.update')"
-          :subtitle="$t('settings.update.notChecked')"
+          :subtitle="updateSubtitle"
           :icon="Download"
         >
           <EasyUpdateSettings
             :t="t"
             :current-version="currentVersion"
             :update-check="updateCheck"
+            :has-update="hasUpdate"
+            :updater="updaterState"
             :format-relative-time="formatRelativeTime"
             :render-release-notes="renderReleaseNotes"
             @check="runUpdateCheck"
-            @download="downloadAndInstall"
+            @install="installUpdate"
+            @open-release="openReleasePage"
           />
         </SettingsPanel>
 
@@ -90,7 +106,7 @@
             </div>
           </div>
           <template #actions>
-            <el-button size="small" @click="uiModeStore.setUiMode('advanced')">
+            <el-button size="small" @click="openAdvancedTab('ports')">
               {{ $t('settings.simple.network.editInAdvanced') }} →
             </el-button>
           </template>
@@ -113,14 +129,10 @@
               class="about-sys-row"
             >
               <span class="sys-label">
-                <HealthStatusDot
-                  :level="(svc.state === 2 || svc.status === 'running') ? 'ok' : 'err'"
-                />
-                {{ svc.id }}
+                <HealthStatusDot :level="serviceDot(svc)" />
+                {{ svc.displayName || svc.name || svc.id }}
               </span>
-              <span class="sys-value mono">
-                {{ (svc.state === 2 || svc.status === 'running') ? $t('common.running') : $t('common.stopped') }}
-              </span>
+              <span class="sys-value">{{ serviceStateLabel(svc) }}</span>
             </div>
           </div>
           <template #actions>
@@ -136,6 +148,7 @@
         <SettingsPanel
           :title="$t('settings.simple.backup.title')"
           :subtitle="$t('settings.simple.backup.subtitle')"
+          :icon="FolderOpened"
         >
           <template #actions>
             <el-button
@@ -198,7 +211,7 @@
           v-if="systemInfo"
           panel-class="simple-runtime-panel"
           :title="$t('settings.tabs.about')"
-          :subtitle="`NKS WDC v${appVersion}`"
+          :subtitle="`NKS WebDev Console v${appVersion}`"
           :icon="InfoFilled"
         >
           <div class="simple-runtime-grid">
@@ -221,12 +234,6 @@
           </div>
         </SettingsPanel>
 
-        <div class="settings-footer simple-settings-footer">
-          <el-button type="primary" size="small" :loading="saving" @click="save">
-            {{ $t('common.save') }} {{ $t('common.settings') }}
-          </el-button>
-          <el-button size="small" @click="loadSettings">{{ $t('common.reset') }}</el-button>
-        </div>
       </div>
 
       <SettingsShell
@@ -267,7 +274,7 @@
                     disabled
                   />
                   <div class="hint">
-                    <code class="mono">{{ p.pluginId }}</code> · default {{ p.defaultPort }}
+                    <code class="mono">{{ p.pluginId }}</code> · {{ $t('settings.advancedPorts.defaultPort', { port: p.defaultPort }) }}
                   </div>
                 </el-form-item>
               </el-form>
@@ -293,6 +300,14 @@
                 <template #title>{{ $t('settings.advancedPorts.portAlertTitle') }}</template>
                 {{ $t('settings.advancedPorts.portAlertDesc') }}
               </el-alert>
+              <el-alert
+                v-if="duplicatePorts.length > 0"
+                type="error"
+                :closable="false"
+                show-icon
+                style="margin-bottom: var(--wdc-space-3)"
+                :title="$t('settings.ports.duplicate', { ports: duplicatePorts.join(', ') })"
+              />
               <el-form label-position="left" label-width="200px" size="small">
                 <el-form-item :label="$t('settings.ports.httpPort')">
                   <el-input-number v-model="ports.http" :min="1" :max="65535" style="width: 100%" />
@@ -312,6 +327,9 @@
                 <el-form-item :label="$t('settings.ports.mailpitHttp')">
                   <el-input-number v-model="ports.mailpitHttp" :min="1" :max="65535" style="width: 100%" />
                 </el-form-item>
+                <el-form-item :label="$t('settings.ports.postgresqlPort')">
+                  <el-input-number v-model="ports.postgresql" :min="1" :max="65535" style="width: 100%" />
+                </el-form-item>
                 <el-form-item :label="$t('settings.ports.phpFpmBase')">
                   <el-input-number v-model="phpFpmBasePort" :min="9000" :max="9999" style="width: 100%" />
                   <div class="hint">{{ $t('settings.ports.phpFpmFormula') }}</div>
@@ -329,6 +347,7 @@
             :theme-mode="themeStore.mode"
             :is-advanced="uiModeStore.isAdvanced"
             :run-on-startup="runOnStartup"
+            :run-on-startup-supported="runOnStartupSupported"
             :default-php="defaultPhp"
             :php-versions="phpVersions"
             :flushing-dns="flushingDns"
@@ -338,10 +357,10 @@
             @update:locale="onLocaleChange"
             @update:theme-mode="themeStore.setMode"
             @update:ui-mode="uiModeStore.setUiMode"
-            @update:run-on-startup="runOnStartup = $event"
-            @update:default-php="defaultPhp = $event"
-            @update:telemetry-enabled="telemetryEnabled = $event"
-            @update:telemetry-crash-reports="telemetryCrashReports = $event"
+            @update:run-on-startup="setRunOnStartup"
+            @update:default-php="saveDefaultPhp"
+            @update:telemetry-enabled="setTelemetryConsent({ enabled: $event })"
+            @update:telemetry-crash-reports="setTelemetryConsent({ crashReports: $event })"
             @flush-dns="flushDns"
             @discover-mamp="discoverMamp"
           />
@@ -349,140 +368,19 @@
         <!-- Paths tab -->
         <section v-show="activeTab === 'paths'" class="shell-section">
           <div class="tab-content">
-            <p class="tab-desc">{{ $t('settings.paths.tabDesc') }}</p>
-            <!-- F79: Browse buttons open the native file/folder dialog via
-                 electronAPI.showOpenDialog. Falls back to manual typing when
-                 running outside Electron (dev browser, etc.). -->
-            <SettingsCard :title="$t('settings.tabs.paths')">
-            <el-form label-position="top" size="small">
-              <el-form-item :label="$t('settings.paths.apache')">
-                <el-input v-model="paths.apache" placeholder="C:\nks-wdc\binaries\apache\2.4\bin\httpd.exe">
-                  <template #append>
-                    <el-button @click="browsePath('apache', 'file')">{{ $t('settings.paths.browse') }}</el-button>
-                  </template>
-                </el-input>
-              </el-form-item>
-              <el-form-item :label="$t('settings.paths.mysql')">
-                <el-input v-model="paths.mysql" placeholder="C:\nks-wdc\binaries\mysql\8.0\bin\mysqld.exe">
-                  <template #append>
-                    <el-button @click="browsePath('mysql', 'file')">{{ $t('settings.paths.browse') }}</el-button>
-                  </template>
-                </el-input>
-              </el-form-item>
-              <el-form-item :label="$t('settings.paths.php')">
-                <el-input v-model="paths.php" placeholder="C:\nks-wdc\binaries\php\8.4\php.exe">
-                  <template #append>
-                    <el-button @click="browsePath('php', 'file')">{{ $t('settings.paths.browse') }}</el-button>
-                  </template>
-                </el-input>
-              </el-form-item>
-              <el-form-item :label="$t('settings.paths.redis')">
-                <el-input v-model="paths.redis" placeholder="C:\nks-wdc\binaries\redis\7.2\redis-server.exe">
-                  <template #append>
-                    <el-button @click="browsePath('redis', 'file')">{{ $t('settings.paths.browse') }}</el-button>
-                  </template>
-                </el-input>
-              </el-form-item>
-              <el-form-item :label="$t('settings.paths.sitesDir')">
-                <el-input v-model="paths.sitesDir" placeholder="C:\nks-wdc\conf\vhosts">
-                  <template #append>
-                    <el-button @click="browsePath('sitesDir', 'folder')">{{ $t('settings.paths.browse') }}</el-button>
-                  </template>
-                </el-input>
-              </el-form-item>
-              <el-form-item :label="$t('settings.paths.hostsFile')">
-                <el-input v-model="paths.hostsFile" placeholder="C:\Windows\System32\drivers\etc\hosts">
-                  <template #append>
-                    <el-button @click="browsePath('hostsFile', 'file')">{{ $t('settings.paths.browse') }}</el-button>
-                  </template>
-                </el-input>
-                <div class="hint">{{ $t('settings.paths.hostsHint') }}</div>
-              </el-form-item>
-
-              <el-divider />
-
-              <el-form-item :label="$t('settings.paths.dataDir')">
-                <el-input
-                  :model-value="systemInfo?.os?.machine ? `${systemInfo?.daemon?.pid ? '~/.wdc' : '~/.wdc'}` : '~/.wdc'"
-                  disabled
-                  class="mono-input"
-                />
-                <div class="hint">
-                  {{ $t('settings.paths.dataHint') }}
-                  Override with <code>WDC_DATA_DIR</code> environment variable or
-                  <code>portable.txt</code> next to the executable.
-                </div>
-              </el-form-item>
-              <el-form-item :label="$t('settings.advancedBackups.backupDir')">
-                <el-input v-model="backupDir" placeholder="~/.wdc/backups" />
-              </el-form-item>
-              <el-form-item :label="$t('settings.advancedBackups.schedule')">
-                <el-input-number
-                  v-model="backupScheduleHours"
-                  :min="0"
-                  :max="720"
-                  controls-position="right"
-                  style="width: 160px"
-                />
-                <span style="margin-left: var(--wdc-space-2); font-size: 0.82rem; color: var(--wdc-text-3)">{{ $t('settings.advancedBackups.hours') }}</span>
-                <div class="hint">
-                  {{ $t('settings.advancedBackups.scheduleHint') }}
-                </div>
-              </el-form-item>
-            </el-form>
-
-            <!-- Manual backup management -->
-            <div style="margin-top: var(--wdc-space-5); border-top: 1px solid var(--wdc-border); padding-top: var(--wdc-space-4)">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--wdc-space-3)">
-                <span style="font-weight: 600; font-size: 0.95rem">{{ $t('settings.advancedBackups.title') }}</span>
-                <div style="display: flex; gap: var(--wdc-space-2)">
-                  <el-button size="small" type="primary" @click="manualBackup" :loading="backupCreating">
-                    {{ $t('settings.advancedBackups.create') }}
-                  </el-button>
-                  <el-button size="small" @click="loadBackups" :loading="backupsLoading">
-                    {{ $t('common.refresh') }}
-                  </el-button>
-                </div>
-              </div>
-              <div v-if="backupsLoading" class="hint">{{ $t('settings.advancedBackups.loading') }}</div>
-              <div v-else-if="backupsList.length === 0" class="hint">{{ $t('settings.advancedBackups.empty') }}</div>
-              <el-table v-else :data="backupsList" size="small" stripe style="width: 100%">
-                <el-table-column :label="$t('settings.advancedBackups.colDate')" width="180">
-                  <template #default="{ row }">
-                    {{ new Date(row.createdUtc).toLocaleString() }}
-                  </template>
-                </el-table-column>
-                <el-table-column :label="$t('settings.advancedBackups.colSize')" width="130">
-                  <template #default="{ row }">
-                    {{ (row.size / 1024 / 1024).toFixed(1) }} MB
-                  </template>
-                </el-table-column>
-                <el-table-column :label="$t('common.actions')">
-                  <template #default="{ row }">
-                    <el-button size="small" @click="downloadBackupFile(row.path)">{{ $t('common.download') }}</el-button>
-                  </template>
-                </el-table-column>
-              </el-table>
-            </div>
+            <SettingsCard :title="$t('settings.paths.dataDir')">
+              <el-input :model-value="systemInfo?.dataDir ?? ''" readonly class="mono-input" />
+              <div class="hint">{{ $t('settings.paths.dataHint') }}</div>
             </SettingsCard>
-          </div>
-        </section>
-
-        <!-- Databases tab -->
-        <section v-show="activeTab === 'databases'" class="shell-section">
-          <div class="tab-content">
-            <p class="tab-desc">{{ $t('settingsDb.tabDesc') }}</p>
-            <SettingsCard :title="$t('settings.tabs.databases')">
-              <div class="db-list" v-if="databases.length > 0">
-                <div class="db-row" v-for="db in databases" :key="db">
-                  <span class="db-name">{{ db }}</span>
-                  <el-button size="small" type="danger" text @click="dropDatabase(db)">{{ $t('settingsDb.drop') }}</el-button>
-                </div>
-              </div>
-              <el-empty v-else :description="$t('settingsDb.noUserDatabases')" :image-size="48" />
-              <div class="db-create">
-                <el-input v-model="newDbName" :placeholder="$t('settingsDb.newPlaceholder')" size="small" style="width: 200px" />
-                <el-button size="small" type="primary" @click="createDatabase" :disabled="!newDbName">{{ $t('settingsDb.create') }}</el-button>
+            <SettingsCard :title="$t('settings.advancedBackups.title')">
+              <p class="tab-desc">{{ $t('settings.paths.backupsDesc') }}</p>
+              <div class="paths-backup-actions">
+                <el-button size="small" type="primary" :loading="backupCreating" @click="manualBackup">
+                  {{ $t('settings.advancedBackups.create') }}
+                </el-button>
+                <el-button size="small" @click="$router.push('/backups')">
+                  {{ $t('settings.paths.manageBackups') }} →
+                </el-button>
               </div>
             </SettingsCard>
           </div>
@@ -493,10 +391,136 @@
              immediately; the daemon refuses them from the MCP token. -->
         <section v-show="activeTab === 'mcp'" class="shell-section">
           <div class="tab-content">
-            <p v-if="!mcpEnabled" class="tab-desc">
-              {{ $t('mcpCapabilities.mcpOff') }}
-              <el-button size="small" text @click="activeTab = 'advanced'">{{ $t('mcpCapabilities.openAdvanced') }}</el-button>
-            </p>
+            <!-- MCP switch and its options live with the capability toggles
+                 and, like them, save on change. Default OFF: hides the AI
+                 confirmation banner and the MCP sidebar entry. -->
+            <div class="settings-section" id="mcp-section">
+              <h4 class="section-title">{{ $t('settings.mcp.title') }}</h4>
+              <p class="hint">
+                {{ $t('settings.mcp.description') }}
+                <strong>{{ $t('settings.mcp.warning') }}</strong>
+              </p>
+              <el-form label-position="left" label-width="320px" size="small">
+                <el-form-item :label="$t('settings.mcp.enableLabel')">
+                  <el-switch :model-value="mcpEnabled" @update:model-value="setMcpEnabled" />
+                  <!-- Copy-paste setup for Claude Code / Desktop / Cursor
+                       lives on the MCP page's "Connect an AI client" card. -->
+                  <el-button
+                    link
+                    type="primary"
+                    class="mcp-connect-link"
+                    data-testid="settings-mcp-connect-link"
+                    @click="$router.push('/mcp/activity')"
+                  >
+                    {{ $t('mcpConnect.openFromSettings') }} →
+                  </el-button>
+                </el-form-item>
+                <!-- Phase 7.4e — strict kind validation. Default OFF (lenient
+                     mode where any regex-valid kind passes). Turn ON to refuse
+                     any kind not registered via IDestructiveOperationKinds. -->
+                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.strictKindsLabel')">
+                  <el-switch :model-value="mcpStrictKinds" @update:model-value="setMcpStrictKinds" />
+                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.strictKindsHint') }}</div>
+                </el-form-item>
+                <!-- Phase 7.5+++ — always-confirm kinds override. Comma-
+                     separated list (e.g. "restore,cancel") of kind ids
+                     for which the validator skips grant auto-approval.
+                     Operator's "ring-fence the riskiest ops" knob: even
+                     wildcard always-grants must yield to the GUI banner
+                     for these kinds. -->
+                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.alwaysConfirmKindsLabel')">
+                  <!-- Phase 7.5+++ — multi-select over registered kinds.
+                       Falls back to a free-text input only if the kinds
+                       endpoint hasn't responded yet (or returns empty),
+                       so the setting is still editable without the
+                       registry. The store/save format stays a comma-
+                       separated string (back-compat with backend). -->
+                  <el-select
+                    v-if="mcpKindOptions.length > 0"
+                    v-model="mcpAlwaysConfirmKindsArr"
+                    multiple
+                    filterable
+                    collapse-tags
+                    collapse-tags-tooltip
+                    @change="saveAlwaysConfirmKinds"
+                    :placeholder="$t('settings.mcp.alwaysConfirmKindsPlaceholder')"
+                    style="max-width: 480px; width: 100%"
+                  >
+                    <el-option
+                      v-for="opt in mcpKindOptions"
+                      :key="opt.id"
+                      :label="humanKindLabel(opt)"
+                      :value="opt.id"
+                    >
+                      <span>{{ humanKindLabel(opt) }}</span>
+                      <span class="muted" style="margin-left: var(--wdc-space-2); font-size: 11px">
+                        {{ opt.id }} · {{ $t('mcpKinds.danger.' + opt.danger) }}
+                      </span>
+                    </el-option>
+                  </el-select>
+                  <el-input
+                    v-else
+                    v-model="mcpAlwaysConfirmKinds"
+                    placeholder="restore,cancel"
+                    @change="saveAlwaysConfirmKinds"
+                    style="max-width: 320px"
+                  />
+                  <!-- Phase 7.5+++ — one-click presets. "Lock all destructive"
+                       fills the picker with every kind tagged Destructive
+                       (restore, test_hook, settings_write, plus any plugin-
+                       contributed dangerous kinds). "Clear" resets. -->
+                  <div v-if="mcpKindOptions.length > 0" style="margin-top: var(--wdc-space-1-5)">
+                    <el-button
+                      size="small"
+                      :disabled="destructiveKindIds.length === 0 || allDestructiveAlreadyLocked"
+                      @click="lockAllDestructive"
+                    >
+                      <el-icon><Lock /></el-icon>
+                      <span>{{ $t('settings.mcp.lockAllDestructive', { n: destructiveKindIds.length }) }}</span>
+                    </el-button>
+                    <el-button
+                      size="small"
+                      plain
+                      :disabled="mcpAlwaysConfirmKindsArr.length === 0"
+                      @click="clearAlwaysConfirm"
+                    >
+                      {{ $t('settings.mcp.clearAlwaysConfirm') }}
+                    </el-button>
+                  </div>
+                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.alwaysConfirmKindsHint') }}</div>
+                </el-form-item>
+                <!-- Phase 7.5+++ — operator-tunable janitor retention.
+                     Defaults match GrantSweeperService.Default* (1d/30d).
+                     Setting either to 0 disables that branch (keep all). -->
+                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.expiredRetentionLabel')">
+                  <el-input-number v-model="mcpExpiredRetentionDays"
+                    :min="0" :max="365" controls-position="right" style="width: 120px"
+                    @change="(v: number | undefined) => saveMcpNumber('mcp.grant_expired_retention_days', v)" />
+                  <span class="hint" style="margin-left: var(--wdc-space-2)">{{ $t('settings.mcp.daysSuffix') }}</span>
+                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.expiredRetentionHint') }}</div>
+                </el-form-item>
+                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.revokedRetentionLabel')">
+                  <el-input-number v-model="mcpRevokedRetentionDays"
+                    :min="0" :max="365" controls-position="right" style="width: 120px"
+                    @change="(v: number | undefined) => saveMcpNumber('mcp.grant_revoked_retention_days', v)" />
+                  <span class="hint" style="margin-left: var(--wdc-space-2)">{{ $t('settings.mcp.daysSuffix') }}</span>
+                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.revokedRetentionHint') }}</div>
+                </el-form-item>
+                <!-- Phase 8 — mcp_tool_calls audit retention. Drives the
+                     hourly McpToolCallsSweeperService. Bumping this
+                     keeps history for forensics; lowering reclaims disk
+                     when traffic is heavy. -->
+                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.toolCallRetentionLabel')">
+                  <el-input-number v-model="mcpToolCallRetentionDays"
+                    :min="1" :max="365" controls-position="right" style="width: 120px"
+                    @change="(v: number | undefined) => saveMcpNumber('mcp.toolCallRetentionDays', v)" />
+                  <span class="hint" style="margin-left: var(--wdc-space-2)">{{ $t('settings.mcp.daysSuffix') }}</span>
+                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.toolCallRetentionHint') }}</div>
+                </el-form-item>
+              </el-form>
+            </div>
+
+            <p v-if="!mcpEnabled" class="tab-desc">{{ $t('mcpCapabilities.mcpOff') }}</p>
             <McpCapabilitiesSettings v-if="activeTab === 'mcp'" />
           </div>
         </section>
@@ -517,13 +541,7 @@
                     </el-button>
                   </template>
                 </el-input>
-                <div class="hint">
-                  URL of the NKS WDC catalog-api service (see
-                  <code>services/catalog-api/</code>). Electron auto-spawns
-                  a local sidecar on <code>127.0.0.1:8765</code> in dev mode.
-                  Point at your self-hosted deployment for team-wide binary
-                  versions or leave blank for the default.
-                </div>
+                <div class="hint">{{ $t('settings.advanced.catalogUrlHint') }}</div>
                 <div class="hint" v-if="catalogStatus">
                   <HealthStatusDot :level="catalogStatus.ok ? 'ok' : 'err'" />
                   {{ catalogStatus.message }}
@@ -539,7 +557,7 @@
                   @click="openCatalogAdmin"
                   :disabled="!catalogUrl"
                 >
-                  {{ $t('common.open') }} admin UI
+                  {{ $t('settings.advanced.openCatalogAdmin') }}
                 </el-button>
               </el-form-item>
               <el-form-item :label="$t('settings.advanced.mysqlRoot')">
@@ -559,10 +577,8 @@
                   >{{ $t('settings.advanced.save') }}</el-button>
                 </div>
                 <div class="hint">
-                  {{ mysqlRootExists ? 'A password is currently stored (encrypted via DPAPI).' : 'No password stored — WDC cannot authenticate to mysqld.' }}
-                  Use this field when your mysqld root password was set outside WDC (external MySQL install, MAMP import, or manual change) — WDC only syncs its stored copy, you still need to run
-                  <code>ALTER USER 'root'@'localhost' IDENTIFIED BY '…'</code>
-                  on the server itself.
+                  {{ mysqlRootExists ? $t('settings.advanced.mysqlRootStored') : $t('settings.advanced.mysqlRootMissing') }}
+                  {{ $t('settings.advanced.mysqlRootHint') }}
                 </div>
               </el-form-item>
               <el-form-item :label="$t('settings.advanced.pluginAutoSync')">
@@ -573,23 +589,17 @@
                   :loading="syncingPlugins"
                   @click="syncPluginsNow"
                 >{{ $t('settings.advanced.syncNow') }}</el-button>
-                <div class="hint">
-                  When enabled the daemon pulls the plugin catalog from the
-                  URL above on startup + every 6 hours and downloads any
-                  missing plugin releases into
-                  <code>~/.wdc/plugins/&lt;id&gt;/&lt;version&gt;/</code>.
-                  Leave off for dev builds that use the bundled
-                  <code>build/plugins/</code>. Env var
-                  <code>NKS_WDC_PLUGIN_AUTOSYNC=1</code> still wins when set.
-                </div>
+                <div class="hint">{{ $t('settings.advanced.pluginAutoSyncHint') }}</div>
                 <div v-if="pluginSyncStatus" class="hint">
                   <HealthStatusDot :level="pluginSyncStatus.ok ? 'ok' : 'err'" />
                   {{ pluginSyncStatus.message }}
                 </div>
                 <div v-if="pluginCatalogStatus" class="hint">
-                  Catalog: {{ pluginCatalogStatus.catalogCount }} plugin{{ pluginCatalogStatus.catalogCount === 1 ? '' : 's' }} ·
-                  cached: {{ pluginCatalogStatus.cachedCount }} ·
-                  last sync: {{ pluginCatalogStatus.lastFetch ? formatAgo(pluginCatalogStatus.lastFetch) : 'never' }}
+                  {{ $t('settings.advanced.pluginCatalogLine', {
+                    count: pluginCatalogStatus.catalogCount,
+                    cached: pluginCatalogStatus.cachedCount,
+                    ago: pluginCatalogStatus.lastFetch ? formatRelativeTime(pluginCatalogStatus.lastFetch) : $t('settings.advanced.neverSynced'),
+                  }) }}
                 </div>
               </el-form-item>
             </el-form>
@@ -641,131 +651,6 @@
               </el-collapse-item>
             </el-collapse>
 
-            <!-- Phase 6.23 — MCP integration toggle. Default OFF: hides
-                 the AI agent confirmation banner + MCP Intents sidebar
-                 entry + makes the daemon's /api/mcp/intents endpoints
-                 return 404. Operators not running an AI client see no
-                 trace of the subsystem. -->
-            <div class="settings-section" id="mcp-section" style="margin-top: var(--wdc-space-4)">
-              <h4 class="section-title">{{ $t('settings.mcp.title') }}</h4>
-              <p class="hint">
-                {{ $t('settings.mcp.description') }}
-                <strong>{{ $t('settings.mcp.warning') }}</strong>
-              </p>
-              <el-form label-position="left" label-width="320px" size="small">
-                <el-form-item :label="$t('settings.mcp.enableLabel')">
-                  <el-switch v-model="mcpEnabled" />
-                  <!-- Copy-paste setup for Claude Code / Desktop / Cursor
-                       lives on the MCP page's "Connect an AI client" card. -->
-                  <el-button
-                    link
-                    type="primary"
-                    class="mcp-connect-link"
-                    data-testid="settings-mcp-connect-link"
-                    @click="$router.push('/mcp/activity')"
-                  >
-                    {{ $t('mcpConnect.openFromSettings') }} →
-                  </el-button>
-                </el-form-item>
-                <!-- Phase 7.4e — strict kind validation. Default OFF (lenient
-                     mode where any regex-valid kind passes). Turn ON to refuse
-                     any kind not registered via IDestructiveOperationKinds. -->
-                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.strictKindsLabel')">
-                  <el-switch v-model="mcpStrictKinds" />
-                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.strictKindsHint') }}</div>
-                </el-form-item>
-                <!-- Phase 7.5+++ — always-confirm kinds override. Comma-
-                     separated list (e.g. "restore,cancel") of kind ids
-                     for which the validator skips grant auto-approval.
-                     Operator's "ring-fence the riskiest ops" knob: even
-                     wildcard always-grants must yield to the GUI banner
-                     for these kinds. -->
-                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.alwaysConfirmKindsLabel')">
-                  <!-- Phase 7.5+++ — multi-select over registered kinds.
-                       Falls back to a free-text input only if the kinds
-                       endpoint hasn't responded yet (or returns empty),
-                       so the setting is still editable without the
-                       registry. The store/save format stays a comma-
-                       separated string (back-compat with backend). -->
-                  <el-select
-                    v-if="mcpKindOptions.length > 0"
-                    v-model="mcpAlwaysConfirmKindsArr"
-                    multiple
-                    filterable
-                    collapse-tags
-                    collapse-tags-tooltip
-                    :placeholder="$t('settings.mcp.alwaysConfirmKindsPlaceholder')"
-                    style="max-width: 480px; width: 100%"
-                  >
-                    <el-option
-                      v-for="opt in mcpKindOptions"
-                      :key="opt.id"
-                      :label="humanKindLabel(opt)"
-                      :value="opt.id"
-                    >
-                      <span>{{ humanKindLabel(opt) }}</span>
-                      <span class="muted" style="margin-left: var(--wdc-space-2); font-size: 11px">
-                        {{ opt.id }} · {{ $t('mcpKinds.danger.' + opt.danger) }}
-                      </span>
-                    </el-option>
-                  </el-select>
-                  <el-input
-                    v-else
-                    v-model="mcpAlwaysConfirmKinds"
-                    placeholder="restore,cancel"
-                    style="max-width: 320px"
-                  />
-                  <!-- Phase 7.5+++ — one-click presets. "Lock all destructive"
-                       fills the picker with every kind tagged Destructive
-                       (restore, test_hook, settings_write, plus any plugin-
-                       contributed dangerous kinds). "Clear" resets. -->
-                  <div v-if="mcpKindOptions.length > 0" style="margin-top: var(--wdc-space-1-5)">
-                    <el-button
-                      size="small"
-                      :disabled="destructiveKindIds.length === 0 || allDestructiveAlreadyLocked"
-                      @click="lockAllDestructive"
-                    >
-                      🔒 {{ $t('settings.mcp.lockAllDestructive', { n: destructiveKindIds.length }) }}
-                    </el-button>
-                    <el-button
-                      size="small"
-                      plain
-                      :disabled="mcpAlwaysConfirmKindsArr.length === 0"
-                      @click="clearAlwaysConfirm"
-                    >
-                      {{ $t('settings.mcp.clearAlwaysConfirm') }}
-                    </el-button>
-                  </div>
-                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.alwaysConfirmKindsHint') }}</div>
-                </el-form-item>
-                <!-- Phase 7.5+++ — operator-tunable janitor retention.
-                     Defaults match GrantSweeperService.Default* (1d/30d).
-                     Setting either to 0 disables that branch (keep all). -->
-                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.expiredRetentionLabel')">
-                  <el-input-number v-model="mcpExpiredRetentionDays"
-                    :min="0" :max="365" controls-position="right" style="width: 120px" />
-                  <span class="hint" style="margin-left: var(--wdc-space-2)">{{ $t('settings.mcp.daysSuffix') }}</span>
-                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.expiredRetentionHint') }}</div>
-                </el-form-item>
-                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.revokedRetentionLabel')">
-                  <el-input-number v-model="mcpRevokedRetentionDays"
-                    :min="0" :max="365" controls-position="right" style="width: 120px" />
-                  <span class="hint" style="margin-left: var(--wdc-space-2)">{{ $t('settings.mcp.daysSuffix') }}</span>
-                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.revokedRetentionHint') }}</div>
-                </el-form-item>
-                <!-- Phase 8 — mcp_tool_calls audit retention. Drives the
-                     hourly McpToolCallsSweeperService. Bumping this
-                     keeps history for forensics; lowering reclaims disk
-                     when traffic is heavy. -->
-                <el-form-item v-if="mcpEnabled" :label="$t('settings.mcp.toolCallRetentionLabel')">
-                  <el-input-number v-model="mcpToolCallRetentionDays"
-                    :min="1" :max="365" controls-position="right" style="width: 120px" />
-                  <span class="hint" style="margin-left: var(--wdc-space-2)">{{ $t('settings.mcp.daysSuffix') }}</span>
-                  <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.toolCallRetentionHint') }}</div>
-                </el-form-item>
-              </el-form>
-            </div>
-
             <!-- Phase 7.1a — deploy subsystem toggle. Default ON since
                  most users install WDC FOR site management with deploy.
                  OFF hides Deploy tab in SiteEdit + plugin REST endpoints
@@ -776,31 +661,15 @@
               <p class="hint">
                 {{ $t('settings.deploySubsystem.description') }}
               </p>
-              <!-- Iter 13: backend mode status banner. Shows operator at a
-                   glance which deploy backend is currently authoritative,
-                   sourced from /api/admin/plugin-readiness. Today always
-                   built-in (Program.cs handlers), but the banner already
-                   reflects the live mode so a future flip is visible
-                   without leaving Settings. -->
-              <div
-                v-if="deployBackendMode"
-                class="hint"
-                style="margin-bottom: var(--wdc-space-3); padding: var(--wdc-space-2-5) var(--wdc-space-3-5); border-radius: var(--wdc-radius-sm); background: var(--wdc-surface-2); border: 1px solid var(--wdc-border); display: inline-block"
-              >
-                <span v-if="deployBackendMode === 'plugin'" style="color: var(--el-color-success)">
-                  🔌 {{ $t('settings.deploySubsystem.modePlugin', { v: deployPluginVersion ?? '?' }) }}
-                </span>
-                <span v-else style="color: var(--el-color-info)">
-                  ⚙ {{ $t('settings.deploySubsystem.modeBuiltIn') }}
-                </span>
-                <span v-if="deployPluginLoaded && deployBackendMode === 'built-in'" class="muted" style="margin-left: var(--wdc-space-2)">
-                  ({{ $t('settings.deploySubsystem.pluginLoadedNotActive', { v: deployPluginVersion ?? '?' }) }})
-                </span>
-              </div>
               <el-form label-position="left" label-width="240px" size="small">
                 <el-form-item :label="$t('settings.deploySubsystem.enableLabel')">
                   <el-switch v-model="deployEnabled" />
                 </el-form-item>
+                <!-- The built-in/plugin backend switch stays out of sight until
+                     there is something to do with it: readiness unlocked the
+                     flip, a flip waits for a restart, or the plugin already
+                     serves deploys. Locked, it only showed migration internals. -->
+                <template v-if="deployFlipUnlocked || deployRestartPending || deployBackendMode === 'plugin'">
                 <!-- Phase 7.4 #109-D1 — backend selector. Today the toggle
                      is INFORMATIONAL only: useLegacyHostHandlers=true means
                      Program.cs deploy handlers serve everything (current
@@ -847,7 +716,8 @@
                         effect="plain"
                         style="margin-left: var(--wdc-space-3); cursor: pointer"
                       >
-                        🔒 {{ $t('settings.deploySubsystem.legacyHandlersLocked', { n: deployFlipBlockers.length }) }}
+                        <el-icon><Lock /></el-icon>
+                        {{ $t('settings.deploySubsystem.legacyHandlersLocked', { n: deployFlipBlockers.length }) }}
                       </el-tag>
                     </template>
                     <!-- Iter 21: shared component renders blockerDetails
@@ -885,12 +755,15 @@
                           </li>
                         </ul>
                       </div>
-                      <div class="muted" style="margin-top: var(--wdc-space-2); font-size: 11px">
-                        <code class="mono">GET /api/admin/plugin-readiness?explain=true</code>
-                      </div>
                     </div>
                   </el-popover>
                 </el-form-item>
+                <div class="hint">
+                  {{ deployBackendMode === 'plugin'
+                    ? $t('settings.deploySubsystem.modePlugin', { v: deployPluginVersion ?? '?' })
+                    : $t('settings.deploySubsystem.modeBuiltIn') }}
+                </div>
+                </template>
               </el-form>
             </div>
           </div>
@@ -990,15 +863,20 @@
 
         <!-- Update tab — visible in both Simple and Advanced -->
         <section v-show="activeTab === 'update'" class="shell-section">
-          <EasyUpdateSettings
-            :t="t"
-            :current-version="currentVersion"
-            :update-check="updateCheck"
-            :format-relative-time="formatRelativeTime"
-            :render-release-notes="renderReleaseNotes"
-            @check="runUpdateCheck"
-            @download="downloadAndInstall"
-          />
+          <div class="tab-content">
+            <EasyUpdateSettings
+              :t="t"
+              :current-version="currentVersion"
+              :update-check="updateCheck"
+              :has-update="hasUpdate"
+              :updater="updaterState"
+              :format-relative-time="formatRelativeTime"
+              :render-release-notes="renderReleaseNotes"
+              @check="runUpdateCheck"
+              @install="installUpdate"
+              @open-release="openReleasePage"
+            />
+          </div>
         </section>
         <!-- Notifications tab — visible in both Simple and Advanced. Stored
              by the Electron main process, so no Save step is involved. -->
@@ -1020,7 +898,17 @@
               @copy="copyDeviceId"
             />
 
-            <!-- Cloud sync -->
+            <!-- Cloud sync needs the catalog account; without it every call fails. -->
+            <el-alert
+              v-if="!accountToken"
+              type="info"
+              :closable="false"
+              show-icon
+              :title="$t('settings.sync.signInFirst')"
+              class="sync-sign-in"
+            >
+              <el-button size="small" type="primary" @click="activeTab = 'account'">{{ $t('settings.sync.goToAccount') }}</el-button>
+            </el-alert>
             <SyncCloudCard
               :t="$t"
               :sync-status="syncStatus"
@@ -1029,7 +917,7 @@
               :syncing="syncing"
               :pulling="pulling"
               :checking-cloud="checkingCloud"
-              :disabled="!catalogUrl && !deviceId"
+              :disabled="!accountToken"
               @push="pushToCloud"
               @pull="pullFromCloud"
               @check="checkCloudExists"
@@ -1063,7 +951,7 @@
         <section v-show="activeTab === 'about'" class="shell-section">
           <div class="tab-content">
             <div class="about-card">
-              <div class="about-logo">NKS WDC</div>
+              <div class="about-logo">NKS WebDev Console</div>
               <div class="about-version">v{{ appVersion }}</div>
               <div class="about-subtitle">{{ $t('settings.about.subtitle') }}</div>
               <div class="about-desc">{{ $t('settings.about.description') }}</div>
@@ -1076,24 +964,18 @@
                 <a href="https://github.com/nks-hub/webdev-console-plugins" target="_blank" class="about-link">plugins</a>
                 <a href="https://github.com/nks-hub/wdc-catalog-api" target="_blank" class="about-link">catalog-api</a>
                 <a href="https://github.com/nks-hub/webdev-console-binaries" target="_blank" class="about-link">binaries</a>
-                <a href="https://wdc.nks-hub.cz" target="_blank" class="about-link">Website</a>
+                <a href="https://wdc.nks-hub.cz" target="_blank" class="about-link">{{ $t('settings.about.website') }}</a>
               </div>
 
-              <div class="about-stack">
-                <el-tag size="small" effect="plain">Electron 34</el-tag>
-                <el-tag size="small" effect="plain">Vue 3.5</el-tag>
-                <el-tag size="small" effect="plain">Element Plus 2.9</el-tag>
-                <el-tag size="small" effect="plain">.NET 9</el-tag>
-              </div>
 
               <!-- F91.4: SSO login moved to Account tab (was here pre-F91.4).
                    Catalog status row stays — it's runtime info, not auth. -->
               <div v-if="pluginCatalogStatus" class="about-sso-status">
-                <HealthStatusDot :level="pluginCatalogStatus.lastFetch ? 'ok' : 'err'" />
+                <HealthStatusDot :level="pluginCatalogStatus.lastFetch ? 'ok' : 'muted'" />
                 <span class="sys-label">{{ $t('settings.sso.catalog') }}</span>
                 <span class="sys-value">
                   {{ pluginCatalogStatus.lastFetch
-                      ? $t('settings.sso.catalogReachable', { ago: formatAgo(pluginCatalogStatus.lastFetch) })
+                      ? $t('settings.sso.catalogReachable', { ago: formatRelativeTime(pluginCatalogStatus.lastFetch) })
                       : $t('settings.sso.catalogNeverSynced') }}
                 </span>
                 <!-- Task 02: when catalog has never synced, surface the
@@ -1150,7 +1032,7 @@
                 </div>
                 <div class="about-sys-row">
                   <span class="sys-label">OS</span>
-                  <span class="sys-value">{{ systemInfo.os?.version }}</span>
+                  <span class="sys-value">{{ systemInfo.os?.name ?? systemInfo.os?.version }}</span>
                 </div>
                 <div class="about-sys-row">
                   <span class="sys-label">.NET</span>
@@ -1160,12 +1042,12 @@
             </div>
           </div>
         </section>
-        <!-- Save button (not shown on About, Update, MCP or Notifications; those save on change) -->
-        <template v-if="activeTab !== 'about' && activeTab !== 'update' && activeTab !== 'mcp' && activeTab !== 'notifications'" #footer>
-          <el-button type="primary" size="small" :loading="saving" @click="save">
-            {{ $t('common.save') }} {{ $t('common.settings') }}
-          </el-button>
-          <el-button size="small" @click="loadSettings">{{ $t('common.reset') }}</el-button>
+        <!-- Only while something is unsaved. Switches and buttons that act on
+             their own (MCP, notifications, account, sync actions) never set it. -->
+        <template v-if="isDirty && activeTab !== 'mcp'" #footer>
+          <span class="footer-unsaved">{{ $t('settings.unsaved.label', changedCount) }}</span>
+          <el-button type="primary" size="small" :loading="saving" @click="save">{{ $t('settings.unsaved.save') }}</el-button>
+          <el-button size="small" @click="discardChanges">{{ $t('settings.unsaved.discard') }}</el-button>
         </template>
       </SettingsShell>
 
@@ -1174,14 +1056,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, onActivated, watch } from 'vue'
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import SettingsShell, { type SettingsSection } from '../settings/SettingsShell.vue'
 import McpCapabilitiesSettings from '../settings/McpCapabilitiesSettings.vue'
 import { setLocale, type Locale } from '../../i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Setting, Download, Connection, FolderOpened, InfoFilled, User, Operation, Warning, Bell } from '@element-plus/icons-vue'
+import { Setting, Download, Connection, FolderOpened, InfoFilled, User, Operation, Warning, Bell, Lock } from '@element-plus/icons-vue'
 import { useThemeStore } from '../../stores/theme'
 import { useUiModeStore } from '../../stores/uiMode'
 import { useAuthStore } from '../../stores/auth'
@@ -1206,12 +1088,13 @@ import AccountPasswordCard from '../settings/account/AccountPasswordCard.vue'
 import AccountSimpleSyncCard from '../settings/account/AccountSimpleSyncCard.vue'
 import AccountSsoCard from '../settings/account/AccountSsoCard.vue'
 import EasyGeneralSettings from '../settings/easy/EasyGeneralSettings.vue'
-import EasyUpdateSettings from '../settings/easy/EasyUpdateSettings.vue'
+import EasyUpdateSettings, { type EasyUpdateCheck } from '../settings/easy/EasyUpdateSettings.vue'
 import SyncCloudCard from '../settings/sync/SyncCloudCard.vue'
 import SyncDeviceIdentityCard from '../settings/sync/SyncDeviceIdentityCard.vue'
 import SyncExportImportCard from '../settings/sync/SyncExportImportCard.vue'
 import SyncSnapshotsCard from '../settings/sync/SyncSnapshotsCard.vue'
-import { compareSemver } from '../../utils/semver'
+import { compareSemver, versionCore } from '../../utils/semver'
+import { pickSyncableSettings } from '../../utils/settingsSync'
 import { useAppVersion } from '../../utils/appVersion'
 
 const versionRef = useAppVersion()
@@ -1230,8 +1113,10 @@ async function ssoLogin() {
     // for the user to navigate away and back.
     await authStore.refreshProfile(url)
     ElMessage.success(authStore.displayName
-      ? `Signed in as ${authStore.displayName}`
-      : 'Signed in')
+      ? t('settingsToast.signedInAs', { email: authStore.displayName })
+      : t('settingsToast.signedIn'))
+    // Register this device once, right after signing in (not on every visit).
+    void autoRegisterDeviceAfterLogin()
   } catch (err) {
     ElMessage.error(t('settingsToast.ssoFailed', { err: errorMessage(err) }))
   }
@@ -1272,14 +1157,14 @@ const settingsSections = computed<SettingsSection[]>(() => [
   { name: 'about', label: t('settings.tabs.about'), group: 'app' },
   { name: 'ports', label: t('settings.tabs.ports'), group: 'environment' },
   { name: 'paths', label: t('settings.tabs.paths'), group: 'environment' },
-  { name: 'databases', label: t('settings.tabs.databases'), group: 'environment' },
   { name: 'sync', label: t('settings.tabs.sync'), group: 'integration' },
   { name: 'mcp', label: t('settings.tabs.mcp'), group: 'integration' },
   { name: 'advanced', label: t('settings.tabs.advanced'), group: 'integration' },
 ])
 
-const ADVANCED_ONLY_TABS = new Set(['ports', 'paths', 'databases', 'advanced', 'sync', 'mcp'])
+const ADVANCED_ONLY_TABS = new Set(['ports', 'paths', 'advanced', 'sync', 'mcp'])
 watch(() => uiModeStore.isSimple, (simple) => {
+  if (!simple) hiddenTabRequested.value = null
   if (simple && ADVANCED_ONLY_TABS.has(activeTab.value)) {
     activeTab.value = 'general'
   }
@@ -1290,13 +1175,35 @@ watch(() => uiModeStore.isSimple, (simple) => {
 // the tab is enough to surface the MCP section within Advanced; the
 // scroll attribute lets us jump to a specific anchor.
 const route = useRoute()
+const router = useRouter()
+// Set when a link asks for an Advanced-only section while in Simple mode.
+const hiddenTabRequested = ref<string | null>(null)
+
+function openAdvancedTab(tab: string): void {
+  hiddenTabRequested.value = null
+  uiModeStore.setUiMode('advanced')
+  activeTab.value = tab
+}
+
 function applyDeepLink(): void {
-  const tabParam = typeof route.query.tab === 'string' ? route.query.tab : ''
-  if (tabParam && settingsSections.value.some(s => s.name === tabParam)) {
-    if (uiModeStore.isSimple && ADVANCED_ONLY_TABS.has(tabParam)) return
-    activeTab.value = tabParam
+  // The page stays alive under other routes; their ?tab= is not ours.
+  if (route.path !== '/settings') return
+  if (route.query.tab === 'databases') {
+    void router.replace('/databases')
+    return
   }
   const scrollTarget = typeof route.query.scroll === 'string' ? route.query.scroll : ''
+  const tabParam = scrollTarget === 'mcp-section'
+    ? 'mcp'
+    : (typeof route.query.tab === 'string' ? route.query.tab : '')
+  if (tabParam && settingsSections.value.some(s => s.name === tabParam)) {
+    if (uiModeStore.isSimple && ADVANCED_ONLY_TABS.has(tabParam)) {
+      hiddenTabRequested.value = tabParam
+      return
+    }
+    hiddenTabRequested.value = null
+    activeTab.value = tabParam
+  }
   if (scrollTarget) {
     // Defer to next tick so the tab content is in the DOM before we
     // scroll to its anchor.
@@ -1308,9 +1215,13 @@ function applyDeepLink(): void {
 }
 watch(() => route.query, applyDeepLink, { immediate: true })
 
+// Keep the open section in the URL so reload and Back return to it.
+watch(activeTab, (tab) => {
+  if (route.path !== '/settings' || route.query.tab === tab) return
+  void router.replace({ query: { ...route.query, tab, scroll: undefined } })
+})
+
 const saving = ref(false)
-const databases = ref<string[]>([])
-const newDbName = ref('')
 const systemInfo = ref<SystemInfo | null>(null)
 const installedVersions = ref<Array<{ app: string; version: string }>>([])
 
@@ -1321,6 +1232,13 @@ const ports = reactive({
   redis: 6379,
   mailpitSmtp: 1025,
   mailpitHttp: 8025,
+  postgresql: 5432,
+})
+
+// Two services on one port means one of them fails to start.
+const duplicatePorts = computed<number[]>(() => {
+  const values = Object.values(ports)
+  return [...new Set(values.filter((port, i) => values.indexOf(port) !== i))]
 })
 
 const runOnStartup = ref(false)
@@ -1377,6 +1295,7 @@ function lockAllDestructive(): void {
   // additions (e.g. plugin-specific kinds) aren't dropped.
   const merged = new Set([...mcpAlwaysConfirmKindsArr.value, ...destructiveKindIds.value])
   mcpAlwaysConfirmKindsArr.value = Array.from(merged)
+  saveAlwaysConfirmKinds()
 }
 
 // Phase 7.5+++ — operator-locale label for the kind. Shared lookup
@@ -1391,6 +1310,47 @@ function humanKindLabel(opt: { id?: string; label?: string }): string {
 
 function clearAlwaysConfirm(): void {
   mcpAlwaysConfirmKindsArr.value = []
+  saveAlwaysConfirmKinds()
+}
+
+// MCP options save on change, like the capability toggles beside them.
+async function saveMcpSetting(patch: Record<string, string>): Promise<boolean> {
+  try {
+    await saveSettings(patch)
+    ElMessage.success(t('settingsToast.settingsSaved'))
+    return true
+  } catch (e) {
+    ElMessage.error(t('settingsToast.saveFailed', { err: errorMessage(e) }))
+    return false
+  }
+}
+
+async function setMcpEnabled(enabled: boolean) {
+  if (enabled) {
+    try {
+      await ElMessageBox.confirm(t('settings.mcp.enableConfirm'), t('settings.mcp.enableConfirmTitle'), {
+        type: 'warning',
+        confirmButtonText: t('settings.mcp.enableConfirmButton'),
+        cancelButtonText: t('common.cancel'),
+      })
+    } catch { return }
+  }
+  if (await saveMcpSetting({ 'mcp.enabled': String(enabled) })) {
+    mcpEnabled.value = enabled
+    if (enabled) void loadMcpKindOptions()
+  }
+}
+
+async function setMcpStrictKinds(strict: boolean) {
+  if (await saveMcpSetting({ 'mcp.strict_kinds': String(strict) })) mcpStrictKinds.value = strict
+}
+
+function saveAlwaysConfirmKinds(): void {
+  void saveMcpSetting({ 'mcp.always_confirm_kinds': mcpAlwaysConfirmKinds.value })
+}
+
+function saveMcpNumber(key: string, value: number | undefined): void {
+  if (typeof value === 'number' && Number.isFinite(value)) void saveMcpSetting({ [key]: String(value) })
 }
 // Phase 7.5+++ — janitor retention windows. Defaults match
 // GrantSweeperService.Default* constants (1 day, 30 days). Setting
@@ -1419,15 +1379,13 @@ const deployUseLegacyHostHandlers = ref(true)
 // #109-D1+ iter 10: store full readiness so the locked toggle can
 // surface blockers count inline — operator sees WHY at a glance without
 // having to open DeploySettings panel popover.
-// Iter 13: also store mode + pluginVersion + pluginLoaded so the section
-// header can render a status banner ("⚙ built-in" / "🔌 plugin v0.1.0").
+// Iter 13: also store mode + pluginVersion for the backend status line.
 const deployFlipUnlocked = ref<boolean>(false)
 const deployFlipBlockers = ref<string[]>([])
 interface DeployBlockerDetail { summary: string; phase: string; remediation: string }
 const deployFlipBlockerDetails = ref<DeployBlockerDetail[]>([])
 const deployBackendMode = ref<'built-in' | 'plugin' | null>(null)
 const deployPluginVersion = ref<string | null>(null)
-const deployPluginLoaded = ref<boolean>(false)
 // Iter 56-58 (#258) — restartPending becomes true when the operator has
 // flipped useLegacyHostHandlers but the daemon still serves under the
 // boot-time value. The global toggle is the place where the operator
@@ -1454,7 +1412,6 @@ async function loadDeployFlipReadiness(): Promise<void> {
       deployFlipBlockerDetails.value = Array.isArray(j.blockerDetails) ? j.blockerDetails : []
       deployBackendMode.value = j.mode === 'plugin' || j.mode === 'built-in' ? j.mode : null
       deployPluginVersion.value = typeof j.pluginVersion === 'string' ? j.pluginVersion : null
-      deployPluginLoaded.value = j.pluginLoaded === true
       deployRestartPending.value = j.restartPending === true
       deployFlipGatedEndpoints.value = Array.isArray(j.gatedEndpoints) ? j.gatedEndpoints : []
     }
@@ -1464,86 +1421,61 @@ async function loadDeployFlipReadiness(): Promise<void> {
 // Auto-start is now per-plugin only — toggle lives on each plugin card in
 // Plugin Manager. The daemon still reads `service.<id>.autoStart` the same
 // way, so the settings key format hasn't changed — just the UI surface.
-const defaultPhp = ref('8.4')
-const phpVersions = ref<string[]>(['8.4', '8.3', '7.4'])
+const defaultPhp = ref('')
+const phpVersions = ref<string[]>([])
 const flushingDns = ref(false)
 const mampDiscovering = ref(false)
 
-// F79: open native OS file/folder picker + write result into paths[key].
-// Electron-only (wrapped via preload's electronAPI.showOpenDialog). When
-// running outside Electron the button no-ops with a warning toast.
-async function browsePath(key: keyof typeof paths, kind: 'file' | 'folder'): Promise<void> {
-  const api = window.electronAPI
-  if (!api?.showOpenDialog) {
-    ElMessage.warning(t('settingsToast.filePickerDesktopOnly'))
-    return
-  }
-  const result = await api.showOpenDialog({
-    properties: kind === 'folder' ? ['openDirectory'] : ['openFile'],
-    title: kind === 'folder' ? 'Select directory' : 'Select file',
-    defaultPath: paths[key] || undefined,
-  })
-  if (result?.canceled) return
-  const picked = result?.filePaths?.[0]
-  if (typeof picked === 'string' && picked.length > 0) {
-    paths[key] = picked
-  }
+// Simple-mode Services panel: a stopped service with no installed binary
+// is "not installed" (grey), not a red failure.
+const installedApps = computed(() => new Set(installedVersions.value.map(b => b.app.toLowerCase())))
+function serviceIsRunning(svc: { state?: number; status?: string }): boolean {
+  return svc.state === 2 || svc.status === 'running'
+}
+function serviceNotInstalled(svc: { id: string; state?: number; status?: string }): boolean {
+  return !serviceIsRunning(svc) && installedVersions.value.length > 0 && !installedApps.value.has(svc.id.toLowerCase())
+}
+function serviceDot(svc: { id: string; state?: number; status?: string }): 'ok' | 'err' | 'muted' {
+  if (serviceIsRunning(svc)) return 'ok'
+  if (svc.state === 4 || svc.status === 'crashed' || svc.status === 'error') return 'err'
+  return 'muted'
+}
+function serviceStateLabel(svc: { id: string; state?: number; status?: string }): string {
+  if (serviceIsRunning(svc)) return t('common.running')
+  if (serviceNotInstalled(svc)) return t('settings.simple.services.notInstalled')
+  if (svc.state === 4 || svc.status === 'crashed' || svc.status === 'error') return t('settings.simple.services.crashed')
+  return t('common.stopped')
 }
 
-// F85: format daemon uptime seconds into human-friendly string.
+// F85: daemon uptime in the UI language ("2 h 5 min", "3 dny 4 h").
 function formatUptime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return '—'
   const s = Math.floor(seconds)
-  if (s < 60) return `${s}s`
+  if (s < 60) return t('settings.about.uptime.seconds', { s })
   const m = Math.floor(s / 60)
-  if (m < 60) return `${m}m ${s % 60}s`
+  if (m < 60) return t('settings.about.uptime.minutes', { m, s: s % 60 })
   const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h ${m % 60}m`
+  if (h < 24) return t('settings.about.uptime.hours', { h, m: m % 60 })
   const d = Math.floor(h / 24)
-  return `${d}d ${h % 24}h`
+  return t('settings.about.uptime.days', { d, h: h % 24 }, d)
 }
-
-const paths = reactive({
-  apache: '',
-  mysql: '',
-  php: '',
-  redis: '',
-  sitesDir: '',
-  hostsFile: '',
-})
 
 // ── Additional settings from SPEC ─────────────────────────────────────
 const phpFpmBasePort = ref(9000)
 const telemetryEnabled = ref(false)
 const telemetryCrashReports = ref(false)
-const backupDir = ref('')
-// Matches BackupScheduler.DefaultScheduleHours; 0 means "off", so a 0
-// default silently disabled scheduled backups on the first Save.
-const backupScheduleHours = ref(24)
 // Save writes every key; never let it run on top of a failed load.
 const settingsLoaded = ref(false)
 
 // Backup management
-import { fetchBackups, createBackup, downloadBackup, listMcpKinds, type BackupEntry } from '../../api/daemon'
-const backupsList = ref<BackupEntry[]>([])
-const backupsLoading = ref(false)
+import { createBackup, listMcpKinds } from '../../api/daemon'
 const backupCreating = ref(false)
-
-async function loadBackups() {
-  backupsLoading.value = true
-  try {
-    const data = await fetchBackups()
-    backupsList.value = data.backups
-  } catch { backupsList.value = [] }
-  finally { backupsLoading.value = false }
-}
 
 async function manualBackup() {
   backupCreating.value = true
   try {
     const result = await createBackup()
-    ElMessage.success(t('settingsToast.backupCreated', { files: result.files, size: (result.size / 1024 / 1024).toFixed(1) }))
-    void loadBackups()
+    ElMessage.success(t('settingsToast.backupCreated', { files: result.files, size: formatSize(result.size) }))
   } catch (e) {
     ElMessage.error(t('settingsToast.backupFailed', { err: errorMessage(e) }))
   } finally {
@@ -1559,8 +1491,9 @@ const httpPort = computed(() => ports.http)
 const httpsPort = computed(() => ports.https)
 const mysqlPort = computed(() => ports.mysql)
 
-function downloadBackupFile(path: string) {
-  downloadBackup(path).catch((e) => ElMessage.error(t('backupsPage.snapshots.downloadFailed', { error: errorMessage(e) })))
+function formatSize(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
 // ── Danger-zone reset operations ──────────────────────────────────────
@@ -1576,17 +1509,14 @@ const dangerZoneExpanded = ref<string[]>([])
 // sites list still shows cached rows, toast flashes briefly, "vůbec nic
 // neudělalo" impression. 3.5 s is the upper bound of our observed
 // exit-99 → port-file → `/healthz` bounce window.
-async function doReset(scope: 'settings' | 'factory', label: string): Promise<boolean> {
+async function doReset(scope: 'settings' | 'factory'): Promise<boolean> {
   const url = `${daemonBaseUrl()}/api/admin/reset?scope=${scope}`
   const r = await fetch(url, { method: 'POST', headers: authHeaders() })
   if (!r.ok) {
     const body = await r.text().catch(() => '')
-    throw new Error(`HTTP ${r.status} — ${body || 'daemon returned no body'}`)
+    throw new Error(body || `HTTP ${r.status}`)
   }
-  ElMessage.success({
-    message: `${label} hotov. Daemon se restartuje a aplikace se znovu načte…`,
-    duration: 3500,
-  })
+  ElMessage.success({ message: t('settings.danger.restarting'), duration: 3500 })
   // Give the daemon time to exit-99 → Electron respawn → port file → /healthz,
   // then ask the main process to force-reload the renderer. Main-side
   // reloadIgnoringCache bypasses cases where `window.location.reload()` in
@@ -1603,16 +1533,15 @@ async function doReset(scope: 'settings' | 'factory', label: string): Promise<bo
 
 async function confirmResetSettings() {
   try {
-    await ElMessageBox.confirm(
-      'Opravdu smazat tabulku `settings`? Weby, databáze a binárky zůstanou. ' +
-      'WDC se po operaci restartuje a uvítací průvodce proběhne znovu.',
-      'Reset nastavení',
-      { type: 'warning', confirmButtonText: 'Smazat a restartovat', cancelButtonText: 'Zrušit' },
-    )
+    await ElMessageBox.confirm(t('settings.danger.resetConfirm'), t('settings.danger.resetSettings'), {
+      type: 'warning',
+      confirmButtonText: t('settings.danger.resetConfirmButton'),
+      cancelButtonText: t('common.cancel'),
+    })
   } catch { return }
   resettingSettings.value = true
   try {
-    await doReset('settings', 'Reset nastavení')
+    await doReset('settings')
   } catch (e) {
     ElMessage.error(t('settingsToast.resetFailed', { err: errorMessage(e) }))
   } finally {
@@ -1622,17 +1551,16 @@ async function confirmResetSettings() {
 
 async function confirmFactoryReset() {
   try {
-    await ElMessageBox.confirm(
-      'SMAZAT VŠECHNO? To zahrnuje všechny weby, databáze i vazby pluginů. ' +
-      'Binárky (~/.wdc/binaries/) zůstanou, aby se znovu nestahovalo Apache/PHP/MySQL. ' +
-      'Tato operace je NEVRATNÁ.',
-      'Tovární reset',
-      { type: 'error', confirmButtonText: 'Ano, smazat všechno', cancelButtonText: 'Zrušit', distinguishCancelAndClose: true },
-    )
+    await ElMessageBox.confirm(t('settings.danger.factoryConfirm'), t('settings.danger.factoryReset'), {
+      type: 'error',
+      confirmButtonText: t('settings.danger.factoryConfirmButton'),
+      cancelButtonText: t('common.cancel'),
+      distinguishCancelAndClose: true,
+    })
   } catch { return }
   resettingFactory.value = true
   try {
-    await doReset('factory', 'Tovární reset')
+    await doReset('factory')
   } catch (e) {
     ElMessage.error(t('settingsToast.resetFailed', { err: errorMessage(e) }))
   } finally {
@@ -1695,7 +1623,7 @@ const pluginPorts = ref<Array<{
 function formatDate(s: string | number | null | undefined): string {
   if (!s) return '—'
   const d = new Date(s)
-  return isNaN(d.getTime()) ? String(s) : d.toLocaleString()
+  return isNaN(d.getTime()) ? String(s) : d.toLocaleString(locale.value)
 }
 
 interface SyncSnapshot {
@@ -1729,9 +1657,9 @@ async function loadSnapshots() {
 async function restoreSnapshot(row: SyncSnapshot) {
   try {
     await ElMessageBox.confirm(
-      `Restore settings from snapshot taken ${formatDate(row.created_at)}? Local changes that haven't been pushed will be overwritten.`,
-      'Restore snapshot',
-      { type: 'warning', confirmButtonText: 'Restore', cancelButtonText: 'Cancel' },
+      t('settings.sync.snapshotRestoreConfirm', { date: formatDate(row.created_at) }),
+      t('settings.sync.snapshotRestoreTitle'),
+      { type: 'warning', confirmButtonText: t('common.restore'), cancelButtonText: t('common.cancel') },
     )
   } catch { return /* cancelled */ }
   snapshotAction.value = row.id
@@ -1746,7 +1674,8 @@ async function restoreSnapshot(row: SyncSnapshot) {
     // Route the payload through the same merge logic as pullFromCloud —
     // saveSettings + reload.
     if (data?.payload?.settings) {
-      await saveSettings(data.payload.settings as Record<string, string>)
+      const portable = pickSyncableSettings(data.payload.settings as Record<string, string>)
+      if (Object.keys(portable).length > 0) await saveSettings(portable)
       await loadSettings()
     }
     ElMessage.success(t('settingsToast.snapshotRestored'))
@@ -1760,9 +1689,9 @@ async function restoreSnapshot(row: SyncSnapshot) {
 async function deleteSnapshot(row: SyncSnapshot) {
   try {
     await ElMessageBox.confirm(
-      `Delete this snapshot? This cannot be undone.`,
-      'Delete snapshot',
-      { type: 'warning', confirmButtonText: 'Delete', cancelButtonText: 'Cancel' },
+      t('settings.sync.snapshotDeleteConfirm', { date: formatDate(row.created_at) }),
+      t('settings.sync.snapshotDeleteTitle'),
+      { type: 'warning', confirmButtonText: t('common.delete'), cancelButtonText: t('common.cancel') },
     )
   } catch { return }
   snapshotAction.value = row.id
@@ -1802,58 +1731,18 @@ async function loadPluginCatalogStatus() {
   } catch { /* daemon unreachable — leave as null so the hint line hides */ }
 }
 
-function formatAgo(iso: string): string {
-  const then = new Date(iso).getTime()
-  const diffSec = Math.max(0, Math.floor((Date.now() - then) / 1000))
-  if (diffSec < 60) return `${diffSec}s ago`
-  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`
-  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`
-  return `${Math.floor(diffSec / 86400)}d ago`
-}
 const refreshingCatalog = ref(false)
 const testingCatalog = ref(false)
 const catalogStatus = ref<{ ok: boolean; message: string } | null>(null)
-
-async function loadDatabases() {
-  try {
-    const r = await fetch(`${daemonBaseUrl()}/api/databases`, { headers: authHeaders() })
-    if (r.ok) {
-      const data = await r.json()
-      databases.value = data.databases ?? []
-    }
-  } catch { /* not connected */ }
-}
-
-async function createDatabase() {
-  if (!newDbName.value) return
-  try {
-    const r = await fetch(`${daemonBaseUrl()}/api/databases`, {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ name: newDbName.value }),
-    })
-    if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
-    ElMessage.success(t('settingsToast.databaseCreated', { name: newDbName.value }))
-    newDbName.value = ''
-    await loadDatabases()
-  } catch (e) { ElMessage.error(t('settingsToast.createFailed', { err: errorMessage(e) })) }
-}
-
-async function dropDatabase(name: string) {
-  try {
-    const r = await fetch(`${daemonBaseUrl()}/api/databases/${name}`, { method: 'DELETE', headers: authHeaders() })
-    if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
-    ElMessage.success(t('settingsToast.databaseDropped', { name }))
-    await loadDatabases()
-  } catch (e) { ElMessage.error(t('settingsToast.dropFailed', { err: errorMessage(e) })) }
-}
 
 async function flushDns() {
   flushingDns.value = true
   try {
     const r = await fetch(`${daemonBaseUrl()}/api/dns/flush`, { method: 'POST', headers: authHeaders() })
-    if (r.ok) ElMessage.success(t('settingsToast.dnsFlushed'))
-    else ElMessage.warning(t('settingsToast.dnsFlushAdmin'))
+    // The daemon answers 200 either way; `ok` says whether ipconfig succeeded.
+    const result = await r.json().catch(() => null) as { ok?: boolean; output?: string } | null
+    if (r.ok && result?.ok) ElMessage.success(t('settingsToast.dnsFlushed'))
+    else ElMessage.warning(t('settingsToast.dnsFlushFailed', { err: result?.output || `HTTP ${r.status}` }))
   } catch {
     ElMessage.warning(t('settingsToast.dnsFlushUnavailable'))
   } finally {
@@ -1875,9 +1764,12 @@ async function discoverMamp() {
       return
     }
     const confirmed = await ElMessageBox.confirm(
-      `Found ${data.count} MAMP site(s): ${(data.sites ?? []).map(s => s.domain || s.Domain).join(', ')}. Import them?`,
-      'MAMP Migration',
-      { confirmButtonText: 'Import', cancelButtonText: 'Cancel', type: 'info' },
+      t('settings.general.mampConfirm', {
+        count: data.count,
+        sites: (data.sites ?? []).map(s => s.domain || s.Domain).join(', '),
+      }),
+      t('settings.general.mampImport'),
+      { confirmButtonText: t('settings.general.mampImportButton'), cancelButtonText: t('common.cancel'), type: 'info' },
     )
     if (confirmed) {
       const ir = await fetch(`${daemonBaseUrl()}/api/sites/migrate-mamp`, { method: 'POST', headers: authHeaders() })
@@ -1892,11 +1784,90 @@ async function discoverMamp() {
   }
 }
 
+// "Výchozí verze PHP" offers installed versions only. A stored version that
+// is no longer installed is not shown; the effective default then is the
+// active version (what the new-site dialog falls back to), else the first.
 async function loadPhpVersions() {
   try {
-    const data = await fetchPhpVersions()
-    phpVersions.value = data.map(v => v.majorMinor || v.version)
-  } catch { /* keep defaults */ }
+    const [installed, settings] = await Promise.all([fetchPhpVersions(), fetchSettings()])
+    phpVersions.value = installed.map(v => v.majorMinor || v.version)
+    const stored = settings['general.defaultPhp'] ?? ''
+    const active = installed.find(v => v.isActive)
+    defaultPhp.value = phpVersions.value.includes(stored)
+      ? stored
+      : (active ? (active.majorMinor || active.version) : (phpVersions.value[0] ?? ''))
+  } catch {
+    phpVersions.value = []
+    defaultPhp.value = ''
+  }
+}
+
+async function saveDefaultPhp(version: string) {
+  const previous = defaultPhp.value
+  defaultPhp.value = version
+  try {
+    await saveSettings({ 'general.defaultPhp': version })
+    ElMessage.success(t('settingsToast.settingsSaved'))
+  } catch (e) {
+    defaultPhp.value = previous
+    ElMessage.error(t('settingsToast.saveFailed', { err: errorMessage(e) }))
+  }
+}
+
+// "Spustit při startu" is the OS login item, read from and written to
+// Electron directly — a value in the settings table started nothing.
+const runOnStartupSupported = ref(false)
+async function loadRunOnStartup() {
+  const state = await window.electronAPI?.autostartGet?.().catch(() => null)
+  runOnStartupSupported.value = state?.supported ?? false
+  runOnStartup.value = state?.enabled ?? false
+}
+
+async function setRunOnStartup(enabled: boolean) {
+  const api = window.electronAPI
+  if (!api?.autostartSet) return
+  try {
+    const state = await api.autostartSet(enabled)
+    runOnStartup.value = state.enabled
+    if (state.enabled === enabled) ElMessage.success(t('settingsToast.settingsSaved'))
+    else ElMessage.error(t('settingsToast.autostartFailed'))
+  } catch (e) {
+    ElMessage.error(t('settingsToast.saveFailed', { err: errorMessage(e) }))
+  }
+}
+
+// Telemetry consent lives in the daemon's telemetry-consent.json, the file
+// the main process checks before sending any crash report.
+async function loadTelemetryConsent() {
+  try {
+    const r = await fetch(`${daemonBaseUrl()}/api/telemetry/consent`, { headers: authHeaders() })
+    if (!r.ok) return
+    const consent = await r.json() as { enabled?: boolean; crashReports?: boolean }
+    telemetryEnabled.value = consent.enabled === true
+    telemetryCrashReports.value = consent.crashReports === true
+  } catch { /* daemon unreachable — switches stay off */ }
+}
+
+async function setTelemetryConsent(patch: { enabled?: boolean; crashReports?: boolean }) {
+  const enabled = patch.enabled ?? telemetryEnabled.value
+  const crashReports = patch.crashReports ?? telemetryCrashReports.value
+  try {
+    const r = await fetch(`${daemonBaseUrl()}/api/telemetry/consent`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ enabled, crashReports, usageMetrics: false }),
+    })
+    if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
+    const consent = await r.json() as { enabled?: boolean; crashReports?: boolean }
+    telemetryEnabled.value = consent.enabled === true
+    telemetryCrashReports.value = consent.crashReports === true
+    const state = await window.electronAPI?.telemetryConsentChanged?.().catch(() => null)
+    ElMessage.success(state && state.consent && !state.active
+      ? t('settingsToast.crashReportsAfterRestart')
+      : t('settingsToast.settingsSaved'))
+  } catch (e) {
+    ElMessage.error(t('settingsToast.saveFailed', { err: errorMessage(e) }))
+  }
 }
 
 async function loadMcpKindOptions(): Promise<void> {
@@ -1912,57 +1883,101 @@ async function loadMcpKindOptions(): Promise<void> {
   }
 }
 
+const intOr = (raw: string | undefined, fallback: number): number => {
+  const n = parseInt(raw ?? '')
+  return Number.isFinite(n) ? n : fallback
+}
+const boolOn = (raw: string | undefined): boolean => raw === 'true' || raw === '1'
+// deploy.* default to on; only an explicit "false"/"0" turns them off.
+const boolDefaultOn = (raw: string | undefined): boolean => !(raw === 'false' || raw === '0')
+
+/** Puts daemon settings (flat "category.key" strings) into the form. */
+function applyValues(data: Record<string, string>): void {
+  ports.http = intOr(data['ports.http'], 80)
+  ports.https = intOr(data['ports.https'], 443)
+  ports.mysql = intOr(data['ports.mysql'], 3306)
+  ports.redis = intOr(data['ports.redis'], 6379)
+  ports.mailpitSmtp = intOr(data['ports.mailpitSmtp'], 1025)
+  ports.mailpitHttp = intOr(data['ports.mailpitHttp'], 8025)
+  ports.postgresql = intOr(data['ports.postgresql'], 5432)
+  phpFpmBasePort.value = intOr(data['ports.phpFpmBase'], 9000)
+  mcpEnabled.value = boolOn(data['mcp.enabled'])
+  mcpStrictKinds.value = boolOn(data['mcp.strict_kinds'])
+  mcpAlwaysConfirmKinds.value = data['mcp.always_confirm_kinds'] ?? ''
+  // Retention defaults match GrantSweeperService (1 d / 30 d) and the
+  // tool-call sweeper (30 d); 0 disables the grant sweeps.
+  mcpExpiredRetentionDays.value = Math.max(0, intOr(data['mcp.grant_expired_retention_days'], 1))
+  mcpRevokedRetentionDays.value = Math.max(0, intOr(data['mcp.grant_revoked_retention_days'], 30))
+  mcpToolCallRetentionDays.value = Math.max(1, intOr(data['mcp.toolCallRetentionDays'], 30))
+  deployEnabled.value = boolDefaultOn(data['deploy.enabled'])
+  deployUseLegacyHostHandlers.value = boolDefaultOn(data['deploy.useLegacyHostHandlers'])
+  catalogUrl.value = data['daemon.catalogUrl'] ?? ''
+  pluginAutoSync.value = data['plugins.autoSyncEnabled'] === 'true'
+  deviceName.value = data['sync.deviceName'] ?? ''
+}
+
+/** The form as the daemon stores it — the counterpart of applyValues(). */
+function formValues(): Record<string, string> {
+  return {
+    'ports.http': String(ports.http),
+    'ports.https': String(ports.https),
+    'ports.mysql': String(ports.mysql),
+    'ports.redis': String(ports.redis),
+    'ports.mailpitSmtp': String(ports.mailpitSmtp),
+    'ports.mailpitHttp': String(ports.mailpitHttp),
+    'ports.postgresql': String(ports.postgresql),
+    'ports.phpFpmBase': String(phpFpmBasePort.value),
+    'deploy.enabled': String(deployEnabled.value),
+    'deploy.useLegacyHostHandlers': String(deployUseLegacyHostHandlers.value),
+    'daemon.catalogUrl': catalogUrl.value,
+    'plugins.autoSyncEnabled': String(pluginAutoSync.value),
+    'sync.deviceName': deviceName.value,
+  }
+}
+
+// What the daemon held when the form was last loaded or saved. Save sends
+// only the keys that differ from it: every port key in a batch used to make
+// the daemon regenerate vhosts and reload services, and this page stays
+// alive in the background, so re-sending everything also wrote back stale
+// values changed elsewhere meanwhile — mcp.enabled from the MCP page.
+const loadedValues = ref<Record<string, string>>({})
+const changedValues = computed<Record<string, string>>(() =>
+  Object.fromEntries(Object.entries(formValues()).filter(([key, value]) => loadedValues.value[key] !== value)))
+const changedCount = computed(() => Object.keys(changedValues.value).length)
+const isDirty = computed(() => settingsLoaded.value && changedCount.value > 0)
+
+onBeforeRouteLeave(async () => {
+  if (!isDirty.value) return true
+  try {
+    await ElMessageBox.confirm(t('settings.unsaved.leaveMessage'), t('settings.unsaved.leaveTitle'), {
+      type: 'warning',
+      confirmButtonText: t('settings.unsaved.leave'),
+      cancelButtonText: t('settings.unsaved.stay'),
+    })
+  } catch {
+    return false
+  }
+  discardChanges()
+  return true
+})
+
+// The page is kept alive between visits; refresh what other pages may have
+// changed meanwhile, unless the user is in the middle of editing.
+onActivated(() => {
+  if (settingsLoaded.value && !isDirty.value) void loadSettings()
+})
+
 async function loadSettings() {
   try {
-    const data = await fetchSettings()
+    applyValues(await fetchSettings())
+    loadedValues.value = formValues()
     settingsLoaded.value = true
-    if (data['ports.http'])        ports.http = parseInt(data['ports.http'])
-    if (data['ports.https'])       ports.https = parseInt(data['ports.https'])
-    // Phase 6.23 — mcp.enabled flag. Stored as string in SQLite settings;
-    // accept "true"/"1" as truthy, default false when missing.
-    mcpEnabled.value = data['mcp.enabled'] === 'true' || data['mcp.enabled'] === '1'
-    // Phase 7.4e — strict_kinds (default false: lenient).
-    mcpStrictKinds.value = data['mcp.strict_kinds'] === 'true' || data['mcp.strict_kinds'] === '1'
-    // Phase 7.5+++ — always-confirm kinds (comma-separated).
-    mcpAlwaysConfirmKinds.value = data['mcp.always_confirm_kinds'] ?? ''
-    // Phase 7.5+++ — janitor retention windows. parseInt yields NaN on
-    // missing/empty; coalesce to defaults (1d/30d) so the inputs land
-    // on sensible numbers when settings haven't been touched.
-    {
-      const exp = parseInt(data['mcp.grant_expired_retention_days'] ?? '')
-      mcpExpiredRetentionDays.value = Number.isFinite(exp) && exp >= 0 ? exp : 1
-      const rev = parseInt(data['mcp.grant_revoked_retention_days'] ?? '')
-      mcpRevokedRetentionDays.value = Number.isFinite(rev) && rev >= 0 ? rev : 30
-      // Phase 8 — mcp_tool_calls audit retention.
-      const tc = parseInt(data['mcp.toolCallRetentionDays'] ?? '')
-      mcpToolCallRetentionDays.value = Number.isFinite(tc) && tc >= 1 ? tc : 30
-    }
-    // Phase 7.1a — deploy.enabled flag. Default TRUE; only false when explicitly
-    // set to "false"/"0". Mirrors daemon's IsDeployEnabled() helper.
-    deployEnabled.value = !(data['deploy.enabled'] === 'false' || data['deploy.enabled'] === '0')
-    // Phase 7.4 #109-D1 — same boolean parsing convention as deploy.enabled.
-    // Default TRUE means current host-native behaviour stays in effect.
-    deployUseLegacyHostHandlers.value = !(data['deploy.useLegacyHostHandlers'] === 'false'
-      || data['deploy.useLegacyHostHandlers'] === '0')
-    if (data['ports.mysql'])       ports.mysql = parseInt(data['ports.mysql'])
-    if (data['ports.redis'])       ports.redis = parseInt(data['ports.redis'])
-    if (data['ports.mailpitSmtp']) ports.mailpitSmtp = parseInt(data['ports.mailpitSmtp'])
-    if (data['ports.mailpitHttp']) ports.mailpitHttp = parseInt(data['ports.mailpitHttp'])
-    if (data['general.runOnStartup']) runOnStartup.value = data['general.runOnStartup'] === 'true'
-    if (data['paths.apache'])    paths.apache = data['paths.apache']
-    if (data['paths.mysql'])     paths.mysql = data['paths.mysql']
-    if (data['paths.php'])       paths.php = data['paths.php']
-    if (data['paths.redis'])     paths.redis = data['paths.redis']
-    if (data['paths.sitesDir'])  paths.sitesDir = data['paths.sitesDir']
-    if (data['paths.hostsFile']) paths.hostsFile = data['paths.hostsFile']
-    if (data['ports.phpFpmBase']) phpFpmBasePort.value = parseInt(data['ports.phpFpmBase'])
-    if (data['daemon.catalogUrl']) catalogUrl.value = data['daemon.catalogUrl']
-    if (data['plugins.autoSyncEnabled']) pluginAutoSync.value = data['plugins.autoSyncEnabled'] === 'true'
-    if (data['telemetry.enabled']) telemetryEnabled.value = data['telemetry.enabled'] === 'true'
-    if (data['telemetry.crashReports']) telemetryCrashReports.value = data['telemetry.crashReports'] === 'true'
-    if (data['backup.dir']) backupDir.value = data['backup.dir']
-    if (data['backup.scheduleHours']) backupScheduleHours.value = parseInt(data['backup.scheduleHours'])
-  } catch { /* daemon not reachable — keep defaults */ }
+    if (mcpEnabled.value && mcpKindOptions.value.length === 0) void loadMcpKindOptions()
+  } catch { /* daemon not reachable — keep defaults, saving stays blocked */ }
+}
+
+function discardChanges(): void {
+  applyValues(loadedValues.value)
 }
 
 async function syncPluginsNow() {
@@ -1975,7 +1990,7 @@ async function syncPluginsNow() {
     })
     if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
     const result = await r.json()
-    const msg = `Catalog: ${result.catalogCount ?? 0} plugins · installed this run: ${result.installedThisCall ?? 0}`
+    const msg = t('settings.advanced.pluginSyncResult', { count: result.catalogCount ?? 0, installed: result.installedThisCall ?? 0 })
     pluginSyncStatus.value = { ok: true, message: msg }
     ElMessage.success(msg)
     // Re-poll the status endpoint so the "last sync" label reflects the
@@ -1998,20 +2013,18 @@ async function refreshCatalog() {
     // trigger a manual refresh so the new source takes effect without
     // restarting the daemon.
     await saveSettings({ 'daemon.catalogUrl': catalogUrl.value || '' })
+    loadedValues.value = { ...loadedValues.value, 'daemon.catalogUrl': catalogUrl.value || '' }
     const r = await fetch(`${daemonBaseUrl()}/api/binaries/catalog/refresh`, {
       method: 'POST',
       headers: authHeaders(),
     })
     if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
     const result = await r.json()
-    catalogStatus.value = {
-      ok: true,
-      message: `Refreshed: ${result.count ?? 0} releases · ${result.lastFetch ?? 'now'}`,
-    }
+    catalogStatus.value = { ok: true, message: t('settingsToast.catalogRefreshed', { count: result.count ?? 0 }) }
     ElMessage.success(t('settingsToast.catalogRefreshed', { count: result.count ?? 0 }))
   } catch (e) {
     const msg = errorMessage(e)
-    catalogStatus.value = { ok: false, message: `Refresh failed: ${msg}` }
+    catalogStatus.value = { ok: false, message: t('settingsToast.refreshFailed', { err: msg }) }
     ElMessage.error(t('settingsToast.refreshFailed', { err: msg }))
   } finally {
     refreshingCatalog.value = false
@@ -2041,13 +2054,10 @@ async function testCatalogReachable() {
     const body = await r.json()
     catalogStatus.value = {
       ok: true,
-      message: `Reachable: ${body.service ?? 'catalog-api'} v${body.version ?? '?'}`,
+      message: t('settings.advanced.catalogReachable', { service: body.service ?? 'catalog-api', version: body.version ?? '?' }),
     }
   } catch (e) {
-    catalogStatus.value = {
-      ok: false,
-      message: `Unreachable: ${errorMessage(e)}. Is the sidecar running?`,
-    }
+    catalogStatus.value = { ok: false, message: t('settings.advanced.catalogUnreachable', { err: errorMessage(e) }) }
   } finally {
     testingCatalog.value = false
   }
@@ -2092,9 +2102,9 @@ const editingDeviceName = ref<string | null>(null)
 async function unlinkDevice(row: CatalogDeviceInfo) {
   try {
     await ElMessageBox.confirm(
-      `Unlink ${row.name || row.device_id.slice(0, 12)} from your account? That device will need to sign in again to sync.`,
-      'Unlink device',
-      { type: 'warning', confirmButtonText: 'Unlink', cancelButtonText: 'Cancel' },
+      t('settings.devices.unlinkConfirm', { name: row.name || row.device_id.slice(0, 12) }),
+      t('settings.devices.unlinkTitle'),
+      { type: 'warning', confirmButtonText: t('settings.devices.unlink'), cancelButtonText: t('common.cancel') },
     )
   } catch { return /* user cancelled */ }
 
@@ -2280,6 +2290,14 @@ async function loadDevicesAccount() {
 
 async function pushMyConfigTo(targetDeviceId: string) {
   if (!accountToken.value || !deviceId.value) return
+  const target = accountDevices.value.find(d => d.device_id === targetDeviceId)
+  try {
+    await ElMessageBox.confirm(
+      t('settings.devices.pushConfirm', { name: target?.name || targetDeviceId.slice(0, 12) }),
+      t('settings.devices.pushTitle'),
+      { type: 'warning', confirmButtonText: t('settings.devices.pushHere'), cancelButtonText: t('common.cancel') },
+    )
+  } catch { return }
   pushingTo.value = targetDeviceId
   try {
     await pushConfigToDevice(getCatalogUrl(), accountToken.value, targetDeviceId, deviceId.value)
@@ -2323,7 +2341,6 @@ async function loadDeviceId() {
       deviceId.value = id
       await saveSettings({ 'sync.deviceId': id })
     }
-    if (data['sync.deviceName']) deviceName.value = data['sync.deviceName']
     if (data['sync.lastSyncTime']) lastSyncTime.value = data['sync.lastSyncTime']
   } catch { /* daemon not reachable */ }
 }
@@ -2353,11 +2370,7 @@ async function buildSyncPayload(): Promise<Record<string, unknown>> {
   const rawSites: Array<{ domain: string } & Record<string, unknown>> = sitesRes.ok ? await sitesRes.json() : []
   const system = systemRes.ok ? await systemRes.json() : null
 
-  // Filter settings: drop local-only keys (paths, ports, backup.dir)
-  const settings: Record<string, unknown> = {}
-  for (const [key, value] of Object.entries(rawSettings)) {
-    if (isSettingSyncable(key)) settings[key] = value
-  }
+  const settings = pickSyncableSettings(rawSettings)
 
   // Filter sites: keep only SITE_SYNC_FIELDS per site (plus domain as the key)
   const sites = rawSites.map(site => {
@@ -2368,10 +2381,11 @@ async function buildSyncPayload(): Promise<Record<string, unknown>> {
     return filtered
   })
 
+  // No deviceId here: the push request names the device separately, and an
+  // exported file must not carry this machine's identity to another one.
   return {
     exportedAt: new Date().toISOString(),
-    version: appVersion,
-    deviceId: deviceId.value,
+    version: appVersion.value,
     deviceName: deviceName.value,
     settings,
     sites,
@@ -2388,6 +2402,7 @@ async function pushToCloud() {
       'sync.deviceName': deviceName.value,
       'sync.lastSyncTime': new Date().toISOString(),
     })
+    loadedValues.value = { ...loadedValues.value, 'sync.deviceName': deviceName.value }
 
     const payload = await buildSyncPayload()
     // Task 33: route through daemon proxy so catalog JWT stays server-side
@@ -2404,38 +2419,20 @@ async function pushToCloud() {
       throw new Error(text || `HTTP ${r.status}`)
     }
     lastSyncTime.value = new Date().toISOString()
-    syncStatus.value = { ok: true, message: 'Pushed successfully' }
+    syncStatus.value = { ok: true, message: t('settings.sync.status.pushed') }
     ElMessage.success(t('settingsToast.configPushedToCloud'))
   } catch (e) {
     const msg = errorMessage(e)
-    syncStatus.value = { ok: false, message: `Push failed: ${msg}` }
+    syncStatus.value = { ok: false, message: t('settingsToast.pushFailed', { err: msg }) }
     ElMessage.error(t('settingsToast.pushFailed', { err: msg }))
   } finally {
     syncing.value = false
   }
 }
 
-// ── Sync field classification (Strategy D) ────────────────────────────
-// Each settings key is tagged as "sync" (portable across devices) or
-// "local" (machine-specific paths/ports that must stay untouched on
-// pull). The classification lives here so adding a new settings key
-// forces the developer to decide "is this sync or local?" at definition
-// time. Site fields follow the same principle: domain/phpVersion/ssl/
-// aliases/framework/cloudflare are sync; documentRoot/ports are local.
-const SYNC_SETTINGS_PREFIXES = [
-  'general.', 'telemetry.', 'backup.scheduleHours', 'daemon.catalogUrl',
-  'sync.',
-]
-const LOCAL_SETTINGS_PREFIXES = [
-  'paths.', 'ports.', 'backup.dir',
-]
-
-function isSettingSyncable(key: string): boolean {
-  if (SYNC_SETTINGS_PREFIXES.some(p => key.startsWith(p))) return true
-  if (LOCAL_SETTINGS_PREFIXES.some(p => key.startsWith(p))) return false
-  return true // unknown keys default to sync
-}
-
+// Settings classification lives in utils/settingsSync (an allowlist). Site
+// fields follow the same principle: domain/phpVersion/ssl/aliases/framework/
+// cloudflare are portable; documentRoot/ports stay local.
 const SITE_SYNC_FIELDS = new Set([
   'domain', 'phpVersion', 'sslEnabled', 'aliases', 'framework',
   'environment', 'cloudflare', 'nodeUpstreamPort', 'nodeStartCommand',
@@ -2444,6 +2441,13 @@ const SITE_SYNC_FIELDS = new Set([
 // excluded by iterating SITE_SYNC_FIELDS only — no need for a second set.
 
 async function pullFromCloud() {
+  try {
+    await ElMessageBox.confirm(t('settings.sync.pullConfirm'), t('settings.sync.pullFromCloud'), {
+      type: 'warning',
+      confirmButtonText: t('settings.sync.pullFromCloud'),
+      cancelButtonText: t('common.cancel'),
+    })
+  } catch { return }
   pulling.value = true
   syncStatus.value = null
   try {
@@ -2458,7 +2462,7 @@ async function pullFromCloud() {
     })
     if (!r.ok) {
       if (r.status === 404) {
-        syncStatus.value = { ok: false, message: 'No cloud snapshot found for this device' }
+        syncStatus.value = { ok: false, message: t('settings.sync.status.noSnapshot') }
         ElMessage.info(t('settingsToast.noCloudSnapshot'))
         return
       }
@@ -2473,14 +2477,7 @@ async function pullFromCloud() {
     // keys (paths, ports, backup dir) stay untouched so pulling another
     // device's snapshot doesn't overwrite C:\work\htdocs with /home/user.
     if (payload?.settings && typeof payload.settings === 'object') {
-      const merged: Record<string, string> = {}
-      for (const [key, value] of Object.entries(payload.settings as Record<string, string>)) {
-        if (isSettingSyncable(key)) {
-          merged[key] = value
-        }
-        // Local keys: keep existing local value (skip remote)
-      }
-
+      const merged = pickSyncableSettings(payload.settings as Record<string, string>)
       if (Object.keys(merged).length > 0) {
         await saveSettings(merged)
       }
@@ -2541,12 +2538,12 @@ async function pullFromCloud() {
       }
     }
 
-    syncStatus.value = { ok: true, message: `Pulled from cloud (${data.updated_at ?? 'unknown'})` }
+    syncStatus.value = { ok: true, message: t('settings.sync.status.pulled', { date: formatDate(data.updated_at) }) }
     ElMessage.success(t('settingsToast.configSynced'))
     await loadSettings()
   } catch (e) {
     const msg = errorMessage(e)
-    syncStatus.value = { ok: false, message: `Pull failed: ${msg}` }
+    syncStatus.value = { ok: false, message: t('settingsToast.pullFailed', { err: msg }) }
     ElMessage.error(t('settingsToast.pullFailed', { err: msg }))
   } finally {
     pulling.value = false
@@ -2572,11 +2569,11 @@ async function checkCloudExists() {
     syncStatus.value = {
       ok: data.has_config,
       message: data.has_config
-        ? `Cloud snapshot exists (updated ${data.updated_at ?? 'unknown'})`
-        : 'No cloud snapshot for this device',
+        ? t('settings.sync.status.exists', { date: formatDate(data.updated_at) })
+        : t('settings.sync.status.noSnapshot'),
     }
   } catch (e) {
-    syncStatus.value = { ok: false, message: `Check failed: ${errorMessage(e)}` }
+    syncStatus.value = { ok: false, message: t('settings.sync.status.checkFailed', { err: errorMessage(e) }) }
   } finally {
     checkingCloud.value = false
   }
@@ -2606,26 +2603,21 @@ async function importSettings(event: Event) {
     const text = await file.text()
     const data = JSON.parse(text)
     if (!data.settings || typeof data.settings !== 'object') {
-      throw new Error('Invalid settings file — missing "settings" object')
+      throw new Error(t('settings.sync.importInvalid'))
     }
-    const fromDevice = data.deviceId ?? 'unknown'
-    const fromDate = data.exportedAt ? new Date(data.exportedAt).toLocaleString() : 'unknown'
     await ElMessageBox.confirm(
-      `Import settings from "${file.name}"?\n\n`
-      + `Source device: ${fromDevice}\n`
-      + `Exported: ${fromDate}\n\n`
-      + `Sync-classified settings (preferences, telemetry) will be applied.\n`
-      + `Local settings (paths, ports) will be kept unchanged.\n`
-      + (data.sites?.length ? `${data.sites.length} site(s) will be merged by domain.` : ''),
-      'Import settings',
-      { confirmButtonText: 'Import', type: 'warning' },
+      t('settings.sync.importConfirm', {
+        file: file.name,
+        device: data.deviceName || '—',
+        date: data.exportedAt ? new Date(data.exportedAt).toLocaleString(locale.value) : '—',
+      }),
+      t('settings.sync.importTitle'),
+      { confirmButtonText: t('settings.sync.importFile'), cancelButtonText: t('common.cancel'), type: 'warning' },
     )
 
-    // Use the same merge logic as pullFromCloud — sync fields only
-    const merged: Record<string, string> = {}
-    for (const [key, value] of Object.entries(data.settings as Record<string, string>)) {
-      if (isSettingSyncable(key)) merged[key] = value
-    }
+    // Same allowlist as pullFromCloud: a foreign file must not replace the
+    // catalog login or this device's identity.
+    const merged = pickSyncableSettings(data.settings as Record<string, string>)
     if (Object.keys(merged).length > 0) {
       await saveSettings(merged)
     }
@@ -2638,55 +2630,39 @@ async function importSettings(event: Event) {
 }
 
 // ── Update check ──────────────────────────────────────────────────────
+// Two sources: GitHub's latest release for the version on offer and its
+// notes, and electron-updater in the main process, which downloads and
+// installs. Portable and dev builds have no updater and link to the
+// release page instead.
 const currentVersion = appVersion
 
-const updateCheck = reactive<{
-  loading: boolean
-  downloading: boolean
-  latest: string | null
-  hasUpdate: boolean
-  downloadUrl: string | null
-  lastCheckedIso: string | null
-  error: string | null
-  // Task 06: release-notes markdown body from GitHub for inline
-  // display so the user sees "what changes before clicking install.
-  releaseNotes: string | null
-  releaseUrl: string | null
-  // Task 06: download progress (from electron-updater download-progress
-  // IPC). 0–100 when actively downloading, null otherwise.
-  progressPercent: number | null
-  progressBytes: string | null
-}>({
+const updateCheck = reactive<EasyUpdateCheck>({
   loading: false,
-  downloading: false,
   latest: null,
-  hasUpdate: false,
-  downloadUrl: null,
   lastCheckedIso: localStorage.getItem('wdc-last-update-check'),
   error: null,
   releaseNotes: null,
   releaseUrl: null,
-  progressPercent: null,
-  progressBytes: null,
 })
+const updaterState = ref<AppUpdaterState | null>(null)
+let unsubscribeUpdater: (() => void) | null = null
+
+const hasUpdate = computed(() => !!updateCheck.latest
+  && compareSemver(versionCore(updateCheck.latest), versionCore(currentVersion.value)) > 0)
 
 async function runUpdateCheck() {
   updateCheck.loading = true
   updateCheck.error = null
+  if (updaterState.value && updaterState.value.status !== 'disabled') {
+    void window.electronAPI?.updaterCheck?.()
+  }
   try {
     const r = await fetch('https://api.github.com/repos/nks-hub/webdev-console/releases/latest')
-    if (!r.ok) throw new Error(`GitHub API ${r.status}`)
-    const data = await r.json() as {
-      tag_name?: string
-      html_url?: string
-      body?: string
-      assets?: Array<{ browser_download_url: string; name: string }>
-    }
-    const latest = (data.tag_name ?? '').replace(/^v/, '')
-    updateCheck.latest = latest
-    updateCheck.hasUpdate = compareSemver(latest, currentVersion.value) > 0
-    const setupAsset = (data.assets ?? []).find(a => /setup.*\.exe$/i.test(a.name))
-    updateCheck.downloadUrl = setupAsset?.browser_download_url ?? data.html_url ?? null
+    // Unauthenticated GitHub API allows 60 requests an hour per IP.
+    if (r.status === 403 || r.status === 429) throw new Error(t('settings.update.rateLimited'))
+    if (!r.ok) throw new Error(t('settings.update.checkFailed', { status: r.status }))
+    const data = await r.json() as { tag_name?: string; html_url?: string; body?: string }
+    updateCheck.latest = (data.tag_name ?? '').replace(/^v/, '') || null
     updateCheck.releaseNotes = data.body ?? null
     updateCheck.releaseUrl = data.html_url ?? null
     updateCheck.lastCheckedIso = new Date().toISOString()
@@ -2697,6 +2673,26 @@ async function runUpdateCheck() {
     updateCheck.loading = false
   }
 }
+
+async function installUpdate() {
+  await window.electronAPI?.updaterInstall?.()
+}
+
+function openReleasePage() {
+  const url = updateCheck.releaseUrl || 'https://github.com/nks-hub/webdev-console/releases/latest'
+  if (window.electronAPI?.openExternal) void window.electronAPI.openExternal(url)
+  else window.open(url, '_blank')
+}
+
+// Simple-mode panel subtitle: the current state in a few words.
+const updateSubtitle = computed(() => {
+  const u = updaterState.value
+  if (u?.status === 'downloaded') return t('settings.update.state.downloaded', { v: u.version ?? '' })
+  if (u?.status === 'downloading') return t('settings.update.state.downloading', { p: u.percent ?? 0 })
+  if (hasUpdate.value) return t('settings.update.state.available', { v: updateCheck.latest ?? '' })
+  if (updateCheck.latest) return t('settings.update.upToDate')
+  return ''
+})
 
 // Task 06: minimal safe markdown-to-HTML for GitHub release notes.
 // Intentionally conservative — only handles headings, bold/italic, code
@@ -2721,26 +2717,14 @@ function renderReleaseNotes(md: string): string {
     .replace(/\n\n/g, '<br/><br/>')
 }
 
-async function downloadAndInstall() {
-  if (!updateCheck.downloadUrl) return
-  updateCheck.downloading = true
-  try {
-    if (window.electronAPI?.openExternal) window.electronAPI.openExternal(updateCheck.downloadUrl)
-    else window.open(updateCheck.downloadUrl, '_blank')
-    ElMessage.info(t('settings.update.downloadStarted'))
-  } finally {
-    updateCheck.downloading = false
-  }
-}
-
+const relativeTime = computed(() => new Intl.RelativeTimeFormat(locale.value, { numeric: 'auto' }))
+/** "před 5 minutami" / "5 minutes ago" in the UI language. */
 function formatRelativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime()
-  const min = Math.floor(diff / 60_000)
-  if (min < 1) return t('common.justNow') || 'právě teď'
-  if (min < 60) return `${min} min`
-  const h = Math.floor(min / 60)
-  if (h < 24) return `${h} h`
-  return `${Math.floor(h / 24)} d`
+  const minutes = Math.round((new Date(iso).getTime() - Date.now()) / 60_000)
+  if (Math.abs(minutes) < 60) return relativeTime.value.format(minutes, 'minute')
+  const hours = Math.round(minutes / 60)
+  if (Math.abs(hours) < 24) return relativeTime.value.format(hours, 'hour')
+  return relativeTime.value.format(Math.round(hours / 24), 'day')
 }
 
 // Iter 29: live-refresh readiness on deploy.* settings save from another
@@ -2751,9 +2735,11 @@ let unsubscribeDeploySettingsSse: (() => void) | null = null
 
 onMounted(async () => {
   void loadSettings()
-  void loadDatabases()
   void loadPhpVersions()
-  void loadBackups()
+  void loadRunOnStartup()
+  void window.electronAPI?.updaterGetStatus?.().then((state) => { updaterState.value = state }).catch(() => {})
+  unsubscribeUpdater = window.electronAPI?.onUpdaterStatus?.((state) => { updaterState.value = state }) ?? null
+  void loadTelemetryConsent()
   void loadDeviceId()
   void loadPluginCatalogStatus()
   void loadPluginPorts()
@@ -2763,27 +2749,7 @@ onMounted(async () => {
   })
   void loadMysqlRootStatus()
   void loadSnapshots()
-  // Phase 7.5+++ — fetch destructive op kinds for the always-confirm
-  // multi-select. Best-effort: silent failure leaves the input as the
-  // free-text fallback, no toast (kinds endpoint may be MCP-disabled).
-  void loadMcpKindOptions()
-  if (accountToken.value) {
-    void loadDevicesAccount()
-    // Mirror the renderer's accountToken into daemon SettingsStore so
-    // CatalogHeartbeatService can see it. Needed for sessions where the
-    // token was set in a previous Electron run (stored in localStorage)
-    // and the daemon was restarted since — its SettingsStore never saw
-    // the login. Silent fail — if daemon is unreachable we'll retry on
-    // next Settings page mount.
-    void (async () => {
-      try {
-        await saveSettings({ 'sync.accountToken': accountToken.value })
-        // Kick off an immediate device push so the cloud admin UI shows
-        // this device as online without waiting for the 60 s heartbeat.
-        void autoRegisterDeviceAfterLogin()
-      } catch { /* no-op */ }
-    })()
-  }
+  if (accountToken.value) void loadDevicesAccount()
   try {
     const r = await fetch(`${daemonBaseUrl()}/api/system`, { headers: authHeaders() })
     if (r.ok) systemInfo.value = await r.json()
@@ -2804,52 +2770,57 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  unsubscribeUpdater?.()
+  unsubscribeUpdater = null
   if (unsubscribeDeploySettingsSse) {
     unsubscribeDeploySettingsSse()
     unsubscribeDeploySettingsSse = null
   }
 })
 
+// New ports something else already listens on ("8080 (nginx)"). Only the
+// changed ones: the current ports are held by our own running services.
+async function portsInUse(patch: Record<string, string>): Promise<string[]> {
+  const changed = Object.entries(patch)
+    .filter(([key]) => key.startsWith('ports.') && key !== 'ports.phpFpmBase')
+    .map(([, value]) => value)
+  const results = await Promise.all(changed.map(async (port) => {
+    try {
+      const r = await fetch(`${daemonBaseUrl()}/api/ports/check?port=${encodeURIComponent(port)}`, { headers: authHeaders() })
+      if (!r.ok) return null
+      const info = await r.json() as { inUse?: boolean; ownerName?: string | null }
+      return info.inUse ? (info.ownerName ? `${port} (${info.ownerName})` : port) : null
+    } catch { return null }
+  }))
+  return results.filter((x): x is string => x !== null)
+}
+
 async function save() {
   if (!settingsLoaded.value) {
     ElMessage.error(t('settings.loadFailedSaveBlocked'))
     return
   }
+  const patch = changedValues.value
+  if (Object.keys(patch).length === 0) return
+  if (duplicatePorts.value.length > 0) {
+    ElMessage.error(t('settings.ports.duplicate', { ports: duplicatePorts.value.join(', ') }))
+    return
+  }
+  const busy = await portsInUse(patch)
+  if (busy.length > 0) {
+    try {
+      await ElMessageBox.confirm(t('settings.ports.inUseConfirm', { ports: busy.join(', ') }), t('settings.ports.inUseTitle'), {
+        type: 'warning',
+        confirmButtonText: t('settings.unsaved.save'),
+        cancelButtonText: t('common.cancel'),
+      })
+    } catch { return }
+  }
   saving.value = true
   try {
-    const payload: Record<string, string> = {
-      'ports.http':          String(ports.http),
-      'ports.https':         String(ports.https),
-      'ports.mysql':         String(ports.mysql),
-      'ports.redis':         String(ports.redis),
-      'ports.mailpitSmtp':   String(ports.mailpitSmtp),
-      'mcp.enabled':         String(mcpEnabled.value),
-      'mcp.strict_kinds':    String(mcpStrictKinds.value),
-      'mcp.always_confirm_kinds': mcpAlwaysConfirmKinds.value,
-      'mcp.grant_expired_retention_days': String(mcpExpiredRetentionDays.value),
-      'mcp.grant_revoked_retention_days': String(mcpRevokedRetentionDays.value),
-      'mcp.toolCallRetentionDays': String(mcpToolCallRetentionDays.value),
-      'deploy.enabled':      String(deployEnabled.value),
-      'deploy.useLegacyHostHandlers': String(deployUseLegacyHostHandlers.value),
-      'ports.mailpitHttp':   String(ports.mailpitHttp),
-      'general.runOnStartup': String(runOnStartup.value),
-      'paths.apache':   paths.apache,
-      'paths.mysql':    paths.mysql,
-      'paths.php':      paths.php,
-      'paths.redis':    paths.redis,
-      'paths.sitesDir': paths.sitesDir,
-      'paths.hostsFile': paths.hostsFile,
-      'ports.phpFpmBase': String(phpFpmBasePort.value),
-      'daemon.catalogUrl': catalogUrl.value,
-      'plugins.autoSyncEnabled': String(pluginAutoSync.value),
-      'telemetry.enabled': String(telemetryEnabled.value),
-      'telemetry.crashReports': String(telemetryCrashReports.value),
-      'backup.dir': backupDir.value,
-      'backup.scheduleHours': String(backupScheduleHours.value),
-    }
-    // saveSettings throws on non-ok with the daemon's error message extracted,
-    // giving better feedback than the previous raw-HTTP-status fallback.
-    await saveSettings(payload)
+    // saveSettings throws on non-ok with the daemon's error message extracted.
+    await saveSettings(patch)
+    loadedValues.value = { ...loadedValues.value, ...patch }
     ElMessage.success(t('settingsToast.settingsSaved'))
   } catch (e) {
     ElMessage.error(t('settingsToast.failedToSave', { err: errorMessage(e) }))
@@ -2917,11 +2888,6 @@ async function save() {
 .simple-runtime-grid {
   display: grid;
   gap: var(--wdc-space-1);
-}
-
-.simple-settings-footer {
-  grid-column: 1 / -1;
-  margin-top: 0 !important;
 }
 
 .settings-tabs {
@@ -3027,6 +2993,13 @@ async function save() {
   gap: var(--wdc-space-2);
 }
 
+.footer-unsaved {
+  align-self: center;
+  margin-right: auto;
+  font-size: 0.85rem;
+  color: var(--wdc-text-2);
+}
+
 @media (max-width: 980px) {
   .simple-settings-grid {
     grid-template-columns: minmax(0, 1fr);
@@ -3129,11 +3102,11 @@ async function save() {
 .about-subtitle { font-size: 0.88rem; font-weight: 600; color: var(--el-text-color-primary); }
 .about-desc { font-size: 0.82rem; color: var(--el-text-color-secondary); line-height: 1.55; max-width: 56ch; }
 
-.about-stack {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--wdc-space-1);
-  margin-top: var(--wdc-space-0-5);
+.simple-hidden-tab {
+  grid-column: 1 / -1;
+}
+.simple-hidden-tab :deep(.el-alert__description) {
+  margin-top: var(--wdc-space-2);
 }
 
 .about-system { font-size: 0.85rem; }
@@ -3171,19 +3144,12 @@ async function save() {
   flex: 1 1 0;
   min-width: 0;
 }
-.about-sso-status { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--el-text-color-secondary); }
+.about-sso-status { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--el-text-color-secondary); }
+.about-sso-status .sys-label, .about-sso-status .sys-value { white-space: nowrap; }
 
-.db-list { margin-bottom: 16px; }
-.db-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--wdc-space-2) var(--wdc-space-3);
-  border-bottom: 1px solid var(--wdc-border);
-}
-.db-row:last-child { border-bottom: none; }
-.db-name { font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; color: var(--wdc-text); }
-.db-create { display: flex; gap: 8px; margin-top: 12px; }
+.paths-backup-actions { display: flex; gap: var(--wdc-space-2); flex-wrap: wrap; }
+.sync-sign-in { margin-bottom: var(--wdc-space-3); }
+.sync-sign-in :deep(.el-alert__description) { margin-top: var(--wdc-space-2); }
 
 /* Sync tab */
 .settings-card {

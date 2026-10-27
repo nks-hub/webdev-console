@@ -75,10 +75,14 @@ internal static class SystemEndpoints
                 sites = sm.Sites.Count,
                 plugins = pluginLoader.Plugins.Count,
                 binaries = bm.ListInstalled().Count,
+                // Where all daemon state lives (WDC_DATA_DIR / portable.txt aware),
+                // shown read-only in Settings → Paths.
+                dataDir = WdcPaths.Root,
                 os = new
                 {
                     platform = Environment.OSVersion.Platform.ToString(),
                     version = Environment.OSVersion.VersionString,
+                    name = FriendlyOsName(),
                     machine = Environment.MachineName,
                     tag = osTag,
                     arch = archTag,
@@ -99,5 +103,17 @@ internal static class SystemEndpoints
                 },
             });
         });
+    }
+
+    /// <summary>
+    /// "Windows 11 (build 26100)" instead of "Microsoft Windows NT 10.0.26100.0":
+    /// Windows 11 still reports version 10.0 and differs only by build number.
+    /// </summary>
+    internal static string FriendlyOsName()
+    {
+        var v = Environment.OSVersion.Version;
+        if (OperatingSystem.IsWindows() && v.Major == 10)
+            return $"Windows {(v.Build >= 22000 ? "11" : "10")} (build {v.Build})";
+        return System.Runtime.InteropServices.RuntimeInformation.OSDescription;
     }
 }

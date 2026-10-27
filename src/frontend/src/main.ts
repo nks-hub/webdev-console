@@ -79,10 +79,15 @@ function stripQuery(raw: string): string {
   }
 }
 
-const sentryEnabled = VITE_SENTRY_DSN.length > 0
+// Set once the renderer client is running — only when the main process
+// started Sentry, which it does only with the user's crash-report consent.
+let sentryEnabled = false
 
-try {
-  if (sentryEnabled) {
+async function startRendererSentry(): Promise<void> {
+  if (!VITE_SENTRY_DSN) return
+  const state = await window.electronAPI?.crashReportsState?.().catch(() => null)
+  if (!state?.active) return
+  try {
   // @sentry/electron/renderer re-exports from @sentry/browser which does
   // NOT ship vueIntegration — that one lives in @sentry/vue and we don't
   // pull it in to keep the renderer bundle lean. Vue component errors
@@ -160,11 +165,13 @@ try {
     Sentry.setTag('route', to.name?.toString() || to.path)
     Sentry.addBreadcrumb({ category: 'navigation', message: `→ ${to.fullPath}`, level: 'info' })
   })
+  sentryEnabled = true
+  } catch (err) {
+    // A broken Sentry init must never take down the UI.
+    console.warn('[Sentry] renderer init skipped:', err)
   }
-} catch (err) {
-  // A broken Sentry init must never take down the UI.
-  console.warn('[Sentry] renderer init skipped:', err)
 }
+void startRendererSentry()
 
 // Renderer → main log bridge. preload.ts exposes `rendererLog` via
 // contextBridge; we fan every console.warn/error + Vue error +

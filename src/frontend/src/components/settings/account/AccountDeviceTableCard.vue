@@ -17,15 +17,18 @@
               @keydown.enter.prevent="emit('saveName', row)"
               @keydown.escape.prevent="emit('update:editingDeviceName', null)"
             />
-            <span
+            <!-- A button, so renaming works from the keyboard too. -->
+            <button
               v-else
+              type="button"
               class="device-name-text mono"
               :style="row.is_current ? 'font-weight: 700' : ''"
-              :title="$t('settings.devices.doubleClickRename')"
-              @dblclick="emit('startEditName', row)"
+              :title="$t('settings.devices.clickRename')"
+              :aria-label="$t('settings.devices.renameAria', { name: deviceLabel(row) })"
+              @click="emit('startEditName', row)"
             >
               {{ deviceLabel(row) }}
-            </span>
+            </button>
             <el-tag v-if="row.is_current" size="small" type="success" effect="dark" class="current-tag">{{ $t('settings.devices.thisTag') }}</el-tag>
           </div>
         </template>
@@ -118,7 +121,18 @@ function deviceLabel(row: CatalogDeviceInfo): string {
 }
 
 .device-name-text {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
   cursor: pointer;
+}
+
+.device-name-text:focus-visible {
+  outline: 2px solid var(--wdc-accent);
+  outline-offset: 2px;
 }
 
 .device-name-text:hover {

@@ -42,7 +42,7 @@
 
     <h4 class="section-heading">{{ t('settings.general.sectionStartup') }}</h4>
     <el-form class="easy-settings-form" label-position="top" size="small">
-      <el-form-item :label="t('settings.general.runOnStartup')">
+      <el-form-item v-if="runOnStartupSupported" :label="t('settings.general.runOnStartup')">
         <el-switch
           :model-value="runOnStartup"
           @update:model-value="(value: boolean) => emit('update:runOnStartup', value)"
@@ -53,7 +53,8 @@
         <el-select
           :model-value="defaultPhp"
           style="width: 160px"
-          :placeholder="t('settings.general.selectPlaceholder')"
+          :disabled="phpVersions.length === 0"
+          :placeholder="phpVersions.length === 0 ? t('settings.general.noPhpInstalled') : t('settings.general.selectPlaceholder')"
           @update:model-value="(value: string) => emit('update:defaultPhp', value)"
         >
           <el-option v-for="version in phpVersions" :key="version" :label="'PHP ' + version" :value="version" />
@@ -112,6 +113,8 @@ withDefaults(defineProps<{
   themeMode: ThemeMode
   isAdvanced: boolean
   runOnStartup: boolean
+  /** False in portable and dev builds, which register no OS login item. */
+  runOnStartupSupported?: boolean
   defaultPhp: string
   phpVersions: string[]
   flushingDns: boolean
@@ -122,7 +125,7 @@ withDefaults(defineProps<{
    *  Advanced tab. The Simple-mode panel passes false because the
    *  surrounding SettingsCard header already shows the description. */
   standalone?: boolean
-}>(), { standalone: true })
+}>(), { standalone: true, runOnStartupSupported: false })
 
 const emit = defineEmits<{
   'update:locale': [value: string]

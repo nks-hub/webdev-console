@@ -56,6 +56,16 @@ public sealed class DaemonClient : IDisposable
         return await response.Content.ReadFromJsonAsync<JsonElement>();
     }
 
+    /// <summary>
+    /// POST that returns status and body instead of throwing, for proxied
+    /// calls whose error body carries the reason (sync push/pull).
+    /// </summary>
+    public async Task<(int Status, string Body)> PostRawAsync(string path, HttpContent? content = null)
+    {
+        using var response = await _http.PostAsync($"{_baseUrl}{path}", content);
+        return ((int)response.StatusCode, await response.Content.ReadAsStringAsync());
+    }
+
     public async Task<JsonElement> PutAsync(string path, HttpContent? content = null)
     {
         using var response = await _http.PutAsync($"{_baseUrl}{path}", content ?? new StringContent(""));
