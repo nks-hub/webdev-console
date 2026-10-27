@@ -151,4 +151,20 @@ public sealed class BackupSchedulerTests : IDisposable
         var created = Assert.Single(BackupFileNames());
         Assert.True(BackupManager.IsScheduledBackup(created));
     }
+
+    [Fact]
+    public void RunTick_UnsetSchedule_RunsOnTheDefaultThatSettingsReport()
+    {
+        // GET /api/settings reports backup.scheduleHours = 24 on a fresh
+        // install; the scheduler must treat the missing key the same way (on),
+        // not as 0 (off).
+        Assert.Equal(
+            BackupScheduler.DefaultScheduleHours.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            NKS.WebDevConsole.Daemon.Config.SettingsKeys.Defaults["backup.scheduleHours"]);
+
+        NewScheduler().RunTick();
+
+        var created = Assert.Single(BackupFileNames());
+        Assert.True(BackupManager.IsScheduledBackup(created));
+    }
 }
