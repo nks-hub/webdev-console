@@ -46,6 +46,183 @@ internal static class HostsEndpoints
             : null;
     }
 
+    private const string BeginMarker = "# BEGIN NKS WebDev Console";
+    private const string EndMarker = "# END NKS WebDev Console";
+
+    // F82 helper: detect IP-like tokens so ParseHostsEntries can skip
+    // comment headers (`## MAMP PRO hosts`) that would otherwise be
+    // parsed as ip="MAMP" hostname="PRO".
+    private static bool LooksLikeIp(string token)
+    {
+        if (string.IsNullOrEmpty(token)) return false;
+        // IPv6 has at least one ':' and no spaces.
+        if (token.Contains(':')) return true;
+        // IPv4 dotted-quad: 4 dot-separated decimal octets 0-255.
+        var octets = token.Split('.');
+        if (octets.Length != 4) return false;
+        foreach (var o in octets)
+        {
+            if (!byte.TryParse(o, System.Globalization.NumberStyles.Integer,
+                    System.Globalization.CultureInfo.InvariantCulture, out _))
+                return false;
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// Parses the hosts file into entries. Commented-out lines count only inside
+    /// the WDC block (as disabled WDC entries); outside it they are plain
+    /// comments, e.g. the rhino.acme.com samples in the stock Windows file.
+    /// </summary>
+    internal static List<HostsEntryDto> ParseHostsEntries(string content)
+    {
+        // Well-known external entries that ship with Windows
+        var windowsDefaults = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "localhost", "ip6-localhost", "ip6-loopback", "broadcasthost",
+        };
+        var windowsDefaultIps = new HashSet<string> { "127.0.0.1", "::1", "255.255.255.255", "fe80::1%lo0" };
+
+        var entries = new List<HostsEntryDto>();
+        var lines = content.Split('\n');
+        bool inWdc = false;
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            var raw = lines[i].TrimEnd('\r');
+            var trimmed = raw.Trim();
+
+            if (trimmed == BeginMarker) { inWdc = true; continue; }
+            if (trimmed == EndMarker)   { inWdc = false; continue; }
+
+            // Skip fully-empty lines
+            if (trimmed.Length == 0) continue;
+
+            bool enabled = !trimmed.StartsWith('#');
+            if (!enabled && !inWdc) continue;
+            var working = enabled ? trimmed : trimmed.TrimStart('#').Trim();
+
+            // Extract inline comment
+            string? comment = null;
+            var commentIdx = working.IndexOf('#');
+            if (commentIdx >= 0)
+            {
+                comment = working[(commentIdx + 1)..].Trim();
+                if (comment.Length == 0) comment = null;
+                working = working[..commentIdx].Trim();
+            }
+
+            var parts = working.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 2) continue;
+
+            var ip = parts[0];
+            // F82: reject lines whose first token doesn't look like an IP. MAMP /
+            // XAMPP dump section headers like `## MAMP PRO hosts` into the file —
+            // after strip-# + trim the working content becomes `MAMP PRO hosts`
+            // and the old parser happily created an entry with ip="MAMP"
+            // hostname="PRO", which is the "bordel" showing up in the UI table.
+            // Treat such lines as pure comments (skip them). IPv4 dotted-quad OR
+            // any token with a colon (IPv6) is accepted; everything else is junk.
+            if (!LooksLikeIp(ip)) continue;
+
+            for (int j = 1; j < parts.Length; j++)
+            {
+                var hostname = parts[j];
+                string source;
+                if (inWdc)
+                    source = "wdc";
+                else if (windowsDefaults.Contains(hostname) || windowsDefaultIps.Contains(ip))
+                    source = "external";
+                else
+                    source = "custom";
+
+                entries.Add(new HostsEntryDto(
+                    Enabled:    enabled,
+                    Ip:         ip,
+                    Hostname:   hostname,
+                    Source:     source,
+                    Comment:    comment,
+                    LineNumber: i + 1));
+            }
+        }
+        return entries;
+    }
+
+    /// <summary>
+    /// New hosts content for an apply request. The WDC block is rebuilt from
+    /// the request's wdc rows. Outside the block only new rows (no
+    /// <c>LineNumber</c>, not in the file yet) are appended; existing lines are
+    /// never rewritten, so a changed existing row is counted in
+    /// <c>NotApplied</c> instead of being added as a duplicate.
+    /// </summary>
+    internal static (string Content, int Added, int NotApplied) BuildAppliedContent(
+        string content, IReadOnlyList<HostsApplyEntry> requestEntries)
+    {
+        var wdcLines = new List<string> { BeginMarker };
+        foreach (var e in requestEntries.Where(e => e.Source == "wdc"))
+        {
+            var prefix = e.Enabled ? "" : "# ";
+            var comment = string.IsNullOrWhiteSpace(e.Comment) ? "" : $" # {e.Comment.Trim()}";
+            wdcLines.Add($"{prefix}{e.Ip}\t{e.Hostname}{comment}");
+        }
+        wdcLines.Add(EndMarker);
+
+        static string Key(string ip, string host) => $"{ip.Trim()}\u0000{host.Trim()}".ToLowerInvariant();
+        var existingOutside = ParseHostsEntries(content).Where(x => x.Source != "wdc").ToList();
+        var existingKeys = existingOutside.Select(x => Key(x.Ip, x.Hostname)).ToHashSet();
+        var requested = requestEntries.Where(e => e.Source != "wdc").ToList();
+        var addedLines = new List<string>();
+        foreach (var e in requested.Where(q => (q.LineNumber is null or <= 0) && !existingKeys.Contains(Key(q.Ip, q.Hostname))))
+        {
+            var prefix = e.Enabled ? "" : "# ";
+            var comment = string.IsNullOrWhiteSpace(e.Comment) ? "" : $" # {e.Comment.Trim()}";
+            addedLines.Add($"{prefix}{e.Ip.Trim()}\t{e.Hostname.Trim()}{comment}");
+            existingKeys.Add(Key(e.Ip, e.Hostname));
+        }
+        var requestedByKey = requested
+            .GroupBy(e => Key(e.Ip, e.Hostname))
+            .ToDictionary(g => g.Key, g => g.First());
+        var notApplied = existingOutside.Count(x =>
+            !requestedByKey.TryGetValue(Key(x.Ip, x.Hostname), out var r)
+            || r.Enabled != x.Enabled
+            || !string.Equals((r.Comment ?? "").Trim(), x.Comment ?? "", StringComparison.Ordinal));
+        // Existing rows whose ip/hostname were edited no longer match any line.
+        var fileKeys = existingOutside.Select(x => Key(x.Ip, x.Hostname)).ToHashSet();
+        notApplied += requested.Count(e => e.LineNumber > 0 && !fileKeys.Contains(Key(e.Ip, e.Hostname)));
+
+        // Strip the existing managed block and put the new one in its place.
+        var beginIdx = content.IndexOf(BeginMarker, StringComparison.Ordinal);
+        var endIdx = content.IndexOf(EndMarker, StringComparison.Ordinal);
+
+        string before, after;
+        if (beginIdx >= 0 && endIdx >= beginIdx)
+        {
+            var endOfEnd = endIdx + EndMarker.Length;
+            if (endOfEnd < content.Length && content[endOfEnd] == '\r') endOfEnd++;
+            if (endOfEnd < content.Length && content[endOfEnd] == '\n') endOfEnd++;
+            before = content[..beginIdx].TrimEnd();
+            after = content[endOfEnd..].TrimStart();
+        }
+        else
+        {
+            before = content.TrimEnd();
+            after = string.Empty;
+        }
+
+        if (addedLines.Count > 0)
+        {
+            var added = string.Join(Environment.NewLine, addedLines);
+            before = before.Length > 0 ? before + Environment.NewLine + added : added;
+        }
+
+        var sb = new System.Text.StringBuilder();
+        if (before.Length > 0) sb.AppendLine(before).AppendLine();
+        sb.AppendLine(string.Join(Environment.NewLine, wdcLines));
+        if (after.Length > 0) sb.AppendLine().Append(after);
+
+        return (sb.ToString(), addedLines.Count, notApplied);
+    }
+
     public static void MapHostsEndpoints(this WebApplication app)
     {
         static string GetHostsPath() =>
@@ -75,104 +252,7 @@ internal static class HostsEndpoints
                 h, @"^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$");
         }
 
-        /// <summary>Parses all lines of the hosts file into structured entries.</summary>
-        // F82 helper: detect IP-like tokens so ParseHostsEntries can skip
-        // comment headers (`## MAMP PRO hosts`) that would otherwise be
-        // parsed as ip="MAMP" hostname="PRO".
-        static bool LooksLikeIp(string token)
-        {
-            if (string.IsNullOrEmpty(token)) return false;
-            // IPv6 has at least one ':' and no spaces.
-            if (token.Contains(':')) return true;
-            // IPv4 dotted-quad: 4 dot-separated decimal octets 0-255.
-            var octets = token.Split('.');
-            if (octets.Length != 4) return false;
-            foreach (var o in octets)
-            {
-                if (!byte.TryParse(o, System.Globalization.NumberStyles.Integer,
-                        System.Globalization.CultureInfo.InvariantCulture, out _))
-                    return false;
-            }
-            return true;
-        }
-
-        static List<HostsEntryDto> ParseHostsEntries(string content, HashSet<string> wdcDomains)
-        {
-            const string beginMarker = "# BEGIN NKS WebDev Console";
-            const string endMarker   = "# END NKS WebDev Console";
-
-            // Well-known external entries that ship with Windows
-            var windowsDefaults = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            {
-                "localhost", "ip6-localhost", "ip6-loopback", "broadcasthost",
-            };
-            var windowsDefaultIps = new HashSet<string> { "127.0.0.1", "::1", "255.255.255.255", "fe80::1%lo0" };
-
-            var entries = new List<HostsEntryDto>();
-            var lines = content.Split('\n');
-            bool inWdc = false;
-
-            for (int i = 0; i < lines.Length; i++)
-            {
-                var raw = lines[i].TrimEnd('\r');
-                var trimmed = raw.Trim();
-
-                if (trimmed == beginMarker) { inWdc = true; continue; }
-                if (trimmed == endMarker)   { inWdc = false; continue; }
-
-                // Skip fully-empty lines
-                if (trimmed.Length == 0) continue;
-
-                bool enabled = !trimmed.StartsWith('#');
-                var working = enabled ? trimmed : trimmed.TrimStart('#').Trim();
-
-                // Extract inline comment
-                string? comment = null;
-                var commentIdx = working.IndexOf('#');
-                if (commentIdx >= 0)
-                {
-                    comment = working[(commentIdx + 1)..].Trim();
-                    if (comment.Length == 0) comment = null;
-                    working = working[..commentIdx].Trim();
-                }
-
-                var parts = working.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length < 2) continue;
-
-                var ip = parts[0];
-                // F82: reject lines whose first token doesn't look like an IP. MAMP /
-                // XAMPP dump section headers like `## MAMP PRO hosts` into the file —
-                // after strip-# + trim the working content becomes `MAMP PRO hosts`
-                // and the old parser happily created an entry with ip="MAMP"
-                // hostname="PRO", which is the "bordel" showing up in the UI table.
-                // Treat such lines as pure comments (skip them). IPv4 dotted-quad OR
-                // any token with a colon (IPv6) is accepted; everything else is junk.
-                if (!LooksLikeIp(ip)) continue;
-
-                for (int j = 1; j < parts.Length; j++)
-                {
-                    var hostname = parts[j];
-                    string source;
-                    if (inWdc)
-                        source = "wdc";
-                    else if (windowsDefaults.Contains(hostname) || windowsDefaultIps.Contains(ip))
-                        source = "external";
-                    else
-                        source = "custom";
-
-                    entries.Add(new HostsEntryDto(
-                        Enabled:    enabled,
-                        Ip:         ip,
-                        Hostname:   hostname,
-                        Source:     source,
-                        Comment:    comment,
-                        LineNumber: i + 1));
-                }
-            }
-            return entries;
-        }
-
-        app.MapGet("/api/hosts", (SiteManager sm) =>
+        app.MapGet("/api/hosts", () =>
         {
             var hostsPath = GetHostsPath();
             if (!File.Exists(hostsPath))
@@ -181,10 +261,7 @@ internal static class HostsEndpoints
             try
             {
                 var content = File.ReadAllText(hostsPath);
-                var wdcDomains = sm.Sites.Values
-                    .SelectMany(s => new[] { s.Domain }.Concat(s.Aliases ?? []))
-                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
-                var entries = ParseHostsEntries(content, wdcDomains);
+                var entries = ParseHostsEntries(content);
                 return Results.Ok(entries);
             }
             catch (Exception ex)
@@ -219,8 +296,6 @@ internal static class HostsEndpoints
             }
 
             var hostsPath = GetHostsPath();
-            const string beginMarker = "# BEGIN NKS WebDev Console";
-            const string endMarker   = "# END NKS WebDev Console";
 
             // Held across read → rewrite → write so a concurrent site apply
             // cannot write back hosts content read before this save.
@@ -230,77 +305,7 @@ internal static class HostsEndpoints
             try
             {
                 var content = await File.ReadAllTextAsync(hostsPath);
-
-                // Build new managed block from wdc entries
-                var wdcEntries = req.Entries.Where(e => e.Source == "wdc").ToList();
-                var wdcLines = new List<string> { beginMarker };
-                foreach (var e in wdcEntries)
-                {
-                    var prefix = e.Enabled ? "" : "# ";
-                    var comment = string.IsNullOrWhiteSpace(e.Comment) ? "" : $" # {e.Comment.Trim()}";
-                    wdcLines.Add($"{prefix}{e.Ip}\t{e.Hostname}{comment}");
-                }
-                wdcLines.Add(endMarker);
-
-                // Entries outside the managed block belong to the user's own part of
-                // the file. The request's custom rows used to be built here and then
-                // dropped, so "Add entry" reported success without touching the file.
-                // Append rows that are not in the file yet; edits and removals of
-                // existing lines are still left as they are and reported back.
-                static string Key(string ip, string host) => $"{ip.Trim()}\u0000{host.Trim()}".ToLowerInvariant();
-                var existingOutside = ParseHostsEntries(content, new HashSet<string>(StringComparer.OrdinalIgnoreCase))
-                    .Where(x => x.Source != "wdc")
-                    .ToList();
-                var existingKeys = existingOutside.Select(x => Key(x.Ip, x.Hostname)).ToHashSet();
-                var requested = req.Entries.Where(e => e.Source != "wdc").ToList();
-                var addedLines = new List<string>();
-                foreach (var e in requested.Where(q => !existingKeys.Contains(Key(q.Ip, q.Hostname))))
-                {
-                    var prefix = e.Enabled ? "" : "# ";
-                    var comment = string.IsNullOrWhiteSpace(e.Comment) ? "" : $" # {e.Comment.Trim()}";
-                    addedLines.Add($"{prefix}{e.Ip.Trim()}\t{e.Hostname.Trim()}{comment}");
-                    existingKeys.Add(Key(e.Ip, e.Hostname));
-                }
-                var requestedByKey = requested
-                    .GroupBy(e => Key(e.Ip, e.Hostname))
-                    .ToDictionary(g => g.Key, g => g.First());
-                var notApplied = existingOutside.Count(x =>
-                    !requestedByKey.TryGetValue(Key(x.Ip, x.Hostname), out var r)
-                    || r.Enabled != x.Enabled
-                    || !string.Equals((r.Comment ?? "").Trim(), x.Comment ?? "", StringComparison.Ordinal));
-
-                // Rebuild: strip existing managed block, replace with new one, keep external
-                // Strategy: strip begin..end block, inject new block, rebuild non-wdc lines
-                var beginIdx = content.IndexOf(beginMarker, StringComparison.Ordinal);
-                var endIdx = content.IndexOf(endMarker, StringComparison.Ordinal);
-
-                string before, after;
-                if (beginIdx >= 0 && endIdx >= beginIdx)
-                {
-                    var endOfEnd = endIdx + endMarker.Length;
-                    if (endOfEnd < content.Length && content[endOfEnd] == '\r') endOfEnd++;
-                    if (endOfEnd < content.Length && content[endOfEnd] == '\n') endOfEnd++;
-                    before = content[..beginIdx].TrimEnd();
-                    after = content[endOfEnd..].TrimStart();
-                }
-                else
-                {
-                    before = content.TrimEnd();
-                    after = string.Empty;
-                }
-
-                if (addedLines.Count > 0)
-                {
-                    var added = string.Join(Environment.NewLine, addedLines);
-                    before = before.Length > 0 ? before + Environment.NewLine + added : added;
-                }
-
-                var sb = new System.Text.StringBuilder();
-                if (before.Length > 0) sb.AppendLine(before).AppendLine();
-                sb.AppendLine(string.Join(Environment.NewLine, wdcLines));
-                if (after.Length > 0) sb.AppendLine().Append(after);
-
-                var newContent = sb.ToString();
+                var (newContent, added, notApplied) = BuildAppliedContent(content, req.Entries);
 
                 // Safety check
                 if (newContent.Length < content.Length / 4 && content.Length > 200)
@@ -319,7 +324,7 @@ internal static class HostsEndpoints
 
                 try { using var p = System.Diagnostics.Process.Start("ipconfig", "/flushdns"); p?.WaitForExit(5000); } catch { }
 
-                return Results.Ok(new { applied = true, entryCount = req.Entries.Count, added = addedLines.Count, notApplied });
+                return Results.Ok(new { applied = true, entryCount = req.Entries.Count, added, notApplied });
             }
             catch (UnauthorizedAccessException)
             {

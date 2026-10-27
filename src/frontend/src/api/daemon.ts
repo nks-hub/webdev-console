@@ -1409,6 +1409,8 @@ export interface HostApplyEntry {
   hostname: string
   source: 'wdc' | 'custom' | 'external'
   comment?: string | null
+  /** Line the row was read from; null for a row added in the UI. */
+  lineNumber?: number | null
 }
 
 export const fetchHosts = (): Promise<HostEntry[]> =>

@@ -8,17 +8,18 @@
       </div>
       <div class="header-actions">
         <el-button size="small" @click="openHostsFile">{{ $t('hosts.openFile') }}</el-button>
+        <el-button size="small" :loading="loading" @click="load">{{ $t('hosts.reload') }}</el-button>
         <el-button size="small" @click="doBackup" :loading="backing">{{ $t('hosts.backup') }}</el-button>
         <el-button size="small" @click="triggerRestore">{{ $t('hosts.restore') }}</el-button>
         <el-button size="small" :loading="reapplying" @click="reapply">{{ $t('hosts.reapplyFromSites') }}</el-button>
-        <el-button size="small" type="primary" @click="showAddDialog = true">{{ $t('hosts.addEntry') }}</el-button>
+        <el-button size="small" type="primary" :icon="Plus" @click="showAddDialog = true">{{ $t('hosts.addEntry') }}</el-button>
         <input ref="restoreInput" type="file" accept=".bak,.txt" style="display:none" @change="onRestoreFile" />
       </div>
     </div>
 
     <!-- Staging bar -->
     <div v-if="pendingCount > 0" class="staging-bar">
-      <span class="staging-label">{{ $t('hosts.pendingChanges', { count: pendingCount }) }}</span>
+      <span class="staging-label">{{ $t('hosts.pendingChanges', { count: pendingCount }, pendingCount) }}</span>
       <el-button size="small" type="danger" plain @click="discardChanges">{{ $t('hosts.discardChanges') }}</el-button>
       <el-button size="small" type="primary" :loading="applying" @click="confirmApply">
         {{ $t('hosts.applyChanges') }}
@@ -39,8 +40,9 @@
           clearable
           style="max-width: 300px"
         />
-        <span class="entry-count">{{ $t('hosts.entriesCount', { n: filteredRows.length }) }}</span>
+        <span class="entry-count">{{ $t('hosts.entriesCount', { n: filteredRows.length }, filteredRows.length) }}</span>
       </div>
+      <p v-if="!loading || rows.length > 0" class="readonly-hint">{{ $t('hosts.readOnlyHint') }}</p>
 
       <el-card v-if="!loading || rows.length > 0" shadow="never" class="table-card">
         <el-table
@@ -53,12 +55,17 @@
           <!-- Enabled toggle -->
           <el-table-column :label="$t('hosts.tableEnabled')" width="80" align="center">
             <template #default="{ row }">
-              <el-switch
-                :model-value="row.enabled"
-                :aria-label="$t('hosts.enableEntryAria', { hostname: row.hostname })"
-                size="small"
-                @change="(v: boolean) => toggleEnabled(row, v)"
-              />
+              <el-tooltip :disabled="isEditable(row)" :content="$t('hosts.readOnlyRow')" placement="right">
+                <span>
+                  <el-switch
+                    :model-value="row.enabled"
+                    :disabled="!isEditable(row)"
+                    :aria-label="$t('hosts.enableEntryAria', { hostname: row.hostname })"
+                    size="small"
+                    @change="(v: boolean) => toggleEnabled(row, v)"
+                  />
+                </span>
+              </el-tooltip>
             </template>
           </el-table-column>
 
@@ -74,7 +81,8 @@
                 @keyup.escape="cancelEdit"
                 autofocus
               />
-              <span v-else v-activate class="mono editable" @click="startEdit(row, 'ip')">{{ row.ip }}</span>
+              <span v-else-if="isEditable(row)" v-activate class="mono editable" @click="startEdit(row, 'ip')">{{ row.ip }}</span>
+              <span v-else class="mono">{{ row.ip }}</span>
             </template>
           </el-table-column>
 
@@ -90,6 +98,7 @@
                 @keyup.escape="cancelEdit"
                 autofocus
               />
+              <span v-else-if="!isEditable(row)">{{ row.hostname }}</span>
               <span v-else v-activate class="editable" @click="startEdit(row, 'hostname')">
                 {{ row.hostname }}
                 <el-tooltip
@@ -126,8 +135,10 @@
                 @keyup.escape="cancelEdit"
                 autofocus
               />
+              <span v-else-if="!isEditable(row)" class="comment-text">{{ row.comment ?? '' }}</span>
               <span
                 v-else
+                v-activate
                 class="editable comment-text"
                 @click="startEdit(row, 'comment')"
               >{{ row.comment ?? '' }}</span>
@@ -138,15 +149,26 @@
           <el-table-column :label="$t('hosts.tableActions')" width="100" align="center">
             <template #default="{ row }">
               <el-popconfirm
+                v-if="isEditable(row)"
                 :title="$t('hosts.confirmRemove')"
+                :confirm-button-text="$t('hosts.removeEntry')"
+                :cancel-button-text="$t('common.cancel')"
                 @confirm="removeRow(row)"
               >
                 <template #reference>
-                  <el-button size="small" type="danger" circle plain>
-                    <span style="font-size:12px; line-height:1">✕</span>
-                  </el-button>
+                  <el-button
+                    size="small"
+                    type="danger"
+                    circle
+                    plain
+                    :icon="Close"
+                    :aria-label="$t('hosts.removeEntryAria', { hostname: row.hostname })"
+                  />
                 </template>
               </el-popconfirm>
+              <el-tooltip v-else :content="$t('hosts.readOnlyRow')" placement="left">
+                <el-icon class="readonly-icon" :aria-label="$t('hosts.readOnlyRow')" role="img" tabindex="0"><Lock /></el-icon>
+              </el-tooltip>
             </template>
           </el-table-column>
         </el-table>
@@ -206,7 +228,7 @@
       width="420px"
       :close-on-click-modal="false"
     >
-      <el-form :model="addForm" label-width="200px" @submit.prevent="submitAdd">
+      <el-form :model="addForm" label-position="top" @submit.prevent="submitAdd">
         <el-form-item :label="$t('hosts.addDialogIp')" required>
           <el-input v-model="addForm.ip" placeholder="127.0.0.1" />
         </el-form-item>
@@ -230,6 +252,7 @@ import { openHostsFile } from '../../utils/hostsFile'
 import { ref, computed, onMounted } from 'vue'
 import LoadingState from '../shared/LoadingState.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Close, Lock, Plus } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import { useSitesStore } from '../../stores/sites'
 import {
@@ -301,6 +324,12 @@ const pendingCount = computed(() =>
   rows.value.filter(r => r._dirty || r._removed || r._added).length
 )
 
+// The daemon rewrites only the WDC block and appends new rows; lines outside
+// the block are never changed, so the UI must not offer to change them.
+function isEditable(row: Row): boolean {
+  return row.source === 'wdc' || row._added
+}
+
 function siteExists(hostname: string): boolean {
   return sitesStore.sites.some(
     s => s.domain === hostname || (s.aliases ?? []).includes(hostname)
@@ -335,7 +364,7 @@ async function load() {
 // ── Inline edit ────────────────────────────────────────────────────────
 
 function startEdit(row: Row, field: 'ip' | 'hostname' | 'comment') {
-  if (row.source === 'external') return
+  if (!isEditable(row)) return
   editingId.value = row._id
   editField.value = field
   editValue.value = (row[field] as string | null | undefined) ?? ''
@@ -365,12 +394,16 @@ function cancelEdit() {
 }
 
 function toggleEnabled(row: Row, v: boolean) {
+  if (!isEditable(row)) return
   row.enabled = v
   row._dirty = true
 }
 
 function removeRow(row: Row) {
-  row._removed = true
+  if (!isEditable(row)) return
+  // A row added in this session was never written; dropping it is enough.
+  if (row._added) rows.value = rows.value.filter(r => r !== row)
+  else row._removed = true
 }
 
 // ── Add entry ──────────────────────────────────────────────────────────
@@ -404,9 +437,9 @@ function submitAdd() {
 async function confirmApply() {
   try {
     await ElMessageBox.confirm(
-      t('hosts.confirmApply', { count: pendingCount.value }),
+      t('hosts.confirmApply', { count: pendingCount.value }, pendingCount.value),
       t('hosts.applyChanges'),
-      { type: 'warning', confirmButtonText: t('hosts.applyChanges'), cancelButtonText: t('hosts.discardChanges') }
+      { type: 'warning', confirmButtonText: t('hosts.applyChanges'), cancelButtonText: t('common.cancel') }
     )
   } catch {
     return
@@ -419,13 +452,15 @@ async function confirmApply() {
       hostname: r.hostname,
       source: r.source,
       comment: r.comment ?? null,
+      lineNumber: r._added ? null : r.lineNumber,
     }))
     const res = await applyHosts(payload)
-    ElMessage.success(t('hosts.applySuccess'))
-    // The daemon only appends new entries outside the WDC block; edits and
-    // removals of existing external lines are left untouched in the file.
+    // The daemon never rewrites lines outside the WDC block; anything it
+    // could not write is reported instead of a success.
     if (res?.notApplied) {
-      ElMessage.warning({ message: t('hosts.externalNotApplied', { count: res.notApplied }), duration: 8000, showClose: true })
+      ElMessage.warning({ message: t('hosts.externalNotApplied', { count: res.notApplied }, res.notApplied), duration: 8000, showClose: true })
+    } else {
+      ElMessage.success(t('hosts.applySuccess'))
     }
     await load()
   } catch (e) {
@@ -482,7 +517,7 @@ async function reapply() {
       { method: 'POST', headers: sitesStore.authHeaders() }
     )
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    ElMessage.success(t('hosts.reapplyFromSites'))
+    ElMessage.success(t('hosts.reapplied'))
     await load()
   } catch (e) {
     ElMessage.error(errorMessage(e))
@@ -516,7 +551,7 @@ async function onRestoreFile(evt: Event) {
     await ElMessageBox.confirm(
       t('hosts.restoreConfirm', { file: file.name }),
       t('hosts.restore'),
-      { type: 'warning' }
+      { type: 'warning', confirmButtonText: t('hosts.restoreConfirmBtn'), cancelButtonText: t('common.cancel') }
     )
   } catch {
     return
@@ -616,9 +651,8 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: var(--wdc-space-2-5);
-  padding: var(--wdc-space-2) var(--wdc-space-5);
-  background: var(--el-color-warning-light-9, #fdf6ec);
-  border-bottom: 1px solid var(--el-color-warning-light-5, #f5dab1);
+  padding: var(--wdc-space-2) 0;
+  border-bottom: 1px solid var(--wdc-border);
   flex-shrink: 0;
 }
 
@@ -626,7 +660,18 @@ onMounted(async () => {
   flex: 1;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--el-color-warning-dark-2, #b88230);
+  color: var(--wdc-warning);
+}
+
+.readonly-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--wdc-text-3);
+}
+
+.readonly-icon {
+  color: var(--wdc-text-3);
+  cursor: help;
 }
 
 .page-body {
@@ -675,7 +720,6 @@ onMounted(async () => {
 .comment-text {
   color: var(--wdc-text-3);
   font-size: 0.85rem;
-  font-style: italic;
 }
 
 .orphan-icon {
@@ -695,11 +739,11 @@ onMounted(async () => {
 }
 
 :deep(.row-dirty td) {
-  background: var(--el-color-primary-light-9, #ecf5ff) !important;
+  background: var(--wdc-accent-dim) !important;
 }
 
 :deep(.row-added td) {
-  background: var(--el-color-success-light-9, #f0f9eb) !important;
+  background: var(--el-color-success-light-9) !important;
 }
 
 :deep(.row-disabled td) {

@@ -30,4 +30,14 @@ test.describe('Tool pages — source contract', () => {
     }
     expect(page('Binaries.vue')).toContain('installErrorMessage(')
   })
+
+  test('hosts rows outside the WDC block are read-only and never reported as saved', () => {
+    const vue = page('HostsManager.vue')
+    expect(vue).toMatch(/return row\.source === 'wdc' \|\| row\._added/)
+    expect(vue).toContain(':disabled="!isEditable(row)"')
+    expect(vue).toMatch(/lineNumber: r\._added \? null : r\.lineNumber/)
+    // Success toast only when nothing was left unwritten.
+    expect(vue).toMatch(/if \(res\?\.notApplied\) \{[\s\S]*?\} else \{\s*ElMessage\.success/)
+    expect(vue).toContain(":aria-label=\"$t('hosts.removeEntryAria'")
+  })
 })

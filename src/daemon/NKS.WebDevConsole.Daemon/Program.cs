@@ -1641,7 +1641,8 @@ record HostsEntryDto(
     int LineNumber);
 
 record HostsApplyRequest(List<HostsApplyEntry> Entries);
-record HostsApplyEntry(bool Enabled, string Ip, string Hostname, string Source, string? Comment);
+// LineNumber > 0 marks a row read from the file (GET /api/hosts); rows without it are new.
+record HostsApplyEntry(bool Enabled, string Ip, string Hostname, string Source, string? Comment, int? LineNumber = null);
 record HostsRestoreRequest(string? Path, string? Content);
 
 record BackupRequestBody(Dictionary<string, bool>? ContentFlags);
