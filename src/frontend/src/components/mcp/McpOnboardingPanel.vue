@@ -4,9 +4,15 @@
       <div class="onboarding-title">
         {{ t('mcpOnboarding.title') }}
       </div>
-      <el-button size="small" text class="dismiss-btn" @click="dismiss">
-        {{ t('mcpOnboarding.dismiss') }}
-      </el-button>
+      <div class="onboarding-actions">
+        <!-- "Manual" is not a profile: it only opens the Rules tab. -->
+        <el-button size="small" link type="primary" data-testid="mcp-onboarding-manual" @click="openRules">
+          {{ t('mcpOnboarding.manual') }}
+        </el-button>
+        <el-button size="small" text class="dismiss-btn" @click="dismiss">
+          {{ t('mcpOnboarding.dismiss') }}
+        </el-button>
+      </div>
     </div>
     <p class="onboarding-hint muted">{{ t('mcpOnboarding.hint') }}</p>
 
@@ -14,7 +20,7 @@
          to create grants, Full trust included. -->
     <div class="profile-cards">
       <div
-        v-for="profile in MCP_PROFILES"
+        v-for="profile in cardProfiles"
         :key="profile.id"
         class="profile-card"
         :class="{ pending: pending === profile.id, recommended: profile.id === DEFAULT_PROFILE, risky: profile.id === 'permissive' }"
@@ -110,12 +116,6 @@ async function apply(profile: McpProfileDefinition): Promise<void> {
   if (profile.id === 'permissive' && !(await confirmPermissive())) return
   pending.value = profile.id
   try {
-    if (profile.id === 'custom') {
-      // Don't create anything — just navigate operator to Rules tab.
-      window.location.hash = '/mcp/grants'
-      dismiss()
-      return
-    }
     if (profile.grants.length === 0) {
       // Minimal = explicit "no grants, ask every time" — just dismiss.
       ElMessage.success(t('mcpOnboarding.minimalApplied'))
@@ -143,6 +143,13 @@ async function apply(profile: McpProfileDefinition): Promise<void> {
   } finally {
     pending.value = null
   }
+}
+
+const cardProfiles = MCP_PROFILES.filter((p) => p.id !== 'custom')
+
+function openRules(): void {
+  window.location.hash = '/mcp/grants'
+  dismiss()
 }
 
 function dismiss(): void {
@@ -183,6 +190,7 @@ onBeforeUnmount(() => {
   margin-bottom: var(--wdc-space-1);
 }
 .onboarding-title { font-size: 16px; font-weight: 600; }
+.onboarding-actions { display: flex; align-items: center; gap: var(--wdc-space-3); }
 .onboarding-hint { margin: 0 0 16px 0; font-size: 13px; }
 .profile-cards {
   display: grid;

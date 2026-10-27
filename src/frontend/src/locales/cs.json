@@ -412,7 +412,9 @@
       "requests": "AI chce udělat něco, co nejde snadno vrátit (smazat databázi, přepsat konfiguraci), a čeká, až to schválíte.",
       "rules": "které žádosti se schválí samy, třeba restart služeb.",
       "catalog": "seznam akcí, u kterých se AI musí zeptat."
-    }
+    },
+    "simpleOnly": "Pravidla a Schvalované akce jsou jen v pokročilém režimu.",
+    "switchToAdvanced": "Přepnout na pokročilý režim"
   },
   "mcpOnboarding": {
     "title": "Kolik toho smí AI udělat bez ptaní?",
@@ -477,7 +479,8 @@
     "permissiveConfirm": "Plná důvěra vytvoří pravidlo, se kterým každý připojený AI klient provede bez ptaní i nevratné akce, třeba smazání databáze. Pro potvrzení napište {word}.",
     "applyFailed": "Profil {profile} se nastavil jen zčásti ({ok} z {total} pravidel). Zkuste to znovu.",
     "permissiveWord": "DŮVĚŘUJI",
-    "permissiveMismatch": "Napište přesně {word}."
+    "permissiveMismatch": "Napište přesně {word}.",
+    "manual": "Nastavit pravidla ručně"
   },
   "mcpActivity": {
     "stats": {
@@ -497,14 +500,19 @@
       "callsPerMinHint": "Průměrná frekvence volání za posledních 24 h",
       "latencyP95": "odezva, 95 % volání",
       "latencyP50": "odezva, medián",
-      "latencyP99": "odezva, 99 % volání"
+      "latencyP99": "odezva, 99 % volání",
+      "perMinute": "/min",
+      "perHour": "/h",
+      "perDay": "/den"
     },
     "filter": {
       "allDanger": "Všechny úrovně",
       "toolName": "Filtrovat podle nástroje…",
       "search": "Hledat v nástrojích a argumentech…",
       "collapseReads": "Sbalit čtení",
-      "dangerAria": "Filtrovat podle úrovně nebezpečí"
+      "dangerAria": "Filtrovat podle úrovně nebezpečí",
+      "clear": "Zrušit filtry",
+      "clearSession": "Zrušit filtr relace"
     },
     "view": {
       "sessions": "Podle relace",
@@ -517,7 +525,9 @@
     "timeline": {
       "title": "Aktivita za posledních {hours} h",
       "empty": "(žádná aktivita)",
-      "errorsInHour": "{n} chyba v {hour} h | {n} chyby v {hour} h | {n} chyb v {hour} h"
+      "errorsInHour": "{n} chyba v {hour} h | {n} chyby v {hour} h | {n} chyb v {hour} h",
+      "tooltip": "{hour}: celkem {total}, čtení {reads}, změny {mutates}, nevratné {destructives}",
+      "tooltipErrors": "chyby {n}"
     },
     "topTools": {
       "title": "Nejčastější nástroje za 24 h",
@@ -529,7 +539,9 @@
       "intentId": "žádost",
       "args": "argumenty",
       "copy": "Kopírovat",
-      "error": "chyba"
+      "error": "chyba",
+      "id": "ID volání",
+      "copied": "Argumenty zkopírovány"
     },
     "sessionDetail": {
       "title": "Detail relace",
@@ -560,7 +572,15 @@
     "hoursAgo": "před {n} h",
     "daysAgo": "před {n} d",
     "callsCount": "{n} volání",
-    "exportFailed": "Export CSV se nepodařil: {error}"
+    "exportFailed": "Export CSV se nepodařil: {error}",
+    "loadFailed": "Aktivitu se nepodařilo načíst: {error}",
+    "emptyFiltered": "Filtrům neodpovídá žádné volání.",
+    "pill": {
+      "reads": "{n} čtení",
+      "mutates": "{n} změna | {n} změny | {n} změn",
+      "destructives": "{n} nevratná | {n} nevratné | {n} nevratných",
+      "errors": "{n} chyba | {n} chyby | {n} chyb"
+    }
   },
   "mcpKinds": {
     "title": "Akce, které AI musí schválit",
@@ -622,7 +642,8 @@
     "toastLoadFailed": "Seznam akcí se nepodařilo načíst: {error}",
     "filterPlaceholder": "Hledat ID nebo popis…",
     "pluginFilterPlaceholder": "Plugin",
-    "autoApproveCount": "{n} pravidlo | {n} pravidla | {n} pravidel"
+    "autoApproveCount": "{n} pravidlo | {n} pravidla | {n} pravidel",
+    "corePlugin": "Vestavěné"
   },
   "composer": {
     "title": "Composer",
@@ -3738,7 +3759,7 @@
     "devNever": "Nikdy povolené routy",
     "master": {
       "label": "Povolit AI klienty (MCP)",
-      "on": "MCP je zapnuté. AI klienti můžou WDC ovládat v rozsahu níže.",
+      "on": "MCP je zapnuté. AI klienti mohou WDC ovládat v rozsahu níže.",
       "off": "MCP je vypnuté. Démon odmítne každého AI klienta, i toho, který už běží. Přepínače níže začnou platit po zapnutí.",
       "connectGuide": "Jak připojit AI klienta"
     },

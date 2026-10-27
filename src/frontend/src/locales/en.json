@@ -412,7 +412,9 @@
       "requests": "an AI wants to do something that is hard to undo (drop a database, overwrite a config) and waits for your approval.",
       "rules": "approve these requests automatically, for example service restarts.",
       "catalog": "the actions an AI has to ask about."
-    }
+    },
+    "simpleOnly": "Rules and Actions to approve are in advanced mode only.",
+    "switchToAdvanced": "Switch to advanced mode"
   },
   "mcpOnboarding": {
     "title": "How much may an AI do without asking?",
@@ -477,7 +479,8 @@
     "permissiveConfirm": "Full trust creates a rule that lets every connected AI client carry out even irreversible actions, such as dropping a database, without asking. To confirm, type {word}.",
     "applyFailed": "Profile {profile} was only partly applied ({ok} of {total} rules). Try again.",
     "permissiveWord": "TRUST",
-    "permissiveMismatch": "Type exactly {word}."
+    "permissiveMismatch": "Type exactly {word}.",
+    "manual": "Set up rules by hand"
   },
   "mcpActivity": {
     "stats": {
@@ -497,14 +500,19 @@
       "callsPerMinHint": "Average call rate over the last 24h",
       "latencyP95": "response, 95% of calls",
       "latencyP50": "response, median",
-      "latencyP99": "response, 99% of calls"
+      "latencyP99": "response, 99% of calls",
+      "perMinute": "/min",
+      "perHour": "/h",
+      "perDay": "/day"
     },
     "filter": {
       "allDanger": "All danger levels",
       "toolName": "Filter by tool…",
       "search": "Search tools and args…",
       "collapseReads": "Collapse reads",
-      "dangerAria": "Filter by danger level"
+      "dangerAria": "Filter by danger level",
+      "clear": "Clear filters",
+      "clearSession": "Clear the session filter"
     },
     "view": {
       "sessions": "By session",
@@ -517,7 +525,9 @@
     "timeline": {
       "title": "Activity for last {hours}h",
       "empty": "(no activity)",
-      "errorsInHour": "{n} error in {hour}h | {n} errors in {hour}h"
+      "errorsInHour": "{n} error in {hour}h | {n} errors in {hour}h",
+      "tooltip": "{hour}: {total} in total, {reads} reads, {mutates} changes, {destructives} irreversible",
+      "tooltipErrors": "{n} errors"
     },
     "topTools": {
       "title": "Top tools 24h",
@@ -529,7 +539,9 @@
       "intentId": "request",
       "args": "args",
       "copy": "Copy",
-      "error": "error"
+      "error": "error",
+      "id": "Call ID",
+      "copied": "Arguments copied"
     },
     "sessionDetail": {
       "title": "Session detail",
@@ -560,7 +572,15 @@
     "hoursAgo": "{n}h ago",
     "daysAgo": "{n}d ago",
     "callsCount": "{n} call | {n} calls",
-    "exportFailed": "CSV export failed: {error}"
+    "exportFailed": "CSV export failed: {error}",
+    "loadFailed": "Could not load the activity: {error}",
+    "emptyFiltered": "No call matches the filters.",
+    "pill": {
+      "reads": "{n} read | {n} reads",
+      "mutates": "{n} change | {n} changes",
+      "destructives": "{n} irreversible",
+      "errors": "{n} error | {n} errors"
+    }
   },
   "mcpKinds": {
     "title": "Actions an AI must get approved",
@@ -622,7 +642,8 @@
     "toastLoadFailed": "Could not load the actions: {error}",
     "filterPlaceholder": "Search id or label…",
     "pluginFilterPlaceholder": "Plugin",
-    "autoApproveCount": "{n} rule | {n} rules"
+    "autoApproveCount": "{n} rule | {n} rules",
+    "corePlugin": "Built-in"
   },
   "composer": {
     "title": "Composer",

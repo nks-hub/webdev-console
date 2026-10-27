@@ -107,6 +107,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { DocumentCopy } from '@element-plus/icons-vue'
 import { fetchMcpToolCalls, saveSettings, subscribeEventsMap } from '../../api/daemon'
@@ -127,8 +128,11 @@ const serverInfo = ref<McpServerInfo | null>(null)
 const lastCallAt = ref<string | null>(null)
 const lastCallTool = ref('')
 const savingEnabled = ref(false)
-// Open by default until an AI client has actually called WDC.
-const expanded = ref(true)
+// Open by default until an AI client has actually called WDC, unless the
+// hub was opened on Requests, Rules or Actions: the setup steps would push
+// that tab below the fold.
+const route = useRoute()
+const expanded = ref(!/\/mcp\/(intents|grants|kinds)$/.test(route.path))
 
 const serverPath = computed(() => serverInfo.value?.serverPath ?? MCP_SERVER_PATH_PLACEHOLDER)
 
@@ -320,8 +324,7 @@ onBeforeUnmount(() => {
 }
 .snippet-head {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  flex-direction: column;
   gap: var(--wdc-space-2);
   margin-bottom: var(--wdc-space-2);
 }
@@ -355,7 +358,7 @@ onBeforeUnmount(() => {
   font-size: 12px;
 }
 .runtime-label { font-weight: 600; font-size: 13px; }
-.snippet-actions { display: flex; flex-direction: column; align-items: flex-end; gap: var(--wdc-space-1); }
+.snippet-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--wdc-space-1) var(--wdc-space-2); }
 .snippet-actions :deep(.el-button + .el-button) { margin-left: 0; }
 .test-ok { color: var(--el-color-success); font-weight: 600; }
 .test-bad { color: var(--el-color-danger); }

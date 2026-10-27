@@ -8,12 +8,12 @@
              but only renders for already-locked rows; this button is
              visible regardless so an operator can reach the override
              editor from a clean list. -->
-        <el-button @click="goToAlwaysConfirmSetting">
-          <el-icon aria-hidden="true"><Lock /></el-icon> {{ t('mcpKinds.editAlwaysConfirm') }}
+        <el-button @click="goToAlwaysConfirmSetting" :icon="Lock">
+          {{ t('mcpKinds.editAlwaysConfirm') }}
           <span v-if="lockedKindCount > 0" class="lock-count-badge">{{ lockedKindCount }}</span>
         </el-button>
-        <el-button :loading="loading" @click="refresh">
-          <el-icon><Refresh /></el-icon> {{ t('mcpKinds.refresh') }}
+        <el-button :loading="loading" @click="refresh" :icon="Refresh">
+          {{ t('mcpKinds.refresh') }}
         </el-button>
       </div>
     </div>
@@ -32,7 +32,7 @@
       <span class="separator" />
       <el-tag v-for="p in pluginCounts" :key="p.pluginId"
         :type="p.pluginId === 'core' ? 'info' : 'success'" effect="plain" size="small">
-        {{ p.pluginId }}: {{ p.count }}
+        {{ pluginLabel(p.pluginId) }}: {{ p.count }}
       </el-tag>
     </div>
 
@@ -45,7 +45,7 @@
       <el-select v-model="pluginFilter" clearable size="small"
         :placeholder="t('mcpKinds.pluginFilterPlaceholder')" class="plugin-select">
         <el-option v-for="p in pluginCounts" :key="p.pluginId"
-          :label="p.pluginId" :value="p.pluginId" />
+          :label="pluginLabel(p.pluginId)" :value="p.pluginId" />
       </el-select>
       <!-- Phase 7.5+++ — danger-level tri-state filter (All / Reversible /
            Destructive). Mirrors the McpGrants usage filter pattern so
@@ -86,7 +86,7 @@
       <el-table-column prop="pluginId" :label="t('mcpKinds.col.plugin')" width="160">
         <template #default="{ row }">
           <el-tag :type="row.pluginId === 'core' ? 'info' : 'success'" size="small" effect="plain">
-            {{ row.pluginId }}
+            {{ pluginLabel(row.pluginId) }}
           </el-tag>
         </template>
       </el-table-column>
@@ -192,6 +192,11 @@ function humanLabel(row: { id?: string; label: string }): string {
   return te(key) ? t(key) : (row.label || row.id)
 }
 
+// Kinds WDC registers itself carry the plugin id 'core'.
+function pluginLabel(pluginId: string): string {
+  return pluginId === 'core' ? t('mcpKinds.corePlugin') : pluginId
+}
+
 // Grants that can approve this kind without asking. A '*' grant does not
 // count for capability-group kinds: the daemon ignores it for them.
 function autoApproveCount(row: McpKindRow): number {
@@ -213,11 +218,11 @@ function goToCreateGrantForKind(kindId: string): void {
   void router.push({ path: '/mcp/grants', query: { createForKind: kindId } })
 }
 
-// Phase 7.5+++ — deep-link to the Settings → Advanced → MCP section
-// where the always-confirm picker lives. Operator can edit the
+// Phase 7.5+++ — deep-link to the "More MCP options" section of
+// Settings → AI clients (MCP), where the always-confirm picker lives. Operator can edit the
 // override directly from a kind row.
 function goToAlwaysConfirmSetting(): void {
-  void router.push({ path: '/settings', query: { tab: 'advanced', scroll: 'mcp-section' } })
+  void router.push({ path: '/settings', query: { tab: 'mcp', scroll: 'mcp-section' } })
 }
 
 const search = ref('')
@@ -323,7 +328,7 @@ async function refresh(): Promise<void> {
 </script>
 
 <style scoped>
-.page { padding: 0; display: flex; flex-direction: column; gap: 0; }
+.page { padding: 0; display: flex; flex-direction: column; gap: var(--wdc-space-3); }
 .page-header {
   display: flex;
   align-items: center;

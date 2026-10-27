@@ -52,7 +52,6 @@ export async function confirmMcpApproval(item: McpApprovalItem, extra = ''): Pro
         type: 'warning',
         confirmButtonText: t('mcpApproval.approve'),
         cancelButtonText: t('common.cancel'),
-        inputPlaceholder: expected,
         inputValidator: (value: string) => value.trim() === expected || t('mcpApproval.mismatch', { expected }),
       })
     } else {

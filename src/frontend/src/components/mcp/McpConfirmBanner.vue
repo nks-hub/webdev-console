@@ -133,9 +133,11 @@ import { useMcpConfirmStore, type PendingConfirm } from '../../stores/mcpConfirm
 import { createMcpGrant, revokeIntent, type McpGrantCreateBody } from '../../api/daemon'
 import { confirmMcpApproval, isMcpTargetMarker, mcpTargetLabel } from '../../utils/mcpApproval'
 import { mcpKindLabel } from '../../utils/mcpKindLabel'
+import { useUiModeStore } from '../../stores/uiMode'
 
 const { t } = useI18n()
 const store = useMcpConfirmStore()
+const uiMode = useUiModeStore()
 
 // In-flight approval calls — keeps the user from double-clicking before the
 // daemon responds. Cleared on completion (whether success or 4xx).
@@ -171,8 +173,9 @@ async function approve(item: PendingConfirm): Promise<void> {
   }
 }
 
+// Simple mode has no Rules tab, so a rule made here could not be seen or revoked.
 function canTrust(item: PendingConfirm): boolean {
-  return !!item.kind && !isMcpTargetMarker(item.domain) && !item.alwaysConfirm
+  return uiMode.isAdvanced && !!item.kind && !isMcpTargetMarker(item.domain) && !item.alwaysConfirm
 }
 
 /**
@@ -336,7 +339,9 @@ onBeforeUnmount(() => {
 <style scoped>
 .mcp-confirm-stack {
   position: fixed;
-  top: 12px;
+  /* Below the 52px app header, so the mode switch, language and theme
+     controls stay reachable while a request waits. */
+  top: 60px;
   right: 12px;
   z-index: 3000;
   display: flex;
@@ -351,7 +356,9 @@ onBeforeUnmount(() => {
   gap: var(--wdc-space-3-5);
   align-items: start;
   padding: var(--wdc-space-3-5) var(--wdc-space-4);
-  background: rgba(245, 158, 11, 0.10);
+  /* The tint sits on an opaque surface: the stack floats over the page,
+     and a see-through card mixed its text with the content below. */
+  background: linear-gradient(rgba(245, 158, 11, 0.10), rgba(245, 158, 11, 0.10)), var(--wdc-surface);
   border: 1px solid var(--wdc-status-starting);
   border-left-width: 5px;
   border-radius: var(--wdc-radius-lg);
@@ -359,7 +366,7 @@ onBeforeUnmount(() => {
   /* Non-color signal too — WCAG 1.4.1 Use of Color */
 }
 .mcp-confirm-banner--destructive {
-  background: rgba(248, 113, 113, 0.10);
+  background: linear-gradient(rgba(248, 113, 113, 0.10), rgba(248, 113, 113, 0.10)), var(--wdc-surface);
   border-color: var(--wdc-status-error);
   border-left-width: 6px;
 }

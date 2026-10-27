@@ -174,7 +174,10 @@ function capDescription(cap: Capability): string {
   const key = `mcpCapabilities.groups.${cap.id}.description`
   return te(key) ? t(key) : cap.description
 }
+// The localized descriptions say what needs approval; only a group the
+// locale files do not know yet gets the generic note.
 function needsApproval(cap: Capability): boolean {
+  if (te(`mcpCapabilities.groups.${cap.id}.description`)) return false
   return cap.routes.some(r => !!r.intentKind) || (cap.bodyFields ?? []).some(b => !!b.intentKind)
 }
 
@@ -239,7 +242,7 @@ async function toggleMcp(enabled: boolean) {
 
 <style scoped>
 .mcp-caps { display: grid; gap: var(--wdc-space-4); max-width: 72ch; }
-.caps-intro { color: var(--wdc-text-2); }
+.caps-intro { margin: 0; font-size: 0.87rem; color: var(--wdc-text-2); }
 .caps-error { display: flex; align-items: center; gap: var(--wdc-space-3); color: var(--wdc-status-error); }
 
 .caps-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--wdc-border); }
