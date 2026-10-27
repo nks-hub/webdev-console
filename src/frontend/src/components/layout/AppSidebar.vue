@@ -34,7 +34,6 @@
             <el-icon class="nav-icon" :size="16" aria-hidden="true"><component :is="item.icon" /></el-icon>
             <span class="nav-label">{{ item.label }}</span>
             <span v-if="item.problems" class="nav-problems" :title="item.problems.detail">
-              <span class="nav-problems-count mono">{{ item.problems.count }}</span>
               <span class="nav-problems-text">{{ item.problems.label }}</span>
               <span :id="`nav-problems-${item.key}`" class="visually-hidden">{{ item.problems.detail }}</span>
             </span>
@@ -363,7 +362,6 @@ function navigate(path: string, query?: Record<string, string>) {
 .nav-problems {
   display: inline-flex;
   align-items: center;
-  gap: var(--wdc-space-1);
   flex-shrink: 0;
   padding: 1px var(--wdc-space-2);
   border-radius: 999px;

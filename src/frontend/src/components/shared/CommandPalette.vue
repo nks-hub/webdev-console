@@ -15,7 +15,6 @@
         v-model="query"
         :placeholder="t('commandPalette.placeholder')"
         :aria-label="t('commandPalette.placeholder')"
-        role="combobox"
         aria-autocomplete="list"
         aria-haspopup="listbox"
         :aria-expanded="results.length > 0"
@@ -91,7 +90,7 @@ const selectedIndex = ref(0)
 // method captures what the component actually uses without coupling to
 // the full ElInput instance type (which changes across element-plus
 // versions).
-const inputRef = ref<{ focus: () => void } | null>(null)
+const inputRef = ref<{ focus: () => void; input?: HTMLInputElement } | null>(null)
 
 type Group = 'recommended' | 'recent' | 'navigate' | 'sites' | 'services' | 'actions'
 const GROUP_ORDER: Group[] = ['recommended', 'recent', 'navigate', 'sites', 'services', 'actions']
@@ -310,7 +309,11 @@ function highlight(label: string): Array<{ text: string; hit: boolean }> {
 
 watch(query, () => { selectedIndex.value = 0 })
 
-function focusInput() { inputRef.value?.focus() }
+// ElInput drops a `role` attribute, so the combobox role goes on the <input> itself.
+function focusInput() {
+  inputRef.value?.input?.setAttribute('role', 'combobox')
+  inputRef.value?.focus()
+}
 
 function open() {
   if (!visible.value) {
