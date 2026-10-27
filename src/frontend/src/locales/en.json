@@ -2976,7 +2976,22 @@
     "later": "Later",
     "laterHint": "You can reopen the wizard from Help.",
     "stateError": "Could not load the current state, retrying.",
-    "installedVersion": "Installed ({version})"
+    "installedVersion": "Installed ({version})",
+    "versionOf": "Version: {name}",
+    "err": {
+      "forbidden": "The server refused the download of {name} {version} (403).",
+      "notFound": "{name} {version} is not on the server (404).",
+      "httpStatus": "The server for {name} {version} answered with error {status}.",
+      "notAnArchive": "The server returned a web page instead of the {name} {version} download.",
+      "shaMismatch": "The downloaded {name} {version} file does not match its checksum.",
+      "noBuild": "There is no build of {name} {version} for this system.",
+      "unreachable": "Could not download {name} {version}, the server is not responding.",
+      "cancelled": "The installation of {name} {version} was cancelled.",
+      "generic": "{name} {version} could not be installed.",
+      "details": "Technical details",
+      "tryAnother": "Try another version",
+      "openBinaries": "Open Binaries"
+    }
   },
   "toast": {
     "noBinaryForPlatform": "{app}: no binary available for this platform",
