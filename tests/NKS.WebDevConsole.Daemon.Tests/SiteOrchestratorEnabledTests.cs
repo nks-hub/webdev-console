@@ -133,8 +133,10 @@ public sealed class SiteOrchestratorEnabledTests
         };
 
         // ApplyAsync will fail internally (no real Apache), but that's caught.
-        await orchestrator.ApplyAsync(site);
+        var result = await orchestrator.ApplyAsync(site);
 
         Assert.Empty(apacheFake.RemoveCalls);
+        // The real hosts file must stay untouched (TestEnvironment sets NKS_WDC_SKIP_HOSTS_UAC).
+        Assert.DoesNotContain(result.Steps, s => s.Name == "hosts" && s.Status == SiteApplyStep.Succeeded && s.Detail is null);
     }
 }
