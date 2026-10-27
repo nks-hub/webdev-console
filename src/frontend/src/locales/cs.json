@@ -1,37 +1,47 @@
 {
   "commandPalette": {
-    "placeholder": "Napiš příkaz…",
-    "empty": "Žádné odpovídající příkazy",
+    "placeholder": "Hledat weby, služby a akce…",
+    "empty": "Nic nenalezeno",
     "goTo": "Přejít na {target}",
-    "gotoSites": "Přejít na Weby",
-    "gotoDashboard": "Přejít na Přehled",
-    "gotoDatabases": "Přejít na Databáze",
-    "gotoSsl": "Přejít na Správu SSL",
-    "gotoPhp": "Přejít na Správu PHP",
-    "gotoBinaries": "Přejít na Binárky",
-    "gotoPlugins": "Přejít na Pluginy",
-    "gotoSettings": "Přejít na Nastavení",
-    "gotoCloudflare": "Přejít na Cloudflare Tunnel",
-    "gotoMcpActivity": "Přejít na MCP Aktivitu",
-    "gotoMcpActivityDesc": "Audit AI tool volání",
-    "gotoMcpRequests": "Přejít na MCP Requesty",
-    "gotoMcpRequestsDesc": "Čekající podepsané AI requesty",
-    "gotoMcpRules": "Přejít na MCP Pravidla",
+    "gotoSites": "Weby",
+    "gotoDashboard": "Přehled",
+    "gotoDatabases": "Databáze",
+    "gotoSsl": "SSL",
+    "gotoPhp": "PHP",
+    "gotoBinaries": "Binárky",
+    "gotoPlugins": "Pluginy",
+    "gotoSettings": "Nastavení",
+    "gotoCloudflare": "Cloudflare",
+    "gotoMcpActivity": "Aktivita MCP",
+    "gotoMcpActivityDesc": "Záznam volání nástrojů AI",
+    "gotoMcpRequests": "Žádosti MCP",
+    "gotoMcpRequestsDesc": "Čekající žádosti od AI",
+    "gotoMcpRules": "Pravidla MCP",
     "gotoMcpRulesDesc": "Pravidla automatického schvalování",
-    "gotoMcpCatalog": "Přejít na MCP Katalog",
+    "gotoMcpCatalog": "Katalog MCP",
     "gotoMcpCatalogDesc": "Dostupné typy akcí",
-    "openMailpit": "Otevřít Mailpit UI",
+    "openMailpit": "Otevřít Mailpit",
     "newSite": "Vytvořit nový web",
     "refresh": "Obnovit data",
     "startService": "Spustit {name}",
     "stopService": "Zastavit {name}",
-    "alreadyRunning": "Už běží",
-    "alreadyStopped": "Už zastaveno",
     "startAll": "Spustit všechny služby",
     "stopAll": "Zastavit všechny služby",
     "openSite": "Otevřít {domain}",
     "editSite": "Upravit {domain}",
-    "gotoServices": "Přejít na Služby"
+    "gotoServices": "Služby",
+    "title": "Paleta příkazů",
+    "installService": "Nainstalovat {name}",
+    "advancedTag": "Pokročilé",
+    "groups": {
+      "recommended": "Doporučené",
+      "recent": "Nedávné",
+      "navigate": "Přejít na",
+      "sites": "Weby",
+      "services": "Služby",
+      "actions": "Akce"
+    },
+    "mcpOff": "MCP je vypnuté"
   },
   "common": {
     "save": "Uložit",
@@ -108,19 +118,32 @@
   },
   "login": {
     "subtitle": "Místní vývojová konzole",
-    "description": "Přihlaste se ke svému NKS WDC katalogovému účtu pro automatickou synchronizaci pluginů, SSO-chráněné akce a identitu zařízení. Aplikaci můžete používat i bez přihlášení — tlačítko zůstane v sidebaru kdykoliv k dispozici.",
-    "signInSso": "Přihlásit přes SSO",
-    "signOut": "Odhlásit",
+    "description": "Přihlášením k účtu NKS se vám synchronizují pluginy a zpřístupní se akce, které vyžadují ověření. Aplikace funguje i bez přihlášení, přihlásit se můžete kdykoli z menu vlevo.",
+    "signInSso": "Přihlásit se účtem NKS",
+    "signOut": "Odhlásit se",
     "continue": "Pokračovat do aplikace",
     "continueWithout": "Pokračovat bez přihlášení →",
-    "signedInHint": "Jste přihlášeni ke katalogu.",
-    "catalogUrl": "URL katalogu",
+    "signedInHint": "Jste přihlášeni k účtu NKS.",
     "or": "nebo",
     "email": "E-mail",
     "password": "Heslo",
     "success": "Přihlášeno",
     "registered": "Účet vytvořen",
-    "failed": "Přihlášení selhalo"
+    "failed": "Přihlášení se nezdařilo",
+    "emailPlaceholder": "vas{'@'}email.cz",
+    "passwordAgain": "Heslo znovu",
+    "createAccount": "Vytvořit účet",
+    "haveAccount": "Už mám účet",
+    "noAccount": "Nemám účet",
+    "errors": {
+      "desktopOnly": "Přihlášení účtem NKS funguje jen v desktopové aplikaci.",
+      "emptyToken": "Přihlášení skončilo bez přístupového tokenu. Zkuste to znovu.",
+      "badCredentials": "E-mail nebo heslo nesouhlasí.",
+      "exists": "Účet s tímto e-mailem už existuje.",
+      "network": "Nepodařilo se spojit s katalogem. Zkontrolujte připojení k internetu.",
+      "mismatch": "Hesla se neshodují.",
+      "generic": "Přihlášení se nepovedlo ({detail})."
+    }
   },
   "nav": {
     "services": "Služby",
@@ -141,31 +164,32 @@
     "tools": "Nástroje",
     "composer": "Composer",
     "hosts": "Hosts soubor",
-    "mcpIntents": "MCP Intents",
     "mcpGrants": "MCP oprávnění",
-    "mcp": "MCP",
+    "mcp": "AI klienti (MCP)",
     "backups": "Zálohy",
     "help": "Nápověda",
-    "signedIn": "Přihlášen",
+    "signedIn": "Přihlášeno jako",
     "signIn": "Přihlásit se",
-    "signOutConfirm": "Odhlásit z katalogu?",
-    "signOutTitle": "Odhlásit",
-    "signedOutToast": "Odhlášeno",
     "serviceStarted": "{name} spuštěno",
     "serviceStopped": "{name} zastaveno",
-    "signedInAsTitle": "Přihlášen jako {name} — kliknutím se odhlásíte",
+    "signedInAsTitle": "Přihlášeno jako {name}. Kliknutím otevřete nastavení účtu.",
     "signInTitle": "Přihlásit se přes SSO",
     "system": "Systém",
     "mainNavigation": "Hlavní navigace",
     "brandHome": "WebDev Console, přehled",
     "application": "Aplikace",
-    "servicesCrashed": "{n} služba spadla | {n} služby spadly | {n} služeb spadlo",
     "groups": {
       "workspace": "Pracovní prostor",
-      "stack": "Stack",
+      "stack": "Prostředí",
       "network": "Síť",
       "operations": "Provoz"
-    }
+    },
+    "cloudflare": "Cloudflare",
+    "problemsBadge": "{n} problém | {n} problémy | {n} problémů",
+    "problemStartFailed": "Služba {name} se nespustila",
+    "problemExited": "Služba {name} spadla",
+    "mcpOff": "vypnuto",
+    "mcpPending": "Čeká na schválení: {n}"
   },
   "versions": {
     "active": "Aktivní",
@@ -582,8 +606,8 @@
     "stopAll": "Zastavit vše",
     "recentActivity": "Nedávná aktivita",
     "connectingTitle": "Připojování k démonu…",
-    "connectingDesc": "Čekání na připojení NKS WDC démona…",
-    "noServices": "Žádné registrované služby. Zkontroluj konfiguraci démona.",
+    "connectingDesc": "Čekám na připojení k démonu NKS WDC…",
+    "noServices": "Žádné registrované služby. Zkontrolujte konfiguraci démona.",
     "logs": "Logy",
     "config": "Konfigurace",
     "newSite": "Nový web",
@@ -604,13 +628,15 @@
     },
     "metrics": {
       "cpuUsage": "Vytížení CPU",
-      "memory": "Paměť"
+      "memory": "Paměť",
+      "range": "posledních 5 min",
+      "collecting": "Sbírám data…"
     },
     "running": "běží",
     "simple": {
       "subtitle": "Lokální vývojové prostředí pro vaše weby",
       "welcomeTitle": "Vítejte v NKS WDC",
-      "summary": "{sites} webů · {running}/{total} služeb · {hits} hits · {errors} chyb",
+      "summary": "{sites} webů · běží {running} z {total} služeb · {hits} požadavků · {errors} chyb",
       "tiles": {
         "sites": "Weby",
         "services": "Služby",
@@ -623,7 +649,7 @@
         "backup": "Zálohování"
       },
       "apacheStopped": {
-        "title": "Web server je zastavený",
+        "title": "Webový server je zastavený",
         "subtitle": "Weby se nenačtou, dokud Apache neběží.",
         "startBtn": "Spustit Apache"
       },
@@ -632,8 +658,8 @@
         "viewAll": "Zobrazit vše"
       },
       "empty": {
-        "title": "Vytvoř svůj první web",
-        "subtitle": "Pár klikem rozjedi lokální web — doména, document root, PHP verze.",
+        "title": "Vytvořte svůj první web",
+        "subtitle": "Několika kliknutími rozjedete lokální web: doména, složka webu a verze PHP.",
         "cta": "Vytvořit nový web"
       },
       "updateAvailable": {
@@ -646,6 +672,48 @@
         "never": "Zatím nebyla vytvořena žádná záloha.",
         "olderThanDays": "Poslední záloha je starší než {days} dní.",
         "openBtn": "Otevřít zálohy"
+      }
+    },
+    "mailpitDown": "Mailpit neběží. Spusťte ho v tabulce služeb.",
+    "activity": {
+      "via": "přes {source}",
+      "op": {
+        "create": "Vytvořeno",
+        "insert": "Vytvořeno",
+        "update": "Změněno",
+        "edit": "Změněno",
+        "delete": "Smazáno",
+        "remove": "Odebráno",
+        "apply": "Použito",
+        "restore": "Obnoveno",
+        "rename": "Přejmenováno",
+        "enable": "Zapnuto",
+        "disable": "Vypnuto",
+        "install": "Nainstalováno",
+        "uninstall": "Odinstalováno",
+        "start": "Spuštěno",
+        "stop": "Zastaveno",
+        "restart": "Restartováno"
+      },
+      "entity": {
+        "site": "Web",
+        "service": "Služba",
+        "setting": "Nastavení",
+        "settings": "Nastavení",
+        "plugin": "Plugin",
+        "database": "Databáze",
+        "binary": "Binárka",
+        "cert": "Certifikát",
+        "certificate": "Certifikát",
+        "backup": "Záloha",
+        "vhost": "Virtuální host",
+        "config": "Konfigurace",
+        "hosts": "Soubor hosts"
+      },
+      "source": {
+        "mcp": "MCP",
+        "cli": "příkazový řádek",
+        "api": "API"
       }
     }
   },
@@ -1335,7 +1403,7 @@
       "userDeleted": "MySQL uživatel smazán",
       "deleteUserFailed": "Smazání uživatele selhalo: {err}",
       "dropUserConfirmTitle": "Smazat MySQL uživatele",
-      "dropUserConfirmMessage": "Smazat MySQL uživatele {user}@{host}? Databáze nebudou smazány.",
+      "dropUserConfirmMessage": "Smazat MySQL uživatele {user}{'@'}{host}? Databáze nebudou smazány.",
       "dropUserConfirmBtn": "Smazat"
     },
     "dropDatabasePrompt": "Pro trvalé smazání databáze napište {name}.",
@@ -1681,7 +1749,7 @@
       "empty": "Zatím nejsou nakonfigurovaní žádní hosti — klikněte na „Přidat hosta“ pro nastavení produkce / stagingu / atd.",
       "col": {
         "name": "Název",
-        "sshTarget": "SSH user@host",
+        "sshTarget": "SSH user{'@'}host",
         "remotePath": "Vzdálená cesta",
         "branch": "Větev",
         "localPaths": "Lokální cesty",
@@ -2206,7 +2274,7 @@
     "title": "Konfigurace služby",
     "reload": "Obnovit",
     "card": {
-      "crashed": "Proces spadl",
+      "crashed": "Spadlo",
       "starting": "Spouštění…",
       "notRunning": "Služba neběží"
     },
@@ -2214,7 +2282,7 @@
     "noConfigSummary": "Žádný konfigurační soubor pro {name}",
     "configless": {
       "hint": "Nastavení pro tuto službu se předává přes CLI argumenty, per-site TOML konfiguraci nebo proměnné prostředí. Žádné soubory k úpravě tu nejsou.",
-      "daemonLooked": "Daemon hledal {paths}. Zkontroluj, že je binárka nainstalovaná přes",
+      "daemonLooked": "Démon hledal {paths}. Zkontrolujte, že je program nainstalovaný přes",
       "daemonLookedBinaries": "Binárky",
       "daemonLookedAnd": "a že služba byla alespoň jednou spuštěná."
     }
@@ -2755,24 +2823,24 @@
     }
   },
   "footer": {
-    "servicesRunning": "služeb běží",
+    "servicesRunning": "Běží {running} z {total} služby | Běží {running} z {total} služeb | Běží {running} z {total} služeb",
     "tunnel": "Tunel",
-    "daemon": "Daemon",
-    "daemonRunning": "Daemon běží",
-    "daemonOffline": "Daemon offline",
-    "crashed": "{n} spadlo",
-    "tunnelTitle": "Cloudflare Tunnel běží — exponované weby jsou veřejně dostupné"
+    "daemon": "Démon",
+    "tunnelTitle": "Tunel Cloudflare běží. Zveřejněné weby jsou dostupné z internetu.",
+    "problems": "{n} problém | {n} problémy | {n} problémů",
+    "simpleOffline": "Aplikace se nemůže spojit se službou na pozadí",
+    "simpleProblems": "{n} služba nefunguje | {n} služby nefungují | {n} služeb nefunguje",
+    "simpleAllRunning": "Vše běží"
   },
   "help": {
     "title": "Nápověda",
     "jumpTo": "Přejít na",
     "searchPlaceholder": "Hledat v nápovědě…",
-    "startGettingStarted": "Rychlý start",
-    "comingSoonVideo": "Video brzy k dispozici",
-    "noResults": "Žádné sekce neodpovídají \"{q}\".",
+    "startGettingStarted": "Prohlídka aplikace",
+    "noResults": "Žádné téma neodpovídá „{q}“.",
     "breadcrumbRoot": "Nápověda",
     "groups": {
-      "gettingStarted": "Rychlý start",
+      "gettingStarted": "Začínáme",
       "sites": "Weby",
       "services": "Služby",
       "advanced": "Pokročilé",
@@ -2780,69 +2848,69 @@
     },
     "topics": {
       "overview": {
-        "title": "Přehled",
-        "body": "<p>NKS WebDev Console je správce lokálního vývojového prostředí pro Windows, macOS a Linux. Nahrazuje MAMP / XAMPP / Laragon jednotným rozhraním pro Apache, Nginx, PHP, MySQL, MariaDB, Redis, Mailpit, Composer, SSL (mkcert) a Cloudflare Tunnely.</p><p>Vše běží jako lokální daemon; Electron app je jen ovládací panel. Přepínání UI mezi <strong>Jednoduchým</strong> a <strong>Pokročilým</strong> režimem je v záhlaví aplikace.</p><h3 id='arch'>Architektura</h3><ul><li><a href='https://github.com/nks-hub/webdev-console' target='_blank'>webdev-console</a> — tato aplikace (Electron + Vue 3 + .NET 9 daemon)</li><li><a href='https://github.com/nks-hub/webdev-console-plugins' target='_blank'>webdev-console-plugins</a> — service pluginy</li><li><a href='https://github.com/nks-hub/wdc-catalog-api' target='_blank'>wdc-catalog-api</a> — backend katalogu binárek a pluginů</li></ul>"
+        "title": "O NKS WebDev Console",
+        "body": "<p>NKS WebDev Console spravuje lokální vývojové prostředí na Windows, macOS i Linuxu. Nahrazuje MAMP, XAMPP a Laragon jedním rozhraním pro Apache, Nginx, PHP, MySQL, MariaDB, Redis, Mailpit, Composer, SSL (mkcert) a tunely Cloudflare.</p><p>Služby běží v samostatném procesu na pozadí (démonu), okno aplikace je jen ovládací panel. Mezi režimy <strong>Jednoduchý</strong> a <strong>Pokročilý</strong> přepínáte v záhlaví aplikace. Jednoduchý režim ukazuje jen to nejdůležitější, Pokročilý přidává databáze, binárky, pluginy a další nástroje.</p>"
       },
       "firstSite": {
-        "title": "Vytvoř první web",
-        "body": "<p>Klikni na <strong>Weby</strong> v sidebaru a pak na <strong>+ Nový web</strong>. Zadej lokální doménu (např. <code>mojeapp.loc</code>) a vyber složku dokumentového kořene. WDC automaticky zaregistruje doménu v hosts souboru.</p><h3 id='simple'>Jednoduchý režim</h3><p>Minimální formulář: doména + document root + PHP verze + volitelné HTTPS + volitelný Cloudflare Tunnel.</p><h3 id='advanced'>Pokročilý režim</h3><p>Tabulkový pohled s 9 záložkami konfigurace webu: Obecné, Runtime, Cloudflare, SSL, Composer, Metriky, Chyby, Historie, Nebezpečné.</p>"
+        "title": "Vytvoření prvního webu",
+        "body": "<p>V menu vlevo otevřete <strong>Weby</strong> a klikněte na <strong>Nový web</strong> (nebo stiskněte <code>Ctrl+N</code>). Zadejte lokální doménu, například <code>mojeapp.loc</code>, a vyberte složku webu. WDC doménu zapíše do souboru hosts samo.</p><h3 id='simple'>Jednoduchý režim</h3><p>Krátký formulář: doména, složka webu, verze PHP a volitelně HTTPS a tunel Cloudflare.</p><h3 id='advanced'>Pokročilý režim</h3><p>Tabulka webů a úplné nastavení každého webu v záložkách: Obecné, Runtime, Cloudflare, SSL, Composer, Metriky, Chyby, Historie a Nebezpečné.</p>"
       },
       "sitesSimple": {
-        "title": "Weby — Jednoduchý režim",
-        "body": "<p>Jednoduchý režim zobrazuje kartu pro každý web se spuštěním/zastavením, otevřením v prohlížeči a rychlým nastavením. Web vytvoříš tlačítkem <strong>+ Nový web</strong>.</p><h3 id='setup'>Nastavení</h3><p>Doména + document root (automaticky navrhováno z <code>C:\\work\\sites\\&lt;doména&gt;</code>), výběr PHP verze, přepínač Cloudflare Tunnel, přepínač SSL.</p>"
+        "title": "Weby v Jednoduchém režimu",
+        "body": "<p>Jednoduchý režim ukazuje pro každý web kartu se spuštěním a zastavením, otevřením v prohlížeči a rychlým nastavením. Nový web vytvoříte tlačítkem <strong>Nový web</strong>.</p><h3 id='setup'>Nastavení</h3><p>Doména, složka webu (navrhne se automaticky), verze PHP, přepínač tunelu Cloudflare a přepínač SSL.</p>"
       },
       "sitesAdvanced": {
-        "title": "Weby — Pokročilý režim",
-        "body": "<p>Tabulkový pohled. Primární akce řádku je <strong>Upravit</strong> (otevře SiteEdit s 9 záložkami); Otevřít v prohlížeči, Detekovat framework, Smazat jsou v overflow menu.</p><h3 id='tabs'>Záložky SiteEdit</h3><ul><li><strong>Obecné</strong> — doména, aliasy, document root, PHP verze</li><li><strong>Runtime</strong> — ladění PHP-FPM poolu, proměnné prostředí</li><li><strong>Cloudflare</strong> — konfigurace tunelu pro web</li><li><strong>SSL</strong> — přepínač certifikátu + přepsání cest</li><li><strong>Composer</strong> — správce balíčků</li><li><strong>Metriky</strong> — přenosová rychlost, historický graf provozu</li><li><strong>Chyby</strong> — souhrn chyb Apache + PHP-FPM</li><li><strong>Historie</strong> — zálohovací body konfigurace</li><li><strong>Nebezpečné</strong> — přejmenování domény / smazání</li></ul>"
+        "title": "Weby v Pokročilém režimu",
+        "body": "<p>Tabulkový pohled. Hlavní akce řádku je <strong>Upravit</strong>, která otevře stránku úpravy webu se záložkami. Další akce, například otevření v prohlížeči nebo smazání, jsou v menu na konci řádku.</p><h3 id='tabs'>Záložky úpravy webu</h3><ul><li><strong>Obecné</strong>: doména, aliasy, složka webu, verze PHP</li><li><strong>Runtime</strong>: ladění poolu PHP-FPM, proměnné prostředí</li><li><strong>Cloudflare</strong>: tunel pro tento web</li><li><strong>SSL</strong>: přepínač certifikátu a vlastní cesty</li><li><strong>Composer</strong>: správa balíčků</li><li><strong>Metriky</strong>: počet požadavků a historický graf provozu</li><li><strong>Chyby</strong>: souhrn chyb z Apache a PHP-FPM</li><li><strong>Historie</strong>: body, ke kterým se lze s konfigurací vrátit</li><li><strong>Nebezpečné</strong>: přejmenování domény a smazání webu</li></ul>"
       },
       "databases": {
         "title": "Databáze",
-        "body": "<p>Správa MySQL / MariaDB databází na <code>/databases</code>. Zobrazení, vytváření, mazání; ad-hoc SQL dotazy; import / export SQL dumpů.</p><h3 id='troubleshoot'>Řešení problémů</h3><p>Pokud stránka zobrazí <strong>\"ERROR 1045 Access denied\"</strong>, port MySQL (výchozí 3306) je obsazený MAMP / XAMPP. Řešení: Nastavení → Porty → změň port MySQL, nebo zastav externí službu.</p>"
+        "body": "<p>Stránka <strong>Databáze</strong> spravuje databáze MySQL a MariaDB: zobrazení, vytváření a mazání, ad-hoc SQL dotazy, import a export SQL dumpů.</p><h3 id='troubleshoot'>Řešení problémů</h3><p>Když stránka zobrazí <strong>„ERROR 1045 Access denied“</strong>, port MySQL (výchozí 3306) pravděpodobně obsazuje MAMP nebo XAMPP. V Nastavení → Porty změňte port MySQL, nebo externí službu zastavte.</p>"
       },
       "ssl": {
         "title": "SSL certifikáty",
-        "body": "<p><code>/ssl</code> spravuje lokálně důvěryhodné TLS certifikáty přes mkcert.</p><h3 id='setup'>Nastavení</h3><ul><li><strong>Instalace CA</strong> — mkcert root do systémového úložiště. Provede se jednou na zařízení.</li><li><strong>Generovat</strong> — vydá certifikát pro doménu + volitelné aliasy.</li></ul><h3 id='status'>Stav certifikátu</h3><p>Každá karta certifikátu zobrazuje odpočet do vypršení (odznak zežloutí &le; 14 dní), DN vystavitele, SHA1 otisk. Osiřelé certifikáty (bez odpovídajícího webu) jsou ztlumeny s odznakem <em>Osiřelý</em>.</p>"
+        "body": "<p>Stránka <strong>SSL</strong> spravuje lokálně důvěryhodné certifikáty TLS přes mkcert.</p><h3 id='setup'>Nastavení</h3><ul><li><strong>Instalace certifikační autority</strong>: kořenový certifikát mkcert se přidá do úložiště systému. Stačí jednou na počítač.</li><li><strong>Generovat</strong>: vydá certifikát pro doménu a volitelné aliasy.</li></ul><h3 id='status'>Stav certifikátu</h3><p>Karta certifikátu ukazuje odpočet do vypršení (odznak zežloutne při 14 dnech a méně), vystavitele a otisk SHA-1. Certifikáty bez odpovídajícího webu jsou ztlumené s odznakem <em>Osiřelý</em>.</p>"
       },
       "composer": {
         "title": "Composer",
-        "body": "<p>Správa Composeru pro konkrétní web je na záložce SiteEdit → Composer a globálně na <code>/composer</code>.</p><ul><li>Automaticky hledá <code>composer.phar</code> v <code>~/.wdc/binaries/composer/</code>.</li><li>Instalace / Require / Remove / Diagnose / Outdated fungují přes invoker pluginu (bez shell interpolace).</li><li>Najetí na název balíčku zobrazí popover s metadaty z Packagist.</li></ul>"
+        "body": "<p>Composer pro jeden web spravujete v Úprava webu → Composer, globálně na stránce <strong>Composer</strong>.</p><ul><li>Soubor <code>composer.phar</code> se hledá automaticky v <code>~/.wdc/binaries/composer/</code>.</li><li>Instalace, přidání a odebrání balíčků, diagnostika a kontrola zastaralých balíčků běží přes plugin, bez předávání příkazů shellu.</li><li>Po najetí na název balíčku se zobrazí informace z Packagistu.</li></ul>"
       },
       "cloudflare": {
         "title": "Cloudflare Tunnel",
-        "body": "<p><code>/cloudflare</code> zpřístupňuje WDC weby na veřejné URL přes Cloudflare Tunnel — bez otevírání portů ve firewallu.</p><h3 id='setup'>Nastavení</h3><p>Vlož svůj Cloudflare API token + vyber zónu. Pro konkrétní web: zapni Tunnel na SiteEdit → Cloudflare.</p><p><strong>Poznámka:</strong> <code>cloudflared</code> je jeden proces obsluhující VŠECHNY tunelované weby. Jeho restart ovlivní celou flotilu tunelů.</p>"
+        "body": "<p>Stránka <strong>Cloudflare</strong> zpřístupní weby z WDC na veřejné adrese přes Cloudflare Tunnel, bez otevírání portů ve firewallu.</p><h3 id='setup'>Nastavení</h3><p>Vložte API token Cloudflare a vyberte zónu. U konkrétního webu pak zapněte tunel v Úprava webu → Cloudflare.</p><p><strong>Poznámka:</strong> <code>cloudflared</code> je jediný proces pro všechny weby v tunelu. Jeho restart se dotkne všech tunelovaných webů.</p>"
       },
       "hosts": {
         "title": "Hosts soubor",
-        "body": "<p><code>/hosts</code> je bezpečnější editor systémového hosts souboru. WDC záznamy jsou uvnitř bloku <code>BEGIN NKS WebDev Console</code> / <code>END NKS WebDev Console</code> — vše mimo je zachováno.</p><h3 id='safety'>Bezpečnost</h3><p>Vyžaduje administrátorská práva ve Windows. Před každým zápisem se vytvoří záloha <code>.bak</code> se časovým razítkem.</p>"
+        "body": "<p>Stránka <strong>Hosts soubor</strong> je bezpečnější editor systémového souboru hosts. Záznamy WDC jsou uvnitř bloku <code>BEGIN NKS WebDev Console</code> / <code>END NKS WebDev Console</code>, vše mimo něj zůstane beze změny.</p><h3 id='safety'>Bezpečnost</h3><p>Ve Windows je potřeba oprávnění správce. Před každým zápisem se vytvoří záloha <code>.bak</code> s časovým razítkem.</p>"
       },
       "plugins": {
         "title": "Pluginy",
-        "body": "<p>WDC je plugin-driven. Daemon načítá <code>IWdcPlugin</code> assemblies ze složky pluginů (Apache, MySQL, PHP, Redis, Composer, SSL, Cloudflare…). Každý plugin je verzován samostatně.</p><p>Psaní pluginu: viz <a href='https://github.com/nks-hub/webdev-console-plugins/blob/main/docs/PLUGIN-API.md' target='_blank'>PLUGIN-API.md</a> a <a href='https://github.com/nks-hub/webdev-console-plugins/blob/main/docs/WRITING-A-PLUGIN.md' target='_blank'>WRITING-A-PLUGIN průvodce</a>.</p>"
+        "body": "<p>WDC se skládá z pluginů. Démon načítá pluginy ze složky pluginů (Apache, MySQL, PHP, Redis, Composer, SSL, Cloudflare…) a každý má vlastní verzi. Zapnout nebo vypnout je můžete na stránce <strong>Pluginy</strong>; vypnutý plugin zmizí z menu i z přehledu služeb.</p><p>Vlastní plugin popisují <a href='https://github.com/nks-hub/webdev-console-plugins/blob/main/docs/PLUGIN-API.md' target='_blank'>PLUGIN-API.md</a> a <a href='https://github.com/nks-hub/webdev-console-plugins/blob/main/docs/WRITING-A-PLUGIN.md' target='_blank'>průvodce psaním pluginu</a>.</p>"
       },
       "mcp": {
-        "title": "MCP dev API",
-        "body": "<p>WDC obsahuje MCP (Model Context Protocol) server, aby AI nástroje (Claude Code, Cursor atd.) mohly automatizovat vytváření a správu webů.</p><h3 id='tools'>Dostupné nástroje</h3><ul><li><code>wdc_create_site</code></li><li><code>wdc_list_databases</code></li><li><code>wdc_generate_cert</code></li><li><code>wdc_cloudflare_config</code></li></ul><p>MCP server běží jako oddělená služba v procesu daemonu. Nasměruj svůj MCP-kompatibilní nástroj na nks-wdc transport.</p>"
+        "title": "MCP pro AI nástroje",
+        "body": "<p>WDC obsahuje server MCP (Model Context Protocol), přes který AI nástroje (Claude Code, Cursor a další) vytvářejí a spravují weby. Zapnete ho v Nastavení, po zapnutí se v menu objeví položka <strong>MCP</strong> s aktivitou, žádostmi a pravidly.</p><h3 id='tools'>Dostupné nástroje</h3><ul><li><code>wdc_create_site</code></li><li><code>wdc_list_databases</code></li><li><code>wdc_generate_cert</code></li><li><code>wdc_cloudflare_config</code></li></ul><p>Nástroj kompatibilní s MCP nasměrujte na transport nks-wdc. Rizikové akce AI nejdřív potvrdíte vy.</p>"
       },
       "shortcuts": {
         "title": "Klávesové zkratky",
-        "body": "<ul><li><code>Ctrl+K</code> / <code>Cmd+K</code> — otevřít Command Palette</li><li><code>F5</code> — obnovit stav daemonu</li><li><code>Ctrl+N</code> — nový web</li><li><code>Ctrl+1..7</code> — přejít na Dashboard / Weby / Databáze / SSL / PHP / Binárky / Nastavení</li></ul>"
+        "body": "<ul><li><code>Ctrl+K</code> / <code>Cmd+K</code>: otevře paletu příkazů (funguje i s Caps Lockem a na české klávesnici)</li><li><code>F5</code>: znovu naváže spojení s démonem</li><li><code>Ctrl+N</code>: nový web</li><li><code>Ctrl+1</code> až <code>Ctrl+7</code>: Přehled / Weby / Databáze / SSL / PHP / Binárky / Nastavení. Čísla jsou na horní řadě kláves a na české klávesnici fungují bez Shiftu. V Jednoduchém režimu vedou i na stránky, které menu neukazuje.</li></ul><p>Při psaní do textového pole nebo editoru se zkratky kromě <code>Ctrl+K</code> nepoužijí, aby vás nepřenesly jinam uprostřed úprav.</p>"
       },
       "settings": {
         "title": "Nastavení",
-        "body": "<p><code>/settings</code> zahrnuje:</p><ul><li><strong>Obecné</strong> — jazyk, motiv, režim UI, spuštění při startu, automatické spuštění služeb, výchozí PHP verze, telemetrie.</li><li><strong>Porty</strong> — přepsání portů pro každou spravovanou službu.</li><li><strong>Cesty</strong> — přepsání cest k binárce + cesta k hosts souboru.</li><li><strong>Databáze</strong> — výchozí přihlašovací údaje MySQL admina.</li><li><strong>Pokročilé</strong> — přepínače pluginů, automatický restart služby, přepsání URL katalogu.</li><li><strong>Účet</strong> — volitelná synchronizace s wdc-catalog-api.</li><li><strong>Aktualizace</strong> — kontrola nových vydání WDC.</li><li><strong>O aplikaci</strong> — verze, zdroje, info o runtime.</li></ul>"
+        "body": "<p><strong>Nastavení</strong> je rozdělené do záložek, například:</p><ul><li><strong>Obecné</strong>: jazyk, motiv, režim rozhraní, spuštění při startu, automatické spouštění služeb, výchozí verze PHP, telemetrie</li><li><strong>Porty</strong>: porty jednotlivých služeb</li><li><strong>Cesty</strong>: cesty k programům a k souboru hosts</li><li><strong>Databáze</strong>: výchozí přihlašovací údaje správce MySQL</li><li><strong>Pokročilé</strong>: zapnutí pluginů, automatický restart služeb, vlastní adresa katalogu</li><li><strong>Účet</strong>: volitelné přihlášení ke katalogu NKS a synchronizace</li><li><strong>Aktualizace</strong>: kontrola nových verzí WDC</li><li><strong>O aplikaci</strong>: verze, zdroje a informace o běhu</li></ul>"
       },
       "binaries": {
         "title": "Binárky",
-        "body": "<p><code>/binaries</code> spravuje runtime binárky (Apache, Nginx, PHP, MySQL, MariaDB, Redis, Caddy, Mailpit, cloudflared, mkcert, Node, Composer). Každá se stahuje na vyžádání z GitHub releases pro tvůj OS + arch. SHA-256 se ověří před rozbalením.</p><h3 id='upgrade'>Aktualizace</h3><p>Upgrade ponechává starší verze na disku jako zálohu pro vrácení zpět.</p>"
+        "body": "<p>Stránka <strong>Binárky</strong> spravuje programy, které WDC spouští (Apache, Nginx, PHP, MySQL, MariaDB, Redis, Caddy, Mailpit, cloudflared, mkcert, Node, Composer). Každý se stáhne na požádání z vydání na GitHubu pro váš systém a architekturu a před rozbalením se ověří jeho SHA-256.</p><h3 id='upgrade'>Aktualizace</h3><p>Při aktualizaci zůstanou starší verze na disku, takže se k nim můžete vrátit.</p>"
       },
       "metrics": {
-        "title": "Metriky + logy",
-        "body": "<p>Každý web má per-request metriky z Apache access logu a souhrnné error logy z Apache + PHP-FPM + PHP-web. Viz SiteEdit → Metriky + Chyby.</p><h3 id='dashboard'>Dashboard</h3><p>Agreguje přes všechny běžící služby: CPU, RAM, sparkline požadavků za minutu, odznak počtu chyb. Kliknutím na dlaždici se dostaneš na detail.</p>"
+        "title": "Metriky a logy",
+        "body": "<p>Každý web má metriky požadavků z přístupového logu Apache a souhrn chyb z Apache a PHP-FPM. Najdete je v Úprava webu → Metriky a Chyby.</p><h3 id='dashboard'>Přehled</h3><p>Úvodní stránka <strong>Přehled</strong> shrnuje stav jednou větou a pod ní ukazuje seznam <em>Vyžaduje pozornost</em> (spadlá služba, chybějící Apache, stará záloha, nová verze), tabulku služeb se stavem, portem, verzí a využitím CPU a paměti a nedávnou aktivitu. V Pokročilém režimu jsou navíc grafy CPU a paměti za posledních 5 minut.</p><p>Nenainstalovaná služba je označená jako <em>Nenainstalováno</em> a má tlačítko <strong>Instalovat</strong>, které otevře stránku Binárky.</p>"
       }
     },
     "wizard": {
-      "title": "Rychlý start",
-      "subtitle": "Naučte se klíčové funkce NKS WebDev Console v 5 krocích.",
+      "title": "Prohlídka aplikace",
+      "subtitle": "Projděte si hlavní funkce NKS WebDev Console v 5 krocích.",
       "step": "Krok {current} z {total}",
       "next": "Další",
       "back": "Zpět",
@@ -2850,62 +2918,65 @@
       "skip": "Přeskočit",
       "steps": {
         "site": {
-          "title": "Vytvoř první web",
-          "desc": "Jdi do <strong>Webů</strong> v sidebaru a klikni na <strong>+ Nový web</strong>. Zadej lokální doménu jako <code>mojeapp.loc</code> a vyber document root. WDC automaticky zaregistruje doménu v hosts souboru.",
-          "tip": "Tip: použij <kbd>Ctrl+N</kbd> pro okamžité otevření formuláře nového webu odkudkoli."
+          "title": "Vytvořte první web",
+          "desc": "V menu vlevo otevřete <strong>Weby</strong> a klikněte na <strong>Nový web</strong>. Zadejte lokální doménu, například <code>mojeapp.loc</code>, a vyberte složku webu. WDC doménu zapíše do souboru hosts samo.",
+          "tip": "Tip: <kbd>Ctrl+N</kbd> otevře formulář nového webu odkudkoli."
         },
         "ssl": {
-          "title": "Zapni HTTPS",
-          "desc": "Otevři web v <strong>SiteEdit → záložka SSL</strong> (nebo přepni SSL přímo v Jednoduchém režimu). Poprvé: nainstaluj lokální CA přes <strong>SSL → Instalace CA</strong>, aby prohlížeč certifikátům důvěřoval.",
-          "tip": "Tip: odznak SSL na kartě certifikátu zežloutí, když do vypršení zbývá ≤ 14 dní."
+          "title": "Zapněte HTTPS",
+          "desc": "V úpravě webu otevřete záložku <strong>SSL</strong> (v Jednoduchém režimu stačí přepínač SSL). Poprvé nejdřív nainstalujte lokální certifikační autoritu na stránce <strong>SSL</strong>, aby prohlížeč certifikátům důvěřoval.",
+          "tip": "Tip: odznak u certifikátu zežloutne, když do vypršení zbývá 14 dnů nebo méně."
         },
         "browser": {
-          "title": "Otevři web v prohlížeči",
-          "desc": "Klikni na tlačítko <strong>Otevřít v prohlížeči</strong> na kartě webu nebo ze SiteEdit. Používá <code>shell.openExternal</code>, takže se otevře výchozí prohlížeč OS — ne okno Electronu.",
-          "tip": "Tip: web musí běžet (zelený stav), aby se URL přeložila."
+          "title": "Otevřete web v prohlížeči",
+          "desc": "Klikněte na <strong>Otevřít v prohlížeči</strong> na kartě webu nebo na stránce úpravy webu. Web se otevře ve výchozím prohlížeči systému.",
+          "tip": "Tip: web musí běžet, jinak se adresa nenačte."
         },
         "database": {
-          "title": "Spravuj databáze",
-          "desc": "Přejdi na <strong>Databáze</strong> v sidebaru pro vytváření databází, spouštění SQL dotazů nebo import/export dumpů. Závislosti Composeru pro konkrétní web jsou na <strong>SiteEdit → Composer</strong>.",
-          "tip": "Tip: pokud MySQL zobrazí \"Access denied\", zkontroluj Nastavení → Porty pro kolizi portů."
+          "title": "Spravujte databáze",
+          "desc": "V menu vlevo otevřete <strong>Databáze</strong>: vytvoříte databázi, spustíte SQL dotaz nebo naimportujete a exportujete dump. Závislosti Composeru jednoho webu najdete v <strong>Úprava webu → Composer</strong>.",
+          "tip": "Tip: když MySQL hlásí „Access denied“, zkontrolujte v Nastavení → Porty, jestli port neobsazuje jiný program."
         },
         "cli": {
-          "title": "Použij CLI",
-          "desc": "WDC obsahuje CLI <code>wdc</code> pro skriptování a integraci AI nástrojů přes MCP. Časté příkazy:",
-          "tip": "Tip: integruj s Claude Code přes MCP server — viz Nápověda → MCP dev API."
+          "title": "Použijte příkazový řádek",
+          "desc": "WDC obsahuje nástroj <code>wdc</code> pro skripty a pro napojení AI nástrojů přes MCP. Časté příkazy:",
+          "tip": "Tip: s Claude Code ho propojíte přes server MCP, viz Nápověda → MCP pro AI nástroje."
         }
       }
     },
-    "runSetupWizard": "Spustit průvodce nastavením"
+    "runSetupWizard": "Nastavit prostředí"
   },
   "onboarding": {
-    "title": "Vítej v NKS WebDev Console",
-    "subtitle": "Pojďme nastavit tvoje lokální vývojové prostředí.",
-    "step1": "Instalace základních binárek",
-    "step1Desc": "Stáhni Apache, PHP a MySQL do spravované složky binárek.",
-    "step2": "Instalace mkcert CA",
-    "step2Desc": "Přidej lokální certifikační autoritu do systémového úložiště důvěryhodných certifikátů, aby HTTPS weby fungovaly bez upozornění.",
-    "step3": "Připraveno",
-    "step3Desc": "Vytvoř svůj první web a pusť se do vývoje.",
+    "title": "Vítejte v NKS WebDev Console",
+    "subtitle": "Nastavíme vaše lokální vývojové prostředí.",
+    "step1": "Základní programy",
+    "step1Desc": "Stáhneme Apache, PHP a MySQL do složky aplikace.",
+    "step2": "Certifikát pro HTTPS",
+    "step2Desc": "Lokální certifikační autoritu (mkcert) přidáme mezi důvěryhodné certifikáty v systému, aby weby na HTTPS fungovaly bez upozornění prohlížeče.",
+    "step3": "Hotovo",
+    "step3Desc": "Vytvořte svůj první web a můžete začít.",
     "installApache": "Instalovat Apache",
     "installPhp": "Instalovat PHP",
     "installMysql": "Instalovat MySQL",
     "pickVersion": "Verze",
-    "installMkcert": "Instalovat mkcert",
-    "installMkcertCa": "Důvěřovat lokální CA",
-    "labelMkcertBinary": "mkcert binárka",
-    "labelLocalCaTrust": "Důvěra lokální CA",
+    "installMkcert": "Nainstalovat mkcert",
+    "installMkcertCa": "Důvěřovat certifikační autoritě",
+    "labelMkcertBinary": "Program mkcert",
+    "labelLocalCaTrust": "Důvěra v lokální certifikační autoritu",
     "installed": "Nainstalováno",
     "notInstalled": "Nenainstalováno",
-    "skip": "Přeskočit průvodce",
     "next": "Další",
     "back": "Zpět",
     "finish": "Dokončit",
     "createFirstSite": "Vytvořit první web",
     "createSampleSite": "Vytvořit ukázkový web localhost",
     "sampleSiteOk": "Ukázkový web localhost byl vytvořen",
-    "sampleSiteWarn": "Ukázkový web možná nebyl vytvořen — zkontroluj stránku Weby",
-    "dontShowAgain": "Příště nezobrazovat"
+    "sampleSiteWarn": "Ukázkový web možná nebyl vytvořen. Zkontrolujte stránku Weby.",
+    "dontShowAgain": "Už nezobrazovat",
+    "later": "Později",
+    "laterHint": "Průvodce znovu otevřete v Nápovědě.",
+    "stateError": "Aktuální stav se nepodařilo načíst, zkusím to znovu.",
+    "installedVersion": "Nainstalováno ({version})"
   },
   "toast": {
     "noBinaryForPlatform": "{app}: pro tuto platformu není k dispozici žádný binární balíček",
@@ -3036,8 +3107,8 @@
       "title": "Vyžaduje pozornost",
       "none": "Teď nic nevyžaduje vaši pozornost.",
       "crashed": "spadla. Důvod obvykle najdete v logu.",
-      "showWhy": "Zobrazit proč",
-      "applyFailed": "Při posledním použití selhal krok {step}. | při posledním použití selhaly kroky: {step}. | při posledním použití selhaly kroky: {step}.",
+      "showWhy": "Zobrazit důvod",
+      "applyFailed": "při posledním použití selhal krok {step}. | při posledním použití selhaly kroky: {step}. | při posledním použití selhaly kroky: {step}.",
       "openSite": "Otevřít web",
       "apacheStopped": "Webový server je zastavený, weby se nenačtou.",
       "startApache": "Spustit Apache",
@@ -3045,10 +3116,15 @@
       "backupOld": "Poslední záloha je starší než {days} dní.",
       "openBackups": "Otevřít zálohy",
       "update": "Verze {version} je připravená k instalaci.",
-      "openUpdate": "Otevřít aktualizaci"
+      "openUpdate": "Otevřít aktualizaci",
+      "startFailed": "se nespustila. Důvod obvykle najdete v logu.",
+      "serviceSubject": "Služba {name}",
+      "apacheMissing": "Webový server Apache není nainstalovaný, weby se nenačtou.",
+      "phpMissing": "PHP není nainstalované, weby v PHP nepoběží.",
+      "install": "Instalovat {name}"
     },
     "stack": {
-      "title": "Stack",
+      "title": "Služby",
       "all": "Všechny služby",
       "caption": "Stav služeb",
       "loading": "Načítám stav služeb",
@@ -3067,8 +3143,10 @@
       "stopped": "Zastaveno",
       "starting": "Spouští se",
       "stopping": "Zastavuje se",
-      "crashed": "Spadla",
-      "disabled": "Vypnuto"
+      "crashed": "Spadlo",
+      "disabled": "Vypnuto",
+      "startFailed": "Nespuštěno",
+      "notInstalled": "Nenainstalováno"
     },
     "actions": {
       "start": "Spustit",
@@ -3076,10 +3154,19 @@
       "why": "Proč?",
       "logs": "Logy",
       "config": "Konfigurace",
-      "more": "Další akce pro {name}"
+      "more": "Další akce pro {name}",
+      "install": "Instalovat"
     },
     "figures": {
       "title": "Přehled čísel"
+    },
+    "summaryNotInstalled": "{n} nenainstalovaná | {n} nenainstalované | {n} nenainstalovaných",
+    "logsTitle": "Logy – {name}",
+    "batch": {
+      "started": "Spuštěno služeb: {n}",
+      "stopped": "Zastaveno služeb: {n}",
+      "startFailed": "Nepodařilo se spustit služeb: {n}",
+      "stopFailed": "Nepodařilo se zastavit služeb: {n}"
     }
   },
   "mcpCapabilities": {
@@ -3154,35 +3241,35 @@
     }
   },
   "splash": {
-    "failedTitle": "Daemon se nepodařilo spustit",
+    "failedTitle": "Službu na pozadí se nepodařilo spustit",
     "retry": "Zkusit znovu",
     "restartApp": "Restartovat aplikaci",
-    "logHint": "Log daemona: {path}",
+    "logHint": "Log služby na pozadí: {path}",
     "status": {
-      "mounting": "Spouštím frontend…",
-      "connecting": "Připojuji se k backendu…",
-      "daemonStarting": "Daemon se spouští…",
-      "pluginsStarting": "Daemon spouští pluginy…",
-      "slow": "Daemon stále odpovídá pomalu…",
-      "unresponsive": "Daemon dlouho nereaguje — chystám diagnostiku…",
-      "auth": "Daemon běží, synchronizuji token…",
-      "server": "Daemon hlásí chybu — zkouším znovu…",
-      "waiting": "Čekám na backend…"
+      "mounting": "Spouštím rozhraní…",
+      "connecting": "Připojuji se ke službě na pozadí…",
+      "daemonStarting": "Služba na pozadí se spouští…",
+      "pluginsStarting": "Služba na pozadí načítá pluginy…",
+      "slow": "Služba na pozadí stále odpovídá pomalu…",
+      "unresponsive": "Služba na pozadí dlouho neodpovídá, připravuji diagnostiku…",
+      "auth": "Služba na pozadí běží, ověřuji přístup…",
+      "server": "Služba na pozadí hlásí chybu, zkouším to znovu…",
+      "waiting": "Čekám na službu na pozadí…"
     },
     "hint": {
       "mount": "načítání rozhraní",
       "first": "první pokus",
       "attempt": "pokus {n}",
-      "network": "pokus {n} · port file / socket",
-      "auth": "pokus {n} · rotace tokenu",
-      "server": "pokus {n} · odpověď 5xx"
+      "network": "pokus {n} · spojení se nezdařilo",
+      "auth": "pokus {n} · ověření přístupu",
+      "server": "pokus {n} · služba hlásí chybu"
     },
     "attempts": "{n} pokus | {n} pokusy | {n} pokusů",
     "fail": {
-      "network": "Daemon neodpovídá (port file / socket) — {attempts} za {s} s.",
-      "auth": "Daemon běží, ale token se nepodařilo synchronizovat — {attempts}.",
-      "server": "Daemon vrací chybu (5xx) — {attempts} za {s} s.",
-      "unknown": "Backend se neozval za {s} s ({attempts})."
+      "network": "Služba na pozadí neodpovídá: {attempts} za {s} s.",
+      "auth": "Služba na pozadí běží, ale nepodařilo se ověřit přístup: {attempts}.",
+      "server": "Služba na pozadí vrací chybu: {attempts} za {s} s.",
+      "unknown": "Služba na pozadí se neozvala za {s} s ({attempts})."
     }
   },
   "osNotifications": {
@@ -3326,5 +3413,9 @@
       "days": "před {n} d"
     },
     "openFromSettings": "Připojit AI klienta"
+  },
+  "app": {
+    "name": "NKS WebDev Console",
+    "short": "WDC"
   }
 }

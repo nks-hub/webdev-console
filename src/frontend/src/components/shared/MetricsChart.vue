@@ -17,6 +17,7 @@ import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent } from 'echarts/components'
 import VChart from 'vue-echarts'
+import { useI18n } from 'vue-i18n'
 import { useChartPalette, rgba } from '../../utils/themeColors'
 
 use([CanvasRenderer, LineChart, GridComponent, TooltipComponent])
@@ -26,7 +27,11 @@ const props = defineProps<{
   /** Series colour: a design token tone. */
   tone?: 'accent' | 'success'
   height?: number
+  /** Unit shown on the axis and in the tooltip ("%", "MB"). */
+  unit?: string
 }>()
+
+const { locale } = useI18n()
 
 const palette = useChartPalette()
 
@@ -50,6 +55,14 @@ onBeforeUnmount(() => {
   resizeObserver = null
 })
 
+// Values under 10 keep a decimal ("0,5 %"), so a quiet CPU does not read as
+// "1 / 1 / 0" on the axis; larger values are rounded.
+function formatValue(v: number): string {
+  const digits = v < 1 ? 2 : v < 10 ? 1 : 0
+  const text = new Intl.NumberFormat(String(locale.value), { maximumFractionDigits: digits }).format(v)
+  return props.unit ? `${text} ${props.unit}` : text
+}
+
 const chartOption = computed(() => {
   const p = palette.value
   const line = props.tone === 'success' ? p.success : p.accent
@@ -69,10 +82,10 @@ const chartOption = computed(() => {
       textStyle: { color: rgba(p.text), fontSize: 11 },
       formatter: (params: unknown) => {
         const val = (params as Array<{ value?: unknown }>)?.[0]?.value
-        return val != null ? `${Number(val).toFixed(1)}` : ''
+        return val != null ? formatValue(Number(val)) : ''
       },
     },
-    grid: { top: 4, right: 4, bottom: 2, left: 30 },
+    grid: { top: 6, right: 6, bottom: 2, left: 52 },
     xAxis: {
       type: 'category',
       show: false,
@@ -84,9 +97,9 @@ const chartOption = computed(() => {
       min: 0,
       splitNumber: 2,
       axisLabel: {
-        fontSize: 9,
+        fontSize: 10,
         color: rgba(p.text3),
-        formatter: (v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(Math.round(v)),
+        formatter: (v: number) => formatValue(v),
       },
       splitLine: {
         lineStyle: { color: rgba(p.border), type: 'dashed' },

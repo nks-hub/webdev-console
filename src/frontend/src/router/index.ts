@@ -1,5 +1,6 @@
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
 import { usePluginsStore } from '../stores/plugins'
+import { i18n } from '../i18n'
 
 // Lazy-loaded so heavy page deps (monaco-editor, echarts, xterm) land in
 // per-route chunks instead of the main bundle. Eagerly importing all 18
@@ -54,9 +55,9 @@ const baseRoutes: RouteRecordRaw[] = [
   { path: '/binaries', component: Binaries, meta: { title: 'Binaries', titleKey: 'nav.binaries', advancedNav: true } },
   { path: '/composer', component: ComposerManager, meta: { title: 'Composer', titleKey: 'nav.composer', advancedNav: true } },
   { path: '/hosts', component: HostsManager, meta: { title: 'Hosts', titleKey: 'nav.hosts', advancedNav: true } },
-  { path: '/service/:id', component: Dashboard, props: true, meta: { title: 'Service', titleKey: 'nav.services', advancedNav: true } },
+  { path: '/service/:id', redirect: to => ({ path: '/services', query: { service: String(to.params.id) } }) },
   { path: '/service/:id/config', component: ServiceConfig, props: true, meta: { title: 'Service Config', titleKey: 'nav.services' } },
-  { path: '/backups', component: BackupsPage, meta: { title: 'Zálohy', titleKey: 'nav.backups' } },
+  { path: '/backups', component: BackupsPage, meta: { title: 'Backups', titleKey: 'nav.backups' } },
   // Phase 8 — single MCP hub with 4 tabs (Activity / Requests / Rules / Catalog).
   // /mcp redirects to /mcp/activity (the new default — full audit feed).
   // MCP visibility is driven by featureFlagsStore.showMcpSurface, not the
@@ -68,7 +69,7 @@ const baseRoutes: RouteRecordRaw[] = [
   { path: '/mcp/grants',  component: McpHub, meta: { title: 'MCP', titleKey: 'nav.mcp' } },
   { path: '/mcp/kinds',   component: McpHub, meta: { title: 'MCP', titleKey: 'nav.mcp' } },
   { path: '/help', component: Help, meta: { title: 'Help', titleKey: 'nav.help' } },
-  { path: '/login', component: Login, meta: { title: 'Sign in', chromeless: true } },
+  { path: '/login', component: Login, meta: { title: 'Sign in', titleKey: 'nav.signIn' } },
   // Unknown paths (stale links, removed pages) used to render an empty
   // shell; send them to the default landing page instead.
   { path: '/:pathMatch(.*)*', redirect: '/sites' },
@@ -94,7 +95,14 @@ router.beforeEach((to) => {
   }
 })
 
-router.afterEach((to) => {
-  const title = (to.meta?.title as string) ?? 'NKS WebDev Console'
-  document.title = `${title} — NKS WDC`
-})
+// Window title in the UI language; meta.title is the English fallback for
+// routes without a titleKey.
+export function updateDocumentTitle(route = router.currentRoute.value): void {
+  const { t, te } = i18n.global
+  const key = route.meta?.titleKey as string | undefined
+  const page = key && te(key) ? t(key) : (route.meta?.title as string | undefined)
+  const app = t('app.name')
+  document.title = page ? `${page} — ${app}` : app
+}
+
+router.afterEach((to) => updateDocumentTitle(to))

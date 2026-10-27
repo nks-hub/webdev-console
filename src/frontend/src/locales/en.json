@@ -1,37 +1,47 @@
 {
   "commandPalette": {
-    "placeholder": "Type a command…",
-    "empty": "No matching commands",
+    "placeholder": "Search sites, services and actions…",
+    "empty": "Nothing found",
     "goTo": "Go to {target}",
-    "gotoSites": "Go to Sites",
-    "gotoDashboard": "Go to Overview",
-    "gotoDatabases": "Go to Databases",
-    "gotoSsl": "Go to SSL Manager",
-    "gotoPhp": "Go to PHP Manager",
-    "gotoBinaries": "Go to Binaries",
-    "gotoPlugins": "Go to Plugins",
-    "gotoSettings": "Go to Settings",
-    "gotoCloudflare": "Go to Cloudflare Tunnel",
-    "gotoMcpActivity": "Go to MCP Activity",
+    "gotoSites": "Sites",
+    "gotoDashboard": "Overview",
+    "gotoDatabases": "Databases",
+    "gotoSsl": "SSL",
+    "gotoPhp": "PHP",
+    "gotoBinaries": "Binaries",
+    "gotoPlugins": "Plugins",
+    "gotoSettings": "Settings",
+    "gotoCloudflare": "Cloudflare",
+    "gotoMcpActivity": "MCP activity",
     "gotoMcpActivityDesc": "AI tool call audit feed",
-    "gotoMcpRequests": "Go to MCP Requests",
+    "gotoMcpRequests": "MCP requests",
     "gotoMcpRequestsDesc": "Pending signed AI requests",
-    "gotoMcpRules": "Go to MCP Rules",
+    "gotoMcpRules": "MCP rules",
     "gotoMcpRulesDesc": "Auto-approve rules",
-    "gotoMcpCatalog": "Go to MCP Catalog",
+    "gotoMcpCatalog": "MCP catalog",
     "gotoMcpCatalogDesc": "Available action types",
-    "openMailpit": "Open Mailpit UI",
+    "openMailpit": "Open Mailpit",
     "newSite": "Create New Site",
     "refresh": "Refresh Data",
     "startService": "Start {name}",
     "stopService": "Stop {name}",
-    "alreadyRunning": "Already running",
-    "alreadyStopped": "Already stopped",
     "startAll": "Start All Services",
     "stopAll": "Stop All Services",
     "openSite": "Open {domain}",
     "editSite": "Edit {domain}",
-    "gotoServices": "Go to Services"
+    "gotoServices": "Services",
+    "title": "Command palette",
+    "installService": "Install {name}",
+    "advancedTag": "Advanced",
+    "groups": {
+      "recommended": "Recommended",
+      "recent": "Recent",
+      "navigate": "Go to",
+      "sites": "Sites",
+      "services": "Services",
+      "actions": "Actions"
+    },
+    "mcpOff": "MCP is off"
   },
   "common": {
     "save": "Save",
@@ -108,19 +118,32 @@
   },
   "login": {
     "subtitle": "Local development console",
-    "description": "Sign in to your NKS WDC catalog account to enable plugin auto-sync, SSO-gated admin actions, and per-device identity. You can use the app without signing in — the button below stays available at any time from the sidebar.",
-    "signInSso": "Sign in with SSO",
+    "description": "Signing in with an NKS account syncs your plugins and unlocks actions that need verification. The app also works without signing in; you can sign in at any time from the left menu.",
+    "signInSso": "Sign in with your NKS account",
     "signOut": "Sign out",
     "continue": "Continue to app",
     "continueWithout": "Continue without signing in →",
     "signedInHint": "You are signed in to the catalog.",
-    "catalogUrl": "Catalog URL",
     "or": "or",
     "email": "Email",
     "password": "Password",
     "success": "Signed in",
     "registered": "Account created",
-    "failed": "Sign-in failed"
+    "failed": "Sign-in failed",
+    "emailPlaceholder": "you{'@'}example.com",
+    "passwordAgain": "Repeat password",
+    "createAccount": "Create account",
+    "haveAccount": "I have an account",
+    "noAccount": "I have no account",
+    "errors": {
+      "desktopOnly": "Signing in with an NKS account only works in the desktop app.",
+      "emptyToken": "Sign-in ended without an access token. Please try again.",
+      "badCredentials": "The e-mail or password is wrong.",
+      "exists": "An account with this e-mail already exists.",
+      "network": "Could not reach the catalog. Check your internet connection.",
+      "mismatch": "The passwords do not match.",
+      "generic": "Sign-in did not work ({detail})."
+    }
   },
   "nav": {
     "services": "Services",
@@ -141,31 +164,32 @@
     "tools": "Tools",
     "composer": "Composer",
     "hosts": "Hosts file",
-    "mcpIntents": "MCP Intents",
     "mcpGrants": "MCP Grants",
-    "mcp": "MCP",
+    "mcp": "AI clients (MCP)",
     "backups": "Backups",
     "help": "Help",
-    "signedIn": "Signed in",
+    "signedIn": "Signed in as",
     "signIn": "Sign in",
-    "signOutConfirm": "Sign out of the catalog?",
-    "signOutTitle": "Sign out",
-    "signedOutToast": "Signed out",
     "serviceStarted": "{name} started",
     "serviceStopped": "{name} stopped",
-    "signedInAsTitle": "Signed in as {name} — click to sign out",
+    "signedInAsTitle": "Signed in as {name}. Click to open account settings.",
     "signInTitle": "Sign in with SSO",
     "system": "System",
     "mainNavigation": "Main navigation",
     "brandHome": "WebDev Console, overview",
     "application": "Application",
-    "servicesCrashed": "{n} service crashed | {n} services crashed",
     "groups": {
       "workspace": "Workspace",
-      "stack": "Stack",
+      "stack": "Environment",
       "network": "Network",
       "operations": "Operations"
-    }
+    },
+    "cloudflare": "Cloudflare",
+    "problemsBadge": "{n} problem | {n} problems",
+    "problemStartFailed": "{name} did not start",
+    "problemExited": "{name} crashed",
+    "mcpOff": "off",
+    "mcpPending": "Waiting for approval: {n}"
   },
   "versions": {
     "active": "Active",
@@ -604,7 +628,9 @@
     },
     "metrics": {
       "cpuUsage": "CPU Usage",
-      "memory": "Memory"
+      "memory": "Memory",
+      "range": "last 5 min",
+      "collecting": "Collecting data…"
     },
     "running": "running",
     "simple": {
@@ -646,6 +672,48 @@
         "never": "No backup has been created yet.",
         "olderThanDays": "Last backup is older than {days} days.",
         "openBtn": "Open backups"
+      }
+    },
+    "mailpitDown": "Mailpit is not running. Start it in the services table.",
+    "activity": {
+      "via": "via {source}",
+      "op": {
+        "create": "Created",
+        "insert": "Created",
+        "update": "Changed",
+        "edit": "Changed",
+        "delete": "Deleted",
+        "remove": "Removed",
+        "apply": "Applied",
+        "restore": "Restored",
+        "rename": "Renamed",
+        "enable": "Enabled",
+        "disable": "Disabled",
+        "install": "Installed",
+        "uninstall": "Uninstalled",
+        "start": "Started",
+        "stop": "Stopped",
+        "restart": "Restarted"
+      },
+      "entity": {
+        "site": "Site",
+        "service": "Service",
+        "setting": "Setting",
+        "settings": "Settings",
+        "plugin": "Plugin",
+        "database": "Database",
+        "binary": "Binary",
+        "cert": "Certificate",
+        "certificate": "Certificate",
+        "backup": "Backup",
+        "vhost": "Virtual host",
+        "config": "Configuration",
+        "hosts": "Hosts file"
+      },
+      "source": {
+        "mcp": "MCP",
+        "cli": "command line",
+        "api": "API"
       }
     }
   },
@@ -1335,7 +1403,7 @@
       "userDeleted": "MySQL user deleted",
       "deleteUserFailed": "Delete user failed: {err}",
       "dropUserConfirmTitle": "Delete MySQL user",
-      "dropUserConfirmMessage": "Delete MySQL user {user}@{host}? Databases are not deleted.",
+      "dropUserConfirmMessage": "Delete MySQL user {user}{'@'}{host}? Databases are not deleted.",
       "dropUserConfirmBtn": "Delete"
     },
     "dropDatabasePrompt": "Type {name} to permanently drop this database.",
@@ -1681,7 +1749,7 @@
       "empty": "No hosts configured yet — click \"Add host\" to set up production / staging / etc.",
       "col": {
         "name": "Name",
-        "sshTarget": "SSH user@host",
+        "sshTarget": "SSH user{'@'}host",
         "remotePath": "Remote path",
         "branch": "Branch",
         "localPaths": "Local paths",
@@ -2755,24 +2823,24 @@
     }
   },
   "footer": {
-    "servicesRunning": "services running",
+    "servicesRunning": "{running} of {total} service running | {running} of {total} services running",
     "tunnel": "Tunnel",
     "daemon": "Daemon",
-    "daemonRunning": "Daemon running",
-    "daemonOffline": "Daemon offline",
-    "crashed": "{n} crashed",
-    "tunnelTitle": "Cloudflare Tunnel is running — exposed sites are publicly reachable"
+    "tunnelTitle": "Cloudflare Tunnel is running — exposed sites are publicly reachable",
+    "problems": "{n} problem | {n} problems",
+    "simpleOffline": "The app cannot reach its background service",
+    "simpleProblems": "{n} service has a problem | {n} services have a problem",
+    "simpleAllRunning": "Everything is running"
   },
   "help": {
     "title": "Help",
     "jumpTo": "Jump to",
     "searchPlaceholder": "Search help…",
-    "startGettingStarted": "Getting Started",
-    "comingSoonVideo": "Video coming soon",
+    "startGettingStarted": "App tour",
     "noResults": "No help sections match \"{q}\".",
     "breadcrumbRoot": "Help",
     "groups": {
-      "gettingStarted": "Getting Started",
+      "gettingStarted": "Getting started",
       "sites": "Sites",
       "services": "Services",
       "advanced": "Advanced",
@@ -2780,12 +2848,12 @@
     },
     "topics": {
       "overview": {
-        "title": "Overview",
-        "body": "<p>NKS WebDev Console is a local development environment manager for Windows, macOS and Linux. It replaces MAMP / XAMPP / Laragon with a unified interface for Apache, Nginx, PHP, MySQL, MariaDB, Redis, Mailpit, Composer, SSL (mkcert) and Cloudflare Tunnels.</p><p>Everything runs as a local daemon process; the Electron app is just the control surface. You can switch UI modes between <strong>Simple</strong> (one-page sites) and <strong>Advanced</strong> (full per-service management) in the header.</p><h3 id='arch'>Architecture</h3><ul><li><a href='https://github.com/nks-hub/webdev-console' target='_blank'>webdev-console</a> — this app (Electron + Vue 3 + .NET 9 daemon)</li><li><a href='https://github.com/nks-hub/webdev-console-plugins' target='_blank'>webdev-console-plugins</a> — service plugins</li><li><a href='https://github.com/nks-hub/wdc-catalog-api' target='_blank'>wdc-catalog-api</a> — binary + plugin catalog backend</li></ul>"
+        "title": "About NKS WebDev Console",
+        "body": "<p>NKS WebDev Console manages a local development environment on Windows, macOS and Linux. It replaces MAMP, XAMPP and Laragon with one interface for Apache, Nginx, PHP, MySQL, MariaDB, Redis, Mailpit, Composer, SSL (mkcert) and Cloudflare Tunnels.</p><p>Services run in a separate background process (the daemon); the app window is just the control panel. Switch between <strong>Simple</strong> and <strong>Advanced</strong> mode in the header. Simple shows only the essentials, Advanced adds databases, binaries, plugins and more tools.</p>"
       },
       "firstSite": {
         "title": "Create your first site",
-        "body": "<p>Click <strong>Sites</strong> in the sidebar, then <strong>+ New Site</strong>. Enter a local domain (e.g. <code>myapp.loc</code>) and choose a document root folder. WDC registers the domain in the hosts file automatically.</p><h3 id='simple'>Simple Mode</h3><p>Minimal form: domain + document root + PHP version + optional HTTPS + optional Cloudflare Tunnel. Advanced features stay hidden.</p><h3 id='advanced'>Advanced Mode</h3><p>Table view with full 9-tab site configuration: General, Runtime, Cloudflare, SSL, Composer, Metrics, Errors, History, Danger.</p>"
+        "body": "<p>Open <strong>Sites</strong> in the left menu and click <strong>New site</strong> (or press <code>Ctrl+N</code>). Enter a local domain (e.g. <code>myapp.loc</code>) and choose the site folder. WDC adds the domain to the hosts file for you.</p><h3 id='simple'>Simple mode</h3><p>A short form: domain, site folder, PHP version and optional HTTPS and Cloudflare Tunnel.</p><h3 id='advanced'>Advanced mode</h3><p>A table of sites and the full configuration of each site in tabs: General, Runtime, Cloudflare, SSL, Composer, Metrics, Errors, History and Danger.</p>"
       },
       "sitesSimple": {
         "title": "Sites — Simple Mode",
@@ -2825,7 +2893,7 @@
       },
       "shortcuts": {
         "title": "Keyboard shortcuts",
-        "body": "<ul><li><code>Ctrl+K</code> / <code>Cmd+K</code> — open Command Palette</li><li><code>F5</code> — refresh daemon state</li><li><code>Ctrl+N</code> — new site</li><li><code>Ctrl+1..7</code> — jump to Dashboard / Sites / Databases / SSL / PHP / Binaries / Settings</li></ul>"
+        "body": "<ul><li><code>Ctrl+K</code> / <code>Cmd+K</code>: open the command palette (works with Caps Lock and on any keyboard layout)</li><li><code>F5</code>: reconnect to the daemon</li><li><code>Ctrl+N</code>: new site</li><li><code>Ctrl+1</code> to <code>Ctrl+7</code>: Overview / Sites / Databases / SSL / PHP / Binaries / Settings. The numbers are the top-row keys and work without Shift on a Czech keyboard. In Simple mode they also open pages the menu does not list.</li></ul><p>While you type in a text field or the editor, shortcuts other than <code>Ctrl+K</code> are ignored so they cannot take you away mid-edit.</p>"
       },
       "settings": {
         "title": "Settings",
@@ -2837,11 +2905,11 @@
       },
       "metrics": {
         "title": "Metrics + logs",
-        "body": "<p>Each site has per-request metrics from the Apache access log and aggregated error logs from Apache + PHP-FPM + PHP-web. See SiteEdit → Metrics + Errors.</p><h3 id='dashboard'>Dashboard</h3><p>Aggregates across all running services: CPU, RAM, request-per-minute sparkline, error count badge. Click a tile to drill down.</p>"
+        "body": "<p>Each site has request metrics from the Apache access log and an error summary from Apache and PHP-FPM. Find them under Edit site → Metrics and Errors.</p><h3 id='dashboard'>Overview</h3><p>The <strong>Overview</strong> page sums up the state in one sentence, then lists <em>Needs attention</em> (a crashed service, missing Apache, an old backup, a new version), a table of services with status, port, version and CPU and memory use, and recent activity. Advanced mode adds CPU and memory charts for the last 5 minutes.</p><p>A service that is not installed is marked <em>Not installed</em> and has an <strong>Install</strong> button that opens the Binaries page.</p>"
       }
     },
     "wizard": {
-      "title": "Getting Started",
+      "title": "App tour",
       "subtitle": "Learn the key features of NKS WebDev Console in 5 quick steps.",
       "step": "Step {current} of {total}",
       "next": "Next",
@@ -2851,7 +2919,7 @@
       "steps": {
         "site": {
           "title": "Create your first site",
-          "desc": "Go to <strong>Sites</strong> in the sidebar and click <strong>+ New Site</strong>. Enter a local domain like <code>myapp.loc</code> and pick a document root. WDC registers the domain in the hosts file automatically.",
+          "desc": "Open <strong>Sites</strong> in the left menu and click <strong>New site</strong>. Enter a local domain like <code>myapp.loc</code> and pick the site folder. WDC adds the domain to the hosts file for you.",
           "tip": "Tip: use <kbd>Ctrl+N</kbd> to open the new-site form instantly from anywhere."
         },
         "ssl": {
@@ -2861,12 +2929,12 @@
         },
         "browser": {
           "title": "Open site in browser",
-          "desc": "Click the <strong>Open in browser</strong> button on any site card or from SiteEdit. It uses <code>shell.openExternal</code> so your OS default browser opens — not an Electron window.",
+          "desc": "Click <strong>Open in browser</strong> on a site card or on the edit-site page. The site opens in your system default browser.",
           "tip": "Tip: the site must be running (green status) for the URL to resolve."
         },
         "database": {
           "title": "Manage databases",
-          "desc": "Navigate to <strong>Databases</strong> in the sidebar to create databases, run SQL queries, or import/export dumps. Per-site Composer dependencies also show up in <strong>SiteEdit → Composer</strong>.",
+          "desc": "Open <strong>Databases</strong> in the left menu to create databases, run SQL queries, or import and export dumps. Per-site Composer dependencies are under <strong>Edit site → Composer</strong>.",
           "tip": "Tip: if MySQL shows \"Access denied\", check Settings → Ports for a port conflict."
         },
         "cli": {
@@ -2876,16 +2944,16 @@
         }
       }
     },
-    "runSetupWizard": "Run setup wizard"
+    "runSetupWizard": "Set up environment"
   },
   "onboarding": {
     "title": "Welcome to NKS WebDev Console",
     "subtitle": "Let's set up your local development environment.",
-    "step1": "Install core binaries",
-    "step1Desc": "Download Apache, PHP and MySQL into the managed binaries folder.",
-    "step2": "Install mkcert CA",
+    "step1": "Core programs",
+    "step1Desc": "Download Apache, PHP and MySQL into the app folder.",
+    "step2": "HTTPS certificate",
     "step2Desc": "Add the local certificate authority to your system trust store so HTTPS sites work without warnings.",
-    "step3": "You're ready",
+    "step3": "Done",
     "step3Desc": "Create your first site and start developing.",
     "installApache": "Install Apache",
     "installPhp": "Install PHP",
@@ -2893,19 +2961,22 @@
     "pickVersion": "Version",
     "installMkcert": "Install mkcert",
     "installMkcertCa": "Trust local CA",
-    "labelMkcertBinary": "mkcert binary",
+    "labelMkcertBinary": "mkcert program",
     "labelLocalCaTrust": "Local CA trust",
     "installed": "Installed",
     "notInstalled": "Not installed",
-    "skip": "Skip wizard",
     "next": "Next",
     "back": "Back",
     "finish": "Finish",
     "createFirstSite": "Create first site",
     "createSampleSite": "Create sample localhost site",
     "sampleSiteOk": "Sample localhost site created",
-    "sampleSiteWarn": "Sample site may not have been created — check Sites page",
-    "dontShowAgain": "Don't show again"
+    "sampleSiteWarn": "The sample site may not have been created. Check the Sites page.",
+    "dontShowAgain": "Don't show again",
+    "later": "Later",
+    "laterHint": "You can reopen the wizard from Help.",
+    "stateError": "Could not load the current state, retrying.",
+    "installedVersion": "Installed ({version})"
   },
   "toast": {
     "noBinaryForPlatform": "{app}: no binary available for this platform",
@@ -3045,10 +3116,15 @@
       "backupOld": "The last backup is more than {days} days old.",
       "openBackups": "Open backups",
       "update": "Version {version} is ready to install.",
-      "openUpdate": "Open update"
+      "openUpdate": "Open update",
+      "startFailed": "did not start. The log usually says why.",
+      "serviceSubject": "{name}",
+      "apacheMissing": "The Apache web server is not installed, so sites will not load.",
+      "phpMissing": "PHP is not installed, so PHP sites will not run.",
+      "install": "Install {name}"
     },
     "stack": {
-      "title": "Stack",
+      "title": "Services",
       "all": "All services",
       "caption": "Service status",
       "loading": "Loading service status",
@@ -3068,7 +3144,9 @@
       "starting": "Starting",
       "stopping": "Stopping",
       "crashed": "Crashed",
-      "disabled": "Disabled"
+      "disabled": "Disabled",
+      "startFailed": "Failed to start",
+      "notInstalled": "Not installed"
     },
     "actions": {
       "start": "Start",
@@ -3076,10 +3154,19 @@
       "why": "Why?",
       "logs": "Logs",
       "config": "Config",
-      "more": "More actions for {name}"
+      "more": "More actions for {name}",
+      "install": "Install"
     },
     "figures": {
       "title": "At a glance"
+    },
+    "summaryNotInstalled": "{n} not installed | {n} not installed",
+    "logsTitle": "Logs – {name}",
+    "batch": {
+      "started": "Services started: {n}",
+      "stopped": "Services stopped: {n}",
+      "startFailed": "Failed to start: {n}",
+      "stopFailed": "Failed to stop: {n}"
     }
   },
   "mcpCapabilities": {
@@ -3154,35 +3241,35 @@
     }
   },
   "splash": {
-    "failedTitle": "The daemon failed to start",
+    "failedTitle": "The background service failed to start",
     "retry": "Try again",
     "restartApp": "Restart the app",
-    "logHint": "Daemon log: {path}",
+    "logHint": "Background service log: {path}",
     "status": {
-      "mounting": "Starting the frontend…",
-      "connecting": "Connecting to the backend…",
-      "daemonStarting": "The daemon is starting…",
-      "pluginsStarting": "The daemon is starting plugins…",
-      "slow": "The daemon is still responding slowly…",
-      "unresponsive": "The daemon has not responded for a long time — preparing diagnostics…",
-      "auth": "The daemon is running, syncing the token…",
-      "server": "The daemon reports an error — retrying…",
-      "waiting": "Waiting for the backend…"
+      "mounting": "Starting the interface…",
+      "connecting": "Connecting to the background service…",
+      "daemonStarting": "The background service is starting…",
+      "pluginsStarting": "The background service is loading plugins…",
+      "slow": "The background service is still responding slowly…",
+      "unresponsive": "The background service has not responded for a long time, preparing diagnostics…",
+      "auth": "The background service is running, verifying access…",
+      "server": "The background service reports an error, retrying…",
+      "waiting": "Waiting for the background service…"
     },
     "hint": {
       "mount": "mount phase",
       "first": "first attempt",
       "attempt": "attempt {n}",
-      "network": "attempt {n} · port file / socket",
-      "auth": "attempt {n} · token rotation",
-      "server": "attempt {n} · 5xx response"
+      "network": "attempt {n} · connection failed",
+      "auth": "attempt {n} · verifying access",
+      "server": "attempt {n} · the service reports an error"
     },
     "attempts": "{n} attempt | {n} attempts",
     "fail": {
-      "network": "The daemon is not responding (port file / socket) — {attempts} in {s}s.",
-      "auth": "The daemon is running, but the token could not be synced — {attempts}.",
-      "server": "The daemon returns an error (5xx) — {attempts} in {s}s.",
-      "unknown": "The backend did not respond within {s}s ({attempts})."
+      "network": "The background service is not responding: {attempts} in {s}s.",
+      "auth": "The background service is running, but access could not be verified: {attempts}.",
+      "server": "The background service returns an error: {attempts} in {s}s.",
+      "unknown": "The background service did not respond within {s}s ({attempts})."
     }
   },
   "osNotifications": {
@@ -3326,5 +3413,9 @@
       "days": "{n} d ago"
     },
     "openFromSettings": "Connect an AI client"
+  },
+  "app": {
+    "name": "NKS WebDev Console",
+    "short": "WDC"
   }
 }

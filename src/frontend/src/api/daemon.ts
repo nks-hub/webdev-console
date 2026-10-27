@@ -1090,6 +1090,8 @@ export interface OnboardingState {
     mkcertBinaryInstalled: boolean
     mkcertCaInstalled: boolean
   }
+  /** Newest installed version per app, null when not installed. Absent on older daemons. */
+  versions?: Partial<Record<'apache' | 'php' | 'mysql' | 'mkcert', string | null>>
 }
 export const fetchOnboardingState = (): Promise<OnboardingState> =>
   json('/api/onboarding/state')

@@ -2,7 +2,7 @@
   <div class="login-page">
     <div class="login-card">
       <div class="login-brand">
-        <div class="brand-mark">NKS WDC</div>
+        <div class="brand-mark">{{ $t('app.name') }}</div>
         <div class="brand-sub">{{ $t('login.subtitle') }}</div>
       </div>
 
@@ -20,7 +20,7 @@
       <template v-else>
         <div class="login-desc">{{ $t('login.description') }}</div>
 
-        <!-- SSO -->
+        <!-- SSO is the one primary action -->
         <div class="login-actions">
           <el-button
             type="primary"
@@ -31,8 +31,8 @@
           >{{ $t('login.signInSso') }}</el-button>
         </div>
 
-        <div v-if="authStore.loginError" class="login-error">
-          {{ authStore.loginError }}
+        <div v-if="authStore.loginError" class="login-error" role="alert">
+          {{ errorText(authStore.loginError) }}
         </div>
 
         <!-- Divider -->
@@ -40,12 +40,12 @@
           <span>{{ $t('login.or') }}</span>
         </div>
 
-        <!-- Password form — F91.15 parity with Settings > Account -->
-        <el-form label-position="top" size="default" @submit.prevent="doPasswordLogin">
+        <!-- E-mail and password: sign in, or create an account -->
+        <el-form label-position="top" size="default" @submit.prevent="submitForm">
           <el-form-item :label="$t('login.email')">
             <el-input
               v-model="authEmail"
-              placeholder="you@example.com"
+              :placeholder="$t('login.emailPlaceholder')"
               autocomplete="email"
               :disabled="authLoading"
             />
@@ -55,34 +55,36 @@
               v-model="authPassword"
               type="password"
               show-password
-              autocomplete="current-password"
+              :autocomplete="registering ? 'new-password' : 'current-password'"
               :disabled="authLoading"
-              @keydown.enter.prevent="doPasswordLogin"
+              @keydown.enter.prevent="submitForm"
+            />
+          </el-form-item>
+          <el-form-item v-if="registering" :label="$t('login.passwordAgain')">
+            <el-input
+              v-model="authPasswordAgain"
+              type="password"
+              show-password
+              autocomplete="new-password"
+              :disabled="authLoading"
+              @keydown.enter.prevent="submitForm"
             />
           </el-form-item>
           <div class="login-actions">
             <el-button
-              type="primary"
               :loading="authLoading"
               :disabled="!authEmail || !authPassword"
-              @click="doPasswordLogin"
-            >{{ $t('common.login') }}</el-button>
-            <el-button
-              :loading="authLoading"
-              :disabled="!authEmail || !authPassword"
-              @click="doPasswordRegister"
-            >{{ $t('common.register') }}</el-button>
+              @click="submitForm"
+            >{{ registering ? $t('login.createAccount') : $t('common.login') }}</el-button>
+            <el-button text @click="toggleRegistering">
+              {{ registering ? $t('login.haveAccount') : $t('login.noAccount') }}
+            </el-button>
           </div>
-          <div v-if="authError" class="login-error">{{ authError }}</div>
+          <div v-if="authError" class="login-error" role="alert">{{ authError }}</div>
         </el-form>
 
-        <div class="login-catalog-hint">
-          <span class="label">{{ $t('login.catalogUrl') }}</span>
-          <code class="url mono">{{ catalogUrl || 'https://wdc.nks-hub.cz' }}</code>
-        </div>
-
         <div class="login-skip">
-          <a href="#/dashboard" @click.prevent="goHome">{{ $t('login.continueWithout') }}</a>
+          <a href="#/" @click.prevent="goHome">{{ $t('login.continueWithout') }}</a>
         </div>
       </template>
     </div>
@@ -97,17 +99,32 @@ import { ElMessage } from 'element-plus'
 import { User, UserFilled } from '@element-plus/icons-vue'
 import { useAuthStore } from '../../stores/auth'
 import { fetchSettings, catalogLogin, catalogRegister } from '../../api/daemon'
+import { errorMessage } from '../../utils/errors'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const { t } = useI18n()
+// The catalog address is edited in Settings > Account; this page only uses it.
 const catalogUrl = ref('')
 
-// Password-login local state (matches Settings > Account pattern)
 const authEmail = ref('')
 const authPassword = ref('')
+const authPasswordAgain = ref('')
+const registering = ref(false)
 const authLoading = ref(false)
 const authError = ref('')
+
+// The auth store and the catalog hand back raw (English) messages; show a
+// sentence in the UI language and keep the raw text only as a last resort.
+function errorText(raw: unknown): string {
+  const msg = errorMessage(raw)
+  if (/desktop app|electronAPI/i.test(msg)) return t('login.errors.desktopOnly')
+  if (/empty token/i.test(msg)) return t('login.errors.emptyToken')
+  if (/\b401\b|unauthori|invalid (credentials|password)|incorrect/i.test(msg)) return t('login.errors.badCredentials')
+  if (/\b409\b|already (exists|registered|in use)/i.test(msg)) return t('login.errors.exists')
+  if (/failed to fetch|network|ECONNREFUSED|timed? ?out/i.test(msg)) return t('login.errors.network')
+  return t('login.errors.generic', { detail: msg })
+}
 
 async function loadCatalogUrl() {
   try {
@@ -126,50 +143,43 @@ async function doSsoLogin() {
     ElMessage.success(t('login.success'))
     goHome()
   } catch (err) {
-    ElMessage.error(`${t('login.failed')}: ${err instanceof Error ? err.message : err}`)
+    ElMessage.error(`${t('login.failed')}: ${errorText(err)}`)
   }
 }
 
-async function doPasswordLogin() {
+function toggleRegistering() {
+  registering.value = !registering.value
+  authError.value = ''
+  authPasswordAgain.value = ''
+}
+
+async function submitForm() {
   if (!authEmail.value || !authPassword.value) return
+  if (registering.value && authPassword.value !== authPasswordAgain.value) {
+    authError.value = t('login.errors.mismatch')
+    return
+  }
   authLoading.value = true
   authError.value = ''
   try {
-    const result = await catalogLogin(getCatalogUrl(), authEmail.value, authPassword.value)
+    const call = registering.value ? catalogRegister : catalogLogin
+    const result = await call(getCatalogUrl(), authEmail.value, authPassword.value)
     authStore.setToken(result.token)
     localStorage.setItem('nks-wdc-catalog-email', result.email)
     await authStore.refreshProfile(getCatalogUrl())
     authPassword.value = ''
-    ElMessage.success(`${t('login.success')}: ${result.email}`)
+    authPasswordAgain.value = ''
+    ElMessage.success(`${t(registering.value ? 'login.registered' : 'login.success')}: ${result.email}`)
     goHome()
   } catch (e) {
-    authError.value = e instanceof Error ? e.message : String(e)
-  } finally {
-    authLoading.value = false
-  }
-}
-
-async function doPasswordRegister() {
-  if (!authEmail.value || !authPassword.value) return
-  authLoading.value = true
-  authError.value = ''
-  try {
-    const result = await catalogRegister(getCatalogUrl(), authEmail.value, authPassword.value)
-    authStore.setToken(result.token)
-    localStorage.setItem('nks-wdc-catalog-email', result.email)
-    await authStore.refreshProfile(getCatalogUrl())
-    authPassword.value = ''
-    ElMessage.success(`${t('login.registered')}: ${result.email}`)
-    goHome()
-  } catch (e) {
-    authError.value = e instanceof Error ? e.message : String(e)
+    authError.value = errorText(e)
   } finally {
     authLoading.value = false
   }
 }
 
 function goHome() {
-  const redirect = (router.currentRoute.value.query.redirect as string | undefined) || '/dashboard'
+  const redirect = (router.currentRoute.value.query.redirect as string | undefined) || '/'
   void router.replace(redirect)
 }
 
@@ -232,26 +242,6 @@ onMounted(loadCatalogUrl)
   flex: 1 1 auto;
   height: 1px;
   background: var(--wdc-border);
-}
-.login-catalog-hint {
-  display: flex;
-  flex-direction: column;
-  gap: var(--wdc-space-1);
-  font-size: 0.78rem;
-  color: var(--el-text-color-secondary);
-}
-.login-catalog-hint .label { font-size: 0.82rem;
-  font-family: var(--wdc-font-display);
-}
-.mono { font-family: 'JetBrains Mono', monospace; }
-.login-catalog-hint .url {
-  background: var(--wdc-surface-2);
-  border: 1px solid var(--wdc-border);
-  padding: var(--wdc-space-1-5) var(--wdc-space-2-5);
-  border-radius: var(--wdc-radius-sm);
-  color: var(--wdc-text);
-  font-size: 0.78rem;
-  word-break: break-all;
 }
 .login-skip {
   font-size: 0.82rem;

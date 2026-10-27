@@ -14,9 +14,13 @@
     </dl>
 
     <div class="simple-quick-actions">
-      <el-button @click="openMailpit">
-        {{ t('dashboard.simple.quickActions.mailpit') }}
-      </el-button>
+      <el-tooltip v-if="mailpit" :disabled="mailpitUsable" :content="t('dashboard.mailpitDown')" placement="top">
+        <span>
+          <el-button :disabled="!mailpitUsable" @click="openMailpit">
+            {{ t('dashboard.simple.quickActions.mailpit') }}
+          </el-button>
+        </span>
+      </el-tooltip>
       <el-button @click="router.push('/backups')">
         {{ t('dashboard.simple.quickActions.backup') }}
       </el-button>
@@ -84,19 +88,26 @@
 // matching the original Dashboard.vue behaviour. Recent sites + tile
 // figures are derived live from the shared sitesStore / daemonStore.
 
-import { computed, onMounted, ref } from 'vue'
+import { computed, onActivated, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ArrowRight, Plus } from '@element-plus/icons-vue'
 import HealthStatusDot from '../shared/HealthStatusDot.vue'
 import { useSitesStore } from '../../stores/sites'
+import { useDaemonStore } from '../../stores/daemon'
 import { daemonBaseUrl } from '../../api/daemon'
+import { isRunning } from '../../utils/serviceState'
+import { openMailpit } from '../../utils/mailpit'
 
 defineOptions({ name: 'DashboardSimple' })
 
 const { t } = useI18n()
 const router = useRouter()
 const sitesStore = useSitesStore()
+const daemonStore = useDaemonStore()
+
+const mailpit = computed(() => daemonStore.visibleServices.find(s => s.id === 'mailpit'))
+const mailpitUsable = computed(() => !!mailpit.value && isRunning(mailpit.value))
 
 const sitesCount = computed(() => sitesStore.sites.length)
 
@@ -105,15 +116,6 @@ const totalErrors = ref(0)
 const aggregatesLoading = ref(false)
 
 const recentSimpleSites = computed(() => sitesStore.sites.slice(0, 5))
-
-function openMailpit() {
-  const mailpitUrl = 'http://127.0.0.1:8025'
-  const electronApi = (window as unknown as {
-    electronAPI?: { openExternal?: (url: string) => void }
-  }).electronAPI
-  if (electronApi?.openExternal) electronApi.openExternal(mailpitUrl)
-  else window.open(mailpitUrl, '_blank')
-}
 
 async function loadAggregates() {
   aggregatesLoading.value = true
@@ -146,7 +148,8 @@ async function loadAggregates() {
           : ((data as { entries?: Array<{ timestamp?: string }> })?.entries ?? [])
         const cutoff = Date.now() - 24 * 60 * 60 * 1000
         errs = entries.filter(e => {
-          if (!e.timestamp) return true
+          // A log line without a readable time is not counted as today's error.
+          if (!e.timestamp) return false
           const ts = new Date(e.timestamp).getTime()
           return !isNaN(ts) && ts > cutoff
         }).length
@@ -164,9 +167,10 @@ async function loadAggregates() {
 }
 
 
-onMounted(() => {
-  void loadAggregates()
-})
+// Reload when the page is shown again and once the site list arrives; on a
+// cold start the sites are empty at first and the totals would stay at 0.
+onActivated(() => { void loadAggregates() })
+watch(() => sitesStore.sites.length, () => { void loadAggregates() })
 
 defineExpose({ reload: loadAggregates })
 </script>

@@ -32,7 +32,7 @@
         <!-- CLI step: show example commands -->
         <div v-if="currentStep.key === 'cli'" class="gsw-codeblock">
           <code>wdc sites list</code>
-          <code>wdc sites create --domain myapp.loc --root /var/www/myapp</code>
+          <code>wdc sites create --domain myapp.loc --root {{ exampleRoot }}</code>
           <code>wdc db list</code>
           <code>wdc ssl generate myapp.loc</code>
         </div>
@@ -82,6 +82,9 @@ const steps = [
 ] as const
 
 const currentStep = computed(() => steps[activeStep.value])
+
+// A path that looks like the user's own system, not a Linux server path.
+const exampleRoot = /win/i.test(navigator.platform) ? 'C:\\work\\sites\\myapp' : '~/sites/myapp'
 
 function open() {
   activeStep.value = 0

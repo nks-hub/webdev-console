@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { fetchStatus, fetchServices, subscribeEvents } from '../api/daemon'
 import type { StatusResponse, ServiceInfo, ValidationUpdate } from '../api/types'
+import { isRunning, isCrashed } from '../utils/serviceState'
+import { usePluginsStore } from './plugins'
 
 type OnConnectListener = () => void | Promise<void>
 const onConnectListeners = new Set<OnConnectListener>()
@@ -42,12 +44,19 @@ export const useDaemonStore = defineStore('daemon', () => {
   const cpuHistory = ref<number[]>([])
   const ramHistory = ref<number[]>([])
 
-  const runningServices = computed(() =>
-    services.value.filter(s => s.state === 2 || s.status === 'running')
+  // One source of truth for "which services count": every counter in the
+  // shell (menu badge, status bar, Overview, metrics history) reads these, so
+  // a service of a disabled plugin is hidden or counted everywhere alike.
+  const pluginsStore = usePluginsStore()
+  const visibleServices = computed(() =>
+    services.value.filter(s => pluginsStore.isServiceVisible(s.id))
   )
+  const runningServices = computed(() => visibleServices.value.filter(isRunning))
+  // A failed start of something that is not installed is "not installed", not a fault.
+  const crashedServices = computed(() => visibleServices.value.filter(s => isCrashed(s) && s.installed !== false))
 
   const allRunning = computed(() =>
-    services.value.length > 0 && services.value.every(s => s.state === 2 || s.status === 'running')
+    visibleServices.value.length > 0 && visibleServices.value.every(isRunning)
   )
 
   let retryCount = 0
@@ -86,8 +95,8 @@ export const useDaemonStore = defineStore('daemon', () => {
       if (fastRetryTimer) { clearTimeout(fastRetryTimer); fastRetryTimer = null }
 
       // Track aggregate metrics
-      const totalCpu = services.value.reduce((sum, s) => sum + (s.cpuPercent ?? 0), 0)
-      const totalRam = services.value.reduce((sum, s) => sum + (s.memoryBytes ?? 0), 0) / 1024 / 1024
+      const totalCpu = visibleServices.value.reduce((sum, s) => sum + (s.cpuPercent ?? 0), 0)
+      const totalRam = visibleServices.value.reduce((sum, s) => sum + (s.memoryBytes ?? 0), 0) / 1024 / 1024
       cpuHistory.value.push(totalCpu)
       ramHistory.value.push(totalRam)
       if (cpuHistory.value.length > MAX_HISTORY) cpuHistory.value.shift()
@@ -159,7 +168,8 @@ export const useDaemonStore = defineStore('daemon', () => {
     sseCleanup = subscribeEvents(
       (service) => {
         const idx = services.value.findIndex(s => s.id === service.id)
-        if (idx >= 0) services.value[idx] = service
+        // Merge: the push payload may lack fields the poll adds (installed, version).
+        if (idx >= 0) services.value[idx] = { ...services.value[idx], ...service }
         else services.value.push(service)
       },
       () => {},
@@ -225,7 +235,7 @@ export const useDaemonStore = defineStore('daemon', () => {
 
   return {
     status, services, connected, hasEverConnected, validation,
-    runningServices, allRunning, cpuHistory, ramHistory,
+    visibleServices, runningServices, crashedServices, allRunning, cpuHistory, ramHistory,
     bootStartedAt, pollAttempts, bootFailed,
     consecutiveFailures: consecutiveFailuresPublic, lastErrorKind,
     isReloading, reloadReason, beginReload, endReload,

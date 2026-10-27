@@ -4,18 +4,24 @@
     :title="t('onboarding.title')"
     width="640px"
     align-center
-    :close-on-click-modal="false"
-    :close-on-press-escape="false"
-    :show-close="false"
+    @close="onDismiss"
   >
     <div class="ob-wrap">
       <p class="ob-subtitle">{{ t('onboarding.subtitle') }}</p>
 
-      <el-steps :active="activeStep" finish-status="success" align-center>
+      <el-steps :active="activeStep" finish-status="success" align-center class="ob-steps">
         <el-step :title="t('onboarding.step1')" />
         <el-step :title="t('onboarding.step2')" />
         <el-step :title="t('onboarding.step3')" />
       </el-steps>
+
+      <el-alert
+        v-if="!state"
+        type="warning"
+        :closable="false"
+        show-icon
+        :title="t('onboarding.stateError')"
+      />
 
       <!-- Step 1: binaries -->
       <div v-if="activeStep === 0" class="ob-step">
@@ -23,14 +29,14 @@
         <div class="ob-actions-grid">
           <div class="ob-row">
             <span class="ob-label">Apache</span>
-            <el-tag v-if="state?.prerequisites.apacheInstalled" size="small" type="success">{{ t('onboarding.installed') }}</el-tag>
+            <el-tag v-if="state?.prerequisites.apacheInstalled" size="small" type="success">{{ installedText(state.versions?.apache) }}</el-tag>
             <el-button v-else size="small" :loading="installing.has('apache')" @click="doInstall('apache')">
               {{ t('onboarding.installApache') }}
             </el-button>
           </div>
           <div class="ob-row">
             <span class="ob-label">PHP</span>
-            <el-tag v-if="state?.prerequisites.phpInstalled" size="small" type="success">{{ t('onboarding.installed') }}</el-tag>
+            <el-tag v-if="state?.prerequisites.phpInstalled" size="small" type="success">{{ installedText(state.versions?.php) }}</el-tag>
             <template v-else>
               <el-select
                 v-model="phpVersionChoice"
@@ -54,7 +60,7 @@
           </div>
           <div class="ob-row">
             <span class="ob-label">MySQL</span>
-            <el-tag v-if="state?.prerequisites.mysqlInstalled" size="small" type="success">{{ t('onboarding.installed') }}</el-tag>
+            <el-tag v-if="state?.prerequisites.mysqlInstalled" size="small" type="success">{{ installedText(state.versions?.mysql) }}</el-tag>
             <el-button v-else size="small" :loading="installing.has('mysql')" @click="doInstall('mysql')">
               {{ t('onboarding.installMysql') }}
             </el-button>
@@ -68,7 +74,7 @@
         <div class="ob-actions-grid">
           <div class="ob-row">
             <span class="ob-label">{{ t('onboarding.labelMkcertBinary') }}</span>
-            <el-tag v-if="state?.prerequisites.mkcertBinaryInstalled" size="small" type="success">{{ t('onboarding.installed') }}</el-tag>
+            <el-tag v-if="state?.prerequisites.mkcertBinaryInstalled" size="small" type="success">{{ installedText(state.versions?.mkcert) }}</el-tag>
             <el-button v-else size="small" :loading="installing.has('mkcert')" @click="doInstall('mkcert')">
               {{ t('onboarding.installMkcert') }}
             </el-button>
@@ -106,7 +112,9 @@
     <template #footer>
       <div class="ob-footer">
         <div class="ob-footer-left">
-          <el-button text @click="skip">{{ t('onboarding.skip') }}</el-button>
+          <el-tooltip :content="t('onboarding.laterHint')" placement="top">
+            <el-button text @click="visible = false">{{ t('onboarding.later') }}</el-button>
+          </el-tooltip>
           <el-checkbox v-model="dontShowAgain" size="small" class="ob-dontshow">
             {{ t('onboarding.dontShowAgain') }}
           </el-checkbox>
@@ -179,6 +187,9 @@ const loadingVersions = ref(false)
 const finishing = ref(false)
 const creatingSample = ref(false)
 const dontShowAgain = ref<boolean>(readLocalFlag(LS_DONTSHOW))
+// Closing the dialog only means "later": it comes back on the next launch,
+// but not again during this session.
+let dismissedThisSession = false
 
 function readLocalFlag(key: string): boolean {
   try { return localStorage.getItem(key) === '1' } catch { return false }
@@ -190,6 +201,10 @@ function writeLocalFlag(key: string, value: boolean) {
   } catch { /* quota/private mode — best-effort only */ }
 }
 
+function installedText(version?: string | null): string {
+  return version ? t('onboarding.installedVersion', { version }) : t('onboarding.installed')
+}
+
 async function refreshState() {
   try {
     state.value = await fetchOnboardingState()
@@ -198,6 +213,16 @@ async function refreshState() {
     state.value = null
   }
 }
+
+// While the dialog is open the state is re-read every few seconds and when
+// the step changes, so an install done elsewhere (Binaries page, CLI) shows up.
+const REFRESH_MS = 4000
+let refreshTimer: ReturnType<typeof setInterval> | null = null
+watch(visible, (open) => {
+  if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null }
+  if (open) refreshTimer = setInterval(() => { void refreshState() }, REFRESH_MS)
+})
+watch(activeStep, () => { void refreshState() })
 
 async function doInstall(app: string, explicitVersion?: string) {
   installing.value.add(app)
@@ -316,15 +341,12 @@ async function finish() {
   }
 }
 
-async function skip() {
-  // Mark complete so the wizard never auto-reopens. User can relaunch from
-  // Settings. We await the full write chain (LS + server) instead of the
-  // previous fire-and-forget `try { await } catch {}` — that swallowed a
-  // transient daemon error and left the server flag missing, which is how
-  // the wizard re-appeared on every launch.
-  await markCompleted()
-  try { await sitesStore.load() } catch { /* same rationale as finish() */ }
-  visible.value = false
+// Every way of closing without finishing (×, Esc, click outside, "Later")
+// lands here. That is "later", not "never": the wizard returns on the next
+// launch unless "Don't show again" is ticked.
+function onDismiss() {
+  dismissedThisSession = true
+  if (dontShowAgain.value) void markCompleted()
 }
 
 async function createSampleSite() {
@@ -386,6 +408,7 @@ async function autoOpenCheck() {
   stopConnectWatch = null
   // Only auto-open if the daemon reports the wizard hasn't been completed yet.
   if (!state.value.completed) {
+    if (dismissedThisSession) return
     visible.value = true
     void loadPhpVersions()
   } else {
@@ -422,6 +445,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener(OPEN_ONBOARDING_EVENT, onOpenRequest)
   stopConnectWatch?.()
+  if (refreshTimer) clearInterval(refreshTimer)
 })
 
 defineExpose({ open })
@@ -438,8 +462,9 @@ defineExpose({ open })
   font-size: 0.92rem;
   color: var(--wdc-text-2);
   margin: 0 0 var(--wdc-space-1);
-  text-align: center;
 }
+/* Element Plus gives step titles a 38px line height; with short titles one line is enough. */
+.ob-steps :deep(.el-step__title) { line-height: 1.3; font-size: 0.9rem; }
 .ob-step {
   min-height: 180px;
   padding: var(--wdc-space-4) var(--wdc-space-2) var(--wdc-space-1);
@@ -450,13 +475,11 @@ defineExpose({ open })
   margin: 0 0 var(--wdc-space-4);
 }
 .ob-step-final {
-  text-align: center;
-  padding-top: var(--wdc-space-6-5);
+  padding-top: var(--wdc-space-4);
 }
 .ob-final-actions {
   display: flex;
   gap: var(--wdc-space-3);
-  justify-content: center;
   flex-wrap: wrap;
 }
 .ob-actions-grid {

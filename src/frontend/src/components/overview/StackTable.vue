@@ -5,11 +5,11 @@
       <router-link class="link" to="/services">{{ t('overview.stack.all') }}</router-link>
     </div>
 
-    <div v-if="!daemonStore.connected && !services.length" class="skeleton" aria-busy="true" :aria-label="t('overview.stack.loading')">
+    <div v-if="!daemonStore.connected && !rows.length" class="skeleton" aria-busy="true" :aria-label="t('overview.stack.loading')">
       <div v-for="n in 4" :key="n" class="skel-row" />
     </div>
 
-    <div v-else-if="!services.length" class="empty">
+    <div v-else-if="!rows.length" class="empty">
       <p class="empty-title">{{ t('overview.stack.empty') }}</p>
       <p>{{ t('overview.stack.emptyHint') }}</p>
       <el-button type="primary" @click="router.push('/binaries')">{{ t('overview.stack.openBinaries') }}</el-button>
@@ -22,56 +22,60 @@
         <tr>
           <th scope="col">{{ t('overview.stack.service') }}</th>
           <th scope="col">{{ t('overview.stack.status') }}</th>
-          <th scope="col" class="num">{{ t('overview.stack.port') }}</th>
+          <th v-if="advanced" scope="col" class="num">{{ t('overview.stack.port') }}</th>
           <th v-if="advanced" scope="col">{{ t('overview.stack.version') }}</th>
           <th v-if="advanced" scope="col" class="num">{{ t('overview.stack.usage') }}</th>
           <th scope="col"><span class="visually-hidden">{{ t('overview.stack.actions') }}</span></th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="svc in services" :key="svc.id" :class="{ 'row-err': state(svc) === 'crashed' }">
-          <th scope="row">{{ shortName(svc) }}</th>
+        <tr v-for="row in rows" :key="row.svc.id" :class="{ 'row-err': row.state === 'crashed', 'row-missing': row.state === 'notInstalled' }">
+          <th scope="row">{{ shortServiceName(row.svc) }}</th>
           <td>
-            <span class="status" :class="`st-${state(svc)}`">
-              <el-icon :size="14" aria-hidden="true">
-                <Check v-if="state(svc) === 'running'" />
-                <Close v-else-if="state(svc) === 'crashed'" />
-                <Loading v-else-if="state(svc) === 'starting' || state(svc) === 'stopping'" class="spin" />
-                <Remove v-else />
-              </el-icon>
-              {{ t(`overview.status.${state(svc)}`) }}
+            <span class="status" :class="`st-${row.state}`">
+              <el-icon v-if="row.state === 'running'" :size="14" aria-hidden="true"><Check /></el-icon>
+              <el-icon v-else-if="row.state === 'crashed'" :size="14" aria-hidden="true"><WarningFilled /></el-icon>
+              <el-icon v-else-if="row.state === 'starting' || row.state === 'stopping'" :size="14" aria-hidden="true"><Loading class="spin" /></el-icon>
+              <el-icon v-else-if="row.state === 'notInstalled'" :size="14" aria-hidden="true"><Download /></el-icon>
+              <span v-else class="ring" aria-hidden="true" />
+              {{ statusLabel(row) }}
             </span>
           </td>
-          <td class="num mono">{{ portOf(svc) ?? '—' }}</td>
-          <td v-if="advanced" class="mono muted">{{ svc.version || '—' }}</td>
+          <td v-if="advanced" class="num mono">{{ row.port ?? '—' }}</td>
+          <td v-if="advanced" class="mono muted">{{ row.svc.version || '—' }}</td>
           <td v-if="advanced" class="num mono muted">
-            <template v-if="state(svc) === 'running'">{{ formatCpu(svc.cpuPercent) }} · {{ formatMem(svc.memoryBytes ?? 0) }}</template>
+            <template v-if="row.state === 'running'">{{ formatPercent(row.svc.cpuPercent ?? 0, localeName) }} · {{ formatBytes(row.svc.memoryBytes ?? 0, localeName) }}</template>
             <template v-else>—</template>
           </td>
           <td class="act">
             <div class="act-row">
               <el-button
-                v-if="state(svc) === 'crashed'"
+                v-if="row.state === 'notInstalled'"
+                size="small"
+                @click="router.push({ path: '/binaries', query: { app: row.svc.binaryApp ?? row.svc.id } })"
+              >{{ t('overview.actions.install') }}</el-button>
+              <el-button
+                v-else-if="row.state === 'crashed'"
                 size="small"
                 @click="router.push({ path: '/services', query: { filter: 'problems' } })"
               >{{ t('overview.actions.why') }}</el-button>
               <el-button
-                v-else-if="state(svc) === 'running'"
+                v-else-if="row.state === 'running'"
                 size="small"
-                :loading="servicesStore.isBusy(svc.id)"
+                :loading="servicesStore.isBusy(row.svc.id)"
                 :disabled="!daemonStore.connected"
-                @click="run(svc, 'restart')"
+                @click="runServiceAction(row.svc, 'restart')"
               >{{ t('overview.actions.restart') }}</el-button>
               <el-button
-                v-else-if="state(svc) === 'stopped' || state(svc) === 'disabled'"
+                v-else-if="row.state === 'stopped' || row.state === 'disabled'"
                 size="small"
-                :loading="servicesStore.isBusy(svc.id)"
+                :loading="servicesStore.isBusy(row.svc.id)"
                 :disabled="!daemonStore.connected"
-                @click="run(svc, 'start')"
+                @click="runServiceAction(row.svc, 'start')"
               >{{ t('overview.actions.start') }}</el-button>
-              <el-button v-else size="small" loading disabled>{{ t(`overview.status.${state(svc)}`) }}</el-button>
-              <el-dropdown v-if="advanced" trigger="click" @command="(c: 'logs' | 'config') => c === 'logs' ? emit('logs', svc.id) : emit('config', svc.id)">
-                <el-button text size="small" class="more-btn" :aria-label="t('overview.actions.more', { name: shortName(svc) })">
+              <el-button v-else size="small" loading disabled>{{ statusLabel(row) }}</el-button>
+              <el-dropdown v-if="advanced && row.state !== 'notInstalled'" trigger="click" @command="(c: 'logs' | 'config') => c === 'logs' ? emit('logs', row.svc.id) : emit('config', row.svc.id)">
+                <el-button text size="small" class="more-btn" :aria-label="t('overview.actions.more', { name: shortServiceName(row.svc) })">
                   <el-icon :size="14"><MoreFilled /></el-icon>
                 </el-button>
                 <template #dropdown>
@@ -94,74 +98,42 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Check, Close, Loading, Remove, MoreFilled } from '@element-plus/icons-vue'
-import { ElMessage, ElNotification } from 'element-plus'
+import { Check, Download, Loading, MoreFilled, WarningFilled } from '@element-plus/icons-vue'
 import { useDaemonStore } from '../../stores/daemon'
 import { useServicesStore } from '../../stores/services'
-import { usePluginsStore } from '../../stores/plugins'
 import { useUiModeStore } from '../../stores/uiMode'
 import type { ServiceInfo } from '../../api/types'
+import { serviceViewState, shortServiceName, type ServiceViewState } from '../../utils/serviceState'
+import { runServiceAction } from '../../utils/serviceActions'
+import { servicePort } from '../../utils/servicePorts'
+import { formatBytes, formatPercent } from '../../utils/format'
 
 const emit = defineEmits<{ logs: [id: string]; config: [id: string] }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const router = useRouter()
 const daemonStore = useDaemonStore()
 const servicesStore = useServicesStore()
-const pluginsStore = usePluginsStore()
 const uiMode = useUiModeStore()
 const advanced = computed(() => uiMode.isAdvanced)
+const localeName = computed(() => String(locale.value))
 
-const services = computed(() => daemonStore.services.filter(s => pluginsStore.isServiceVisible(s.id)))
+interface Row { svc: ServiceInfo; state: ServiceViewState; port: number | null }
 
-type State = 'stopped' | 'starting' | 'running' | 'stopping' | 'crashed' | 'disabled'
-const STATES: State[] = ['stopped', 'starting', 'running', 'stopping', 'crashed', 'disabled']
-function state(svc: ServiceInfo): State {
-  const byNumber = STATES[svc.state ?? -1]
-  if (byNumber) return byNumber
-  return (STATES as string[]).includes(svc.status ?? '') ? svc.status as State : 'stopped'
-}
+// Installed services first; the ones still to install go to the bottom.
+const rows = computed<Row[]>(() => {
+  const all = daemonStore.visibleServices.map(svc => {
+    const state = serviceViewState(svc)
+    // The daemon reports the configured port when it knows it; the settings table is the fallback.
+    const port = (svc as ServiceInfo & { port?: number }).port ?? servicePort(svc.id)
+    return { svc, state, port: state === 'notInstalled' ? null : port }
+  })
+  return [...all.filter(r => r.state !== 'notInstalled'), ...all.filter(r => r.state === 'notInstalled')]
+})
 
-const SHORT_NAMES: Record<string, string> = {
-  'Apache HTTP Server': 'Apache',
-  'PHP (Multi-version)': 'PHP',
-}
-function shortName(svc: ServiceInfo): string {
-  return SHORT_NAMES[svc.displayName ?? ''] || svc.displayName || svc.id
-}
-
-const KNOWN_PORTS: Record<string, number> = { apache: 80, mysql: 3306, redis: 6379, mailpit: 8025 }
-function portOf(svc: ServiceInfo & { port?: number }): number | null {
-  return svc.port ?? KNOWN_PORTS[svc.id] ?? null
-}
-
-function formatCpu(val?: number): string {
-  return `${(val ?? 0).toFixed(1)} %`
-}
-function formatMem(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(0)} MB`
-  return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`
-}
-
-async function run(svc: ServiceInfo, op: 'start' | 'restart') {
-  const name = shortName(svc)
-  try {
-    if (op === 'start') {
-      await servicesStore.start(svc.id)
-      ElMessage.success(t('toast.serviceStarted', { name }))
-    } else {
-      await servicesStore.restart(svc.id)
-      ElMessage.success(t('overview.restarted', { name }))
-    }
-  } catch (err) {
-    ElNotification({
-      title: t('overview.actionFailed', { name }),
-      message: err instanceof Error ? err.message : String(err),
-      type: 'error',
-      duration: 5000,
-    })
-  }
+function statusLabel(row: Row): string {
+  if (row.state === 'crashed' && row.svc.crashKind === 'startFailed') return t('overview.status.startFailed')
+  return t(`overview.status.${row.state}`)
 }
 </script>
 
@@ -229,7 +201,17 @@ async function run(svc: ServiceInfo, op: 'start' | 'restart') {
 .st-running .el-icon { color: var(--wdc-status-running); }
 .st-crashed { color: var(--wdc-status-error); }
 .st-starting .el-icon, .st-stopping .el-icon { color: var(--wdc-status-starting); }
-.st-stopped, .st-disabled { color: var(--wdc-text-3); }
+.st-stopped, .st-disabled, .st-notInstalled { color: var(--wdc-text-3); }
+/* Empty ring for "stopped": a minus-in-circle reads as "remove". */
+.ring {
+  width: 10px;
+  height: 10px;
+  margin: 0 2px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+.row-missing th { color: var(--wdc-text-3); }
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
