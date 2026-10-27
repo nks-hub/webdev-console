@@ -2300,7 +2300,7 @@
     },
     "empty": {
       "title": "Deploy {domain}",
-      "description": "Nastavte cíle deploye a releasy budete publikovat přímo z WDC. Vytvoříme {neon} v kořeni projektu (jde commitnout do gitu) a {localNeon} pro tajné údaje, který git ignoruje.",
+      "description": "Nastavte cíle deploye a release pak budete publikovat přímo z WDC. V kořeni projektu vytvoříme soubor {neon}, který jde commitnout do gitu, a soubor {localNeon} pro tajné údaje, který git ignoruje.",
       "bullets": {
         "zeroDowntime": "Atomický přepínač symlinků bez výpadku",
         "autoRollback": "Automatický rollback, když selže kontrola dostupnosti",
