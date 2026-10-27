@@ -204,4 +204,33 @@ window.addEventListener('unhandledrejection', (e) => {
   try { Sentry.captureException(e.reason) } catch { /* no-op */ }
 })
 
+// Route components are lazy chunks. When the app updates while a window is
+// open, the chunk names change and the next navigation asks for a file that
+// no longer exists — the route then renders nothing at all. Vite raises
+// `vite:preloadError` for exactly this; reloading once picks up the new
+// manifest. The guard stops a genuinely missing chunk from looping.
+const CHUNK_RELOAD_KEY = 'wdc-chunk-reload-at'
+function recoverFromStaleChunk(reason: unknown) {
+  const last = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) ?? 0)
+  if (Date.now() - last < 10_000) {
+    bridge('error', '[chunk] reload already attempted, not looping', reason)
+    return
+  }
+  sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now()))
+  bridge('warn', '[chunk] stale asset after update — reloading', reason)
+  window.location.reload()
+}
+
+window.addEventListener('vite:preloadError', (e) => {
+  e.preventDefault()
+  recoverFromStaleChunk((e as unknown as { payload?: unknown }).payload)
+})
+
+window.addEventListener('unhandledrejection', (e) => {
+  if (/Failed to fetch dynamically imported module|Importing a module script failed/i.test(String(e.reason?.message ?? e.reason))) {
+    e.preventDefault()
+    recoverFromStaleChunk(e.reason)
+  }
+})
+
 app.mount('#app')

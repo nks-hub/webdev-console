@@ -55,6 +55,7 @@ interface Window {
   electronAPI?: {
     /** Returns true if the URL was allowlisted + opened, false on rejection. */
     openExternal: (url: string) => Promise<boolean>
+    restartApp?: () => Promise<boolean>
     showOpenDialog: (options?: {
       title?: string
       defaultPath?: string

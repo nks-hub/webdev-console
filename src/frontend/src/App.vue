@@ -332,6 +332,9 @@ const splashFailHint = computed(() => {
 })
 
 function reloadApp() {
+  // A renderer reload does nothing under app:// in the packaged build; relaunch instead.
+  const restart = window.electronAPI?.restartApp
+  if (restart) { void restart(); return }
   window.location.reload()
 }
 

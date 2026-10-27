@@ -1992,6 +1992,18 @@ ipcMain.handle('restart-renderer', async (_evt) => {
 // IsElevated() check passes. On dev, we re-launch `dotnet run --project
 // <daemon>` elevated — which loses the CiBuild=true asInvoker manifest
 // override and gives us the real prod manifest with admin rights.
+// Full restart for the boot-failure splash's "Restart app" button: a renderer
+// reload is a no-op under the app:// scheme, and relaunching also brings a
+// dead daemon back through the normal startup path.
+ipcMain.handle('restart-app', async () => {
+  log.info('[restart-app] relaunching')
+  isQuitting = true
+  await shutdownDaemon()
+  app.relaunch()
+  app.exit(0)
+  return true
+})
+
 ipcMain.handle('elevate-daemon', async () => {
   if (process.platform !== 'win32') {
     return { ok: false, error: 'Self-elevation is only supported on Windows' }

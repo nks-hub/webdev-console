@@ -61,6 +61,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Open a URL in the user's DEFAULT system browser, bypassing
   // Electron's new-window handler. Main allowlists the URL scheme.
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
+  // Relaunch the whole app (and with it the daemon) from the boot-failure splash.
+  restartApp: () => ipcRenderer.invoke('restart-app'),
 
   // Show a native file/directory picker. Returns { canceled, filePaths }.
   // Pass { properties: ['openDirectory'] } for folder picker (F79 path
