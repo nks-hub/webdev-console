@@ -1127,25 +1127,25 @@
     "title": "SSL certifikáty",
     "generate": "Vygenerovat certifikát",
     "installCa": "Instalovat CA",
-    "caInstalled": "CA úspěšně nainstalováno",
-    "caTrusted": "Lokální CA je důvěryhodné",
+    "caInstalled": "Certifikační autorita je nainstalovaná a důvěryhodná",
+    "caTrusted": "CA je důvěryhodná",
     "revoke": "Odvolat",
-    "noCerts": "Žádné SSL certifikáty. Vygeneruj jeden pro své weby.",
+    "noCerts": "Zatím tu není žádný certifikát. Certifikát se vytvoří sám, když u webu zapnete HTTPS. Ručně ho potřebujete jen pro domény mimo WDC.",
     "mkcertReady": "mkcert připraven",
     "mkcertMissing": "mkcert nenalezen",
     "mkcertNotInstalledTitle": "mkcert není nainstalován",
-    "mkcertNotInstalledDesc": "Nainstaluj mkcert přes stránku Binárky pro povolení generování SSL certifikátů.",
+    "mkcertNotInstalledDesc": "Bez nástroje mkcert nejde vytvářet certifikáty pro HTTPS. Nainstaluje se do spravovaných binárek, nic dalšího nastavovat nemusíte.",
     "loading": "Načítání SSL certifikátů…",
     "statusExpired": "Vypršel",
-    "statusExpiring": "Vyprší za {days}d",
-    "statusValid": "Platný {days}d",
-    "orphan": "Sirotek",
+    "statusExpiring": "Vyprší za {days} den | Vyprší za {days} dny | Vyprší za {days} dní",
+    "statusValid": "Platí ještě {days} den | Platí ještě {days} dny | Platí ještě {days} dní",
+    "orphan": "Bez webu",
     "orphanHint": "Žádný web s touto doménou aktuálně neexistuje",
     "metaAliases": "Aliasy",
     "metaCreated": "Vytvořeno",
     "metaExpires": "Vyprší",
     "metaIssuer": "Vystavitel",
-    "revokeFailed": "Odvolání selhalo",
+    "revokeFailed": "Certifikát se nepodařilo odvolat: {err}",
     "dialog": {
       "title": "Vygenerovat SSL certifikát",
       "domain": "Doména",
@@ -1156,7 +1156,23 @@
       "generateBtn": "Vygenerovat"
     },
     "revokeConfirmTitle": "Odvolat certifikát",
-    "revokeConfirmMessage": "Odvolat certifikát pro „{domain}\"? Weby, které ho používají, poběží přes HTTP, dokud nebude vygenerován nový certifikát."
+    "revokeConfirmMessage": "Odvolat certifikát pro „{domain}\"? Weby, které ho používají, poběží přes HTTP, dokud nebude vygenerován nový certifikát.",
+    "caNotTrusted": "CA zatím není důvěryhodná",
+    "installMkcert": "Nainstalovat mkcert",
+    "mkcertInstalledToast": "mkcert {version} je nainstalovaný",
+    "loadFailed": "Certifikáty se nepodařilo načíst (HTTP {status})",
+    "daemonUnreachable": "Nepodařilo se spojit s daemonem: {err}",
+    "caInstallFailed": "Instalace certifikační autority selhala: {err}",
+    "generateFailed": "Certifikát se nepodařilo vytvořit: {err}",
+    "pluginMissingTitle": "Plugin SSL není nainstalovaný",
+    "pluginMissingDesc": "Certifikáty pro HTTPS spravuje plugin SSL (mkcert). Bez něj tato stránka nemá co zobrazit.",
+    "error": {
+      "plugin_not_loaded": "Plugin SSL není načtený. Zapněte ho na stránce Pluginy.",
+      "ca_install_failed": "Certifikační autoritu se nepodařilo nainstalovat. Pokud se zobrazil dotaz systému, potvrďte ho a zkuste to znovu. {detail}",
+      "generate_failed": "Certifikát se nepodařilo vytvořit. Zkontrolujte, že je mkcert nainstalovaný. {detail}",
+      "revoke_failed": "Certifikát se nepodařilo odvolat. {detail}",
+      "not_found": "Certifikát pro tuto doménu už neexistuje."
+    }
   },
   "plugins": {
     "title": "Pluginy",
@@ -3376,5 +3392,10 @@
       "days": "před {n} d"
     },
     "openFromSettings": "Připojit AI klienta"
+  },
+  "pluginMissing": {
+    "enable": "Zapnout plugin",
+    "openMarketplace": "Otevřít Pluginy › Marketplace",
+    "disabledHint": "Plugin je nainstalovaný, ale vypnutý."
   }
 }

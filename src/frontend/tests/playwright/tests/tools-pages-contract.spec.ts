@@ -40,4 +40,15 @@ test.describe('Tool pages — source contract', () => {
     expect(vue).toMatch(/if \(res\?\.notApplied\) \{[\s\S]*?\} else \{\s*ElMessage\.success/)
     expect(vue).toContain(":aria-label=\"$t('hosts.removeEntryAria'")
   })
+
+  test('SSL status comes from the machine, not from the plugin being loaded', () => {
+    const endpoint = daemon('Ssl/SslEndpoints.cs')
+    expect(endpoint).not.toContain('mkcertInstalled = true')
+    expect(endpoint).toContain('bm.ListInstalled("mkcert")')
+    expect(endpoint).toContain('IsCaTrusted(MkcertCaRoot())')
+    const vue = page('SslManager.vue')
+    expect(vue).toMatch(/v-if="mkcertInstalled && !caInstalled/)
+    expect(vue).toContain('installMkcert')
+    expect(vue).toContain('<PluginMissingState')
+  })
 })

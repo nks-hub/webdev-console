@@ -12,16 +12,88 @@ namespace NKS.WebDevConsole.Daemon.Ssl;
 /// </summary>
 internal static class SslEndpoints
 {
+    /// <summary>mkcert's default CAROOT for this OS (or the CAROOT override).</summary>
+    internal static string MkcertCaRoot()
+    {
+        var env = Environment.GetEnvironmentVariable("CAROOT");
+        if (!string.IsNullOrWhiteSpace(env)) return env;
+        if (OperatingSystem.IsWindows())
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "mkcert");
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (OperatingSystem.IsMacOS())
+            return Path.Combine(home, "Library", "Application Support", "mkcert");
+        var xdg = Environment.GetEnvironmentVariable("XDG_DATA_HOME");
+        return Path.Combine(string.IsNullOrWhiteSpace(xdg) ? Path.Combine(home, ".local", "share") : xdg, "mkcert");
+    }
+
+    /// <summary>
+    /// True when the mkcert root CA in <paramref name="caRoot"/> sits in a
+    /// trusted root store. mkcert creates rootCA.pem on first use, so the file
+    /// alone does not mean browsers trust it.
+    /// </summary>
+    internal static bool IsCaTrusted(string caRoot)
+    {
+        var pem = Path.Combine(caRoot, "rootCA.pem");
+        if (!File.Exists(pem)) return false;
+        try
+        {
+            using var ca = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadCertificateFromFile(pem);
+            foreach (var location in new[] { System.Security.Cryptography.X509Certificates.StoreLocation.CurrentUser, System.Security.Cryptography.X509Certificates.StoreLocation.LocalMachine })
+            {
+                using var store = new System.Security.Cryptography.X509Certificates.X509Store(
+                    System.Security.Cryptography.X509Certificates.StoreName.Root, location);
+                try { store.Open(System.Security.Cryptography.X509Certificates.OpenFlags.ReadOnly | System.Security.Cryptography.X509Certificates.OpenFlags.OpenExistingOnly); }
+                catch (System.Security.Cryptography.CryptographicException) { continue; }
+                var found = store.Certificates.Find(
+                    System.Security.Cryptography.X509Certificates.X509FindType.FindByThumbprint, ca.Thumbprint, validOnly: false);
+                var hit = found.Count > 0;
+                foreach (var c in found) c.Dispose();
+                if (hit) return true;
+            }
+        }
+        catch (System.Security.Cryptography.CryptographicException) { /* unreadable rootCA.pem */ }
+        return false;
+    }
+
+    /// <summary>
+    /// The SSL plugin looks for mkcert only when it starts. After mkcert is
+    /// installed from Binaries, ask it to look again so generating works
+    /// without a daemon restart. Returns whether the plugin now has mkcert.
+    /// </summary>
+    private static async Task<bool> EnsurePluginSeesMkcertAsync(object plugin, bool binaryInstalled)
+    {
+        var manager = plugin.GetType()
+            .GetField("_mkcert", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            ?.GetValue(plugin);
+        if (manager is null) return binaryInstalled;
+        bool Ready() => manager.GetType().GetProperty("IsInstalled")?.GetValue(manager) as bool? ?? binaryInstalled;
+        if (Ready() || !binaryInstalled) return Ready();
+        try
+        {
+            if (manager.GetType().GetMethod("DetectAsync")?.Invoke(manager, null) is Task<bool> detect && await detect)
+                plugin.GetType()
+                    .GetMethod("ScanExistingCerts", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)
+                    ?.Invoke(plugin, null);
+        }
+        catch (Exception) { /* plugin shape changed; report what it says below */ }
+        return Ready();
+    }
+
     public static void MapSslEndpoints(this WebApplication app, PluginLoader pluginLoader)
     {
-        // SSL certificates
-        app.MapGet("/api/ssl/certs", (SiteManager sm) =>
+        // SSL certificates. mkcertInstalled/caInstalled come from the machine,
+        // not from the plugin merely being loaded.
+        app.MapGet("/api/ssl/certs", async (SiteManager sm, NKS.WebDevConsole.Daemon.Binaries.BinaryManager bm) =>
         {
+            var binaryInstalled = bm.ListInstalled("mkcert").Count > 0;
+            var caInstalled = IsCaTrusted(MkcertCaRoot());
             var sslPlugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.ssl");
-            if (sslPlugin == null) return Results.Ok(new { certs = Array.Empty<object>(), mkcertInstalled = false });
+            if (sslPlugin == null)
+                return Results.Ok(new { certs = Array.Empty<object>(), pluginLoaded = false, mkcertInstalled = binaryInstalled, caInstalled });
+            var mkcertInstalled = await EnsurePluginSeesMkcertAsync(sslPlugin.Instance, binaryInstalled);
             var method = sslPlugin.Instance.GetType().GetMethod("GetCerts");
             if (method == null)
-                return Results.Ok(new { certs = Array.Empty<object>(), mkcertInstalled = false });
+                return Results.Ok(new { certs = Array.Empty<object>(), pluginLoaded = true, mkcertInstalled, caInstalled });
 
             var rawResult = method.Invoke(sslPlugin.Instance, null);
             var certValues = new List<object>();
@@ -98,13 +170,13 @@ internal static class SslEndpoints
                     orphan,
                 });
             }
-            return Results.Ok(new { certs = enriched, mkcertInstalled = true });
+            return Results.Ok(new { certs = enriched, pluginLoaded = true, mkcertInstalled, caInstalled });
         });
 
         app.MapPost("/api/ssl/install-ca", async () =>
         {
             var sslPlugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.ssl");
-            if (sslPlugin == null) return Results.BadRequest(new { ok = false, message = "SSL plugin not loaded" });
+            if (sslPlugin == null) return Results.BadRequest(new { ok = false, code = "plugin_not_loaded", message = "SSL plugin not loaded" });
             var method = sslPlugin.Instance.GetType().GetMethod("InstallCA");
             if (method == null) return Results.BadRequest(new { ok = false, message = "InstallCA method not found" });
             try
@@ -114,12 +186,12 @@ internal static class SslEndpoints
                 var success = await task;
                 return success
                     ? Results.Ok(new { ok = true, message = "CA installed" })
-                    : Results.BadRequest(new { ok = false, message = "Failed to install CA" });
+                    : Results.BadRequest(new { ok = false, code = "ca_install_failed", message = "Failed to install CA" });
             }
             catch (Exception ex)
             {
                 app.Logger.LogWarning(ex, "InstallCA reflection failed");
-                return Results.BadRequest(new { ok = false, message = $"InstallCA failed: {ex.Message}" });
+                return Results.BadRequest(new { ok = false, code = "ca_install_failed", message = $"InstallCA failed: {ex.InnerException?.Message ?? ex.Message}" });
             }
         });
 
@@ -143,7 +215,7 @@ internal static class SslEndpoints
                 aliases = aliasArr.EnumerateArray().Select(a => a.GetString() ?? "").Where(s => s.Length > 0).ToArray();
 
             var sslPlugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.ssl");
-            if (sslPlugin == null) return Results.BadRequest(new { ok = false, message = "SSL plugin not loaded. Install mkcert first." });
+            if (sslPlugin == null) return Results.BadRequest(new { ok = false, code = "plugin_not_loaded", message = "SSL plugin not loaded" });
 
             var method = sslPlugin.Instance.GetType().GetMethod("GenerateCert");
             if (method == null) return Results.BadRequest(new { ok = false, message = "GenerateCert method not found" });
@@ -156,7 +228,7 @@ internal static class SslEndpoints
                 var result = resultProp?.GetValue(task);
 
                 if (result == null)
-                    return Results.BadRequest(new { ok = false, message = "mkcert not installed or failed" });
+                    return Results.BadRequest(new { ok = false, code = "generate_failed", message = "mkcert not installed or failed" });
 
                 return Results.Ok(new { ok = true, domain, message = $"Certificate generated for {domain}" });
             }
@@ -164,8 +236,8 @@ internal static class SslEndpoints
             {
                 // mkcert exec failure, missing binary, perms — surface the inner
                 // cause from reflection's TargetInvocationException wrapper.
-                return Results.Problem(
-                    $"Certificate generation failed: {ex.InnerException?.Message ?? ex.Message}");
+                return Results.Json(new { ok = false, code = "generate_failed",
+                    message = $"Certificate generation failed: {ex.InnerException?.Message ?? ex.Message}" }, statusCode: 500);
             }
         });
 
@@ -193,7 +265,7 @@ internal static class SslEndpoints
             }
 
             var sslPlugin = pluginLoader.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.ssl");
-            if (sslPlugin == null) return Results.BadRequest(new { ok = false, message = "SSL plugin not loaded" });
+            if (sslPlugin == null) return Results.BadRequest(new { ok = false, code = "plugin_not_loaded", message = "SSL plugin not loaded" });
             var method = sslPlugin.Instance.GetType().GetMethod("RevokeCert");
             if (method == null) return Results.BadRequest(new { ok = false, message = "RevokeCert not found" });
             try
@@ -201,12 +273,12 @@ internal static class SslEndpoints
                 var success = (bool)method.Invoke(sslPlugin.Instance, new object[] { domain })!;
                 return success
                     ? Results.Ok(new { ok = true, message = $"Certificate for {domain} revoked" })
-                    : Results.NotFound(new { ok = false, message = $"No certificate found for {domain}" });
+                    : Results.NotFound(new { ok = false, code = "not_found", message = $"No certificate found for {domain}" });
             }
             catch (Exception ex)
             {
-                return Results.Problem(
-                    $"Certificate revoke failed: {ex.InnerException?.Message ?? ex.Message}");
+                return Results.Json(new { ok = false, code = "revoke_failed",
+                    message = $"Certificate revoke failed: {ex.InnerException?.Message ?? ex.Message}" }, statusCode: 500);
             }
         });
     }

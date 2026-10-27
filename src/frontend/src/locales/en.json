@@ -1127,25 +1127,25 @@
     "title": "SSL Certificates",
     "generate": "Generate Cert",
     "installCa": "Install CA",
-    "caInstalled": "CA installed successfully",
-    "caTrusted": "Local CA trusted",
+    "caInstalled": "The certificate authority is installed and trusted",
+    "caTrusted": "CA trusted",
     "revoke": "Revoke",
-    "noCerts": "No SSL certificates. Generate one for your sites.",
+    "noCerts": "No certificates yet. A certificate is created automatically when you turn on HTTPS for a site. You only need to create one by hand for domains outside WDC.",
     "mkcertReady": "mkcert ready",
     "mkcertMissing": "mkcert not found",
     "mkcertNotInstalledTitle": "mkcert not installed",
-    "mkcertNotInstalledDesc": "Install mkcert via Binaries page to enable SSL certificate generation.",
+    "mkcertNotInstalledDesc": "Without mkcert no HTTPS certificates can be created. It installs into the managed binaries, nothing else to set up.",
     "loading": "Reading SSL certificates…",
     "statusExpired": "Expired",
-    "statusExpiring": "Expires in {days}d",
-    "statusValid": "Valid {days}d",
-    "orphan": "Orphan",
+    "statusExpiring": "Expires in {days} day | Expires in {days} days",
+    "statusValid": "Valid for {days} more day | Valid for {days} more days",
+    "orphan": "No site",
     "orphanHint": "No site with this domain currently exists",
     "metaAliases": "Aliases",
     "metaCreated": "Created",
     "metaExpires": "Expires",
     "metaIssuer": "Issuer",
-    "revokeFailed": "Revoke failed",
+    "revokeFailed": "Could not revoke the certificate: {err}",
     "dialog": {
       "title": "Generate SSL Certificate",
       "domain": "Domain",
@@ -1156,7 +1156,23 @@
       "generateBtn": "Generate"
     },
     "revokeConfirmTitle": "Revoke certificate",
-    "revokeConfirmMessage": "Revoke the certificate for \"{domain}\"? Sites using it will fall back to HTTP until a new certificate is generated."
+    "revokeConfirmMessage": "Revoke the certificate for \"{domain}\"? Sites using it will fall back to HTTP until a new certificate is generated.",
+    "caNotTrusted": "CA not trusted yet",
+    "installMkcert": "Install mkcert",
+    "mkcertInstalledToast": "mkcert {version} is installed",
+    "loadFailed": "Could not load certificates (HTTP {status})",
+    "daemonUnreachable": "Cannot connect to the daemon: {err}",
+    "caInstallFailed": "Installing the certificate authority failed: {err}",
+    "generateFailed": "Could not create the certificate: {err}",
+    "pluginMissingTitle": "The SSL plugin is not installed",
+    "pluginMissingDesc": "HTTPS certificates are managed by the SSL (mkcert) plugin. Without it this page has nothing to show.",
+    "error": {
+      "plugin_not_loaded": "The SSL plugin is not loaded. Enable it on the Plugins page.",
+      "ca_install_failed": "Could not install the certificate authority. If the system asked for confirmation, accept it and try again. {detail}",
+      "generate_failed": "Could not create the certificate. Check that mkcert is installed. {detail}",
+      "revoke_failed": "Could not revoke the certificate. {detail}",
+      "not_found": "There is no certificate for this domain any more."
+    }
   },
   "plugins": {
     "title": "Plugins",
@@ -3376,5 +3392,10 @@
       "days": "{n} d ago"
     },
     "openFromSettings": "Connect an AI client"
+  },
+  "pluginMissing": {
+    "enable": "Enable plugin",
+    "openMarketplace": "Open Plugins › Marketplace",
+    "disabledHint": "The plugin is installed but switched off."
   }
 }
