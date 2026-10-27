@@ -28,6 +28,9 @@ namespace NKS.WebDevConsole.Daemon.Services;
 /// </summary>
 internal static class ServiceConfigEndpoints
 {
+    // Serialises config/validate runs that swap a draft into a live Apache include.
+    private static readonly SemaphoreSlim LiveDraftGate = new(1, 1);
+
     public static void MapServiceConfigEndpoints(this WebApplication app, PluginLoader pluginLoader)
     {
         // Version validation (checks if a version string is available for a service)
@@ -75,6 +78,14 @@ internal static class ServiceConfigEndpoints
         });
 
         // Service logs
+        // An open log viewer renews this every ~15 s so ServiceLogTailer
+        // streams that service's new lines (see ServiceLogTailer.Watch).
+        app.MapPost("/api/services/{id}/logs/watch", (string id, ServiceLogTailer tailer) =>
+        {
+            tailer.Watch(id);
+            return Results.NoContent();
+        });
+
         app.MapGet("/api/services/{id}/logs", async (string id, IServiceProvider sp, int? lines) =>
         {
             var modules = sp.GetServices<IServiceModule>();
@@ -210,15 +221,25 @@ internal static class ServiceConfigEndpoints
                     if (body.Content is null)
                         return await run(apacheRootConfigPath);
 
-                    var originalContent = await File.ReadAllTextAsync(normalizedConfigPath, ctx.RequestAborted);
-                    await File.WriteAllTextAsync(normalizedConfigPath, body.Content, ctx.RequestAborted);
+                    // One draft at a time, and the original always goes back even
+                    // when the client disconnects mid-run.
+                    await LiveDraftGate.WaitAsync(ctx.RequestAborted);
                     try
                     {
-                        return await run(apacheRootConfigPath);
+                        var originalContent = await File.ReadAllTextAsync(normalizedConfigPath, ctx.RequestAborted);
+                        await File.WriteAllTextAsync(normalizedConfigPath, body.Content, ctx.RequestAborted);
+                        try
+                        {
+                            return await run(apacheRootConfigPath);
+                        }
+                        finally
+                        {
+                            await File.WriteAllTextAsync(normalizedConfigPath, originalContent, CancellationToken.None);
+                        }
                     }
                     finally
                     {
-                        await File.WriteAllTextAsync(normalizedConfigPath, originalContent, ctx.RequestAborted);
+                        LiveDraftGate.Release();
                     }
                 }
 

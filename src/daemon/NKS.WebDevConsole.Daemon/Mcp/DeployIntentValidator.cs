@@ -315,6 +315,10 @@ public sealed class DeployIntentValidator : IDeployIntentValidator
             kind,
             domain,
             ct);
+        // A catch-all grant (e.g. the onboarding Full Trust preset) predates the
+        // capability groups; it must not silently approve their operator kinds.
+        if (grant is not null && grant.KindPattern == "*" && McpCapabilities.CapabilityIntentKinds.Contains(kind))
+            grant = null;
         // Phase 7.5+++ — cooldown check. If the grant has a positive
         // min_cooldown_seconds AND last_matched_at + cooldown is in
         // the future, treat the grant as a non-match → falls back to

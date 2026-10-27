@@ -76,6 +76,9 @@ public static class McpTokenPolicy
     private static readonly (string, string) SitePut = ("PUT", "/api/sites/{*}");
     private static readonly (string, string) CloudflareConfigPut = ("PUT", "/api/cloudflare/config");
     private static readonly (string, string) DatabaseExport = ("GET", "/api/databases/{*}/export");
+    private static readonly (string, string) BackupPost = ("POST", "/api/backup");
+    private static readonly (string, string) TableBrowse = ("GET", "/api/databases/v2/{*}/tables/{*}/data");
+    private static readonly (string, string) ConfigValidate = ("POST", "/api/config/validate");
 
     /// <summary>
     /// Canonical form of a route pattern or path for comparison: lower case,
@@ -163,9 +166,28 @@ public static class McpTokenPolicy
                 return CapabilityDisabled(routeCapability, routeText);
         }
 
-        var needsBody = key == SettingsPut || key == SitePost || key == SitePut || key == CloudflareConfigPut
+        // Raw SQL in ?where= and a file path in ?out= skip the guards the MCP
+        // tools rely on; the shipped tools send neither.
+        if (key == TableBrowse && ctx.Request.Query.ContainsKey("where"))
+            return Forbidden("?where= is raw SQL and not available to the MCP token; use wdc_query for filtered reads");
+        if (key == BackupPost && ctx.Request.Query.ContainsKey("out"))
+            return Forbidden("?out= is not available to the MCP token; backups are written to the backups folder");
+
+        var needsBody = key == SettingsPut || key == SitePost || key == SitePut || key == CloudflareConfigPut || key == ConfigValidate
                         || route?.IntentTarget?.Contains("{body.", StringComparison.Ordinal) == true;
-        var body = needsBody ? await ReadObjectPropertiesAsync(ctx) : [];
+        IReadOnlyList<BodyProperty> body = [];
+        if (needsBody)
+        {
+            // The endpoint would decode a body this policy cannot read (another
+            // charset, say) and act on fields the checks below never saw.
+            if (await ReadObjectPropertiesAsync(ctx) is not { } read)
+                return new(StatusCodes.Status400BadRequest, new
+                {
+                    error = "mcp_bad_body",
+                    detail = $"{routeText} needs a UTF-8 JSON object body from the MCP token",
+                });
+            body = read;
+        }
 
         if (key == SettingsPut)
         {
@@ -220,6 +242,13 @@ public static class McpTokenPolicy
             }
         }
 
+        else if (key == ConfigValidate
+                 && body.Any(p => p.Name.Equals("content", StringComparison.OrdinalIgnoreCase) && p.Kind != JsonValueKind.Null)
+                 && !isEnabled(McpCapabilities.ServiceConfig))
+        {
+            // Validating a draft of an Apache include swaps it into the live file for the test run.
+            return CapabilityDisabled(McpCapabilities.Get(McpCapabilities.ServiceConfig), "validate a config draft (content)");
+        }
         else if (key == DatabaseExport && ctx.Request.Query.ContainsKey(McpCapabilities.ExportOutputPathParameter)
                  && !isEnabled(McpCapabilities.DatabaseAdmin))
         {
@@ -306,8 +335,15 @@ public static class McpTokenPolicy
         }).ToList();
     }
 
-    private static async Task<IReadOnlyList<BodyProperty>> ReadObjectPropertiesAsync(HttpContext ctx)
+    /// <summary>Top-level properties of the JSON body; null when the body is not readable UTF-8 JSON.</summary>
+    private static async Task<IReadOnlyList<BodyProperty>?> ReadObjectPropertiesAsync(HttpContext ctx)
     {
+        var charset = ctx.Request.GetTypedHeaders().ContentType?.Charset.Value;
+        if (!string.IsNullOrEmpty(charset)
+            && !charset.Equals("utf-8", StringComparison.OrdinalIgnoreCase)
+            && !charset.Equals("utf8", StringComparison.OrdinalIgnoreCase))
+            return null;
+        if (ctx.Request.ContentLength == 0) return [];
         ctx.Request.EnableBuffering();
         try
         {
@@ -321,7 +357,9 @@ public static class McpTokenPolicy
         }
         catch (JsonException)
         {
-            return []; // the endpoint itself rejects malformed JSON
+            // No body at all leaves nothing for the endpoint to act on either.
+            ctx.Request.Body.Position = 0;
+            return ctx.Request.Body.ReadByte() == -1 ? [] : null;
         }
         finally
         {

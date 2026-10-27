@@ -112,6 +112,25 @@ public sealed class McpGrantAutoApprovalTests : IDisposable
     }
 
     [Fact]
+    public async Task WildcardGrant_DoesNotApprove_CapabilityKinds_ButANamedGrantDoes()
+    {
+        await AddGrant("always", null, kind: "node_process");
+        await AddGrant("always", null); // newer catch-all, e.g. the Full Trust preset
+        var token = InsertPendingIntent("node_process", "a.loc", "*mcp*", out var intentId);
+        SimulateRequest(mcpToken: true);
+        var result = await NewValidator().ValidateAndConsumeAsync(
+            token, "node_process", "a.loc", "*mcp*", allowUnconfirmed: false, CancellationToken.None);
+        Assert.True(result.Ok, result.Reason);
+
+        var token2 = InsertPendingIntent("daemon_admin", "reset", "*mcp*", out var intentId2);
+        SimulateRequest(mcpToken: true);
+        var denied = await NewValidator().ValidateAndConsumeAsync(
+            token2, "daemon_admin", "reset", "*mcp*", allowUnconfirmed: false, CancellationToken.None);
+        Assert.False(denied.Ok);
+        Assert.Null(ReadIntent(intentId2).ConfirmedAt);
+    }
+
+    [Fact]
     public async Task SessionGrant_AutoApproves_McpTokenRequest_WithMatchingSessionHeader()
     {
         var grantId = await AddGrant("session", "agent-run-1", kind: "database_drop");

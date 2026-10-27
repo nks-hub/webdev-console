@@ -148,7 +148,8 @@ public sealed class McpSessionGrantsRepository : IMcpSessionGrantsRepository
             "       OR (instr(target_pattern, '*') > 0 AND lower(@Target) GLOB " +
             "           replace(replace(lower(target_pattern), '[', '[[]'), '?', '[?]'))) " +
             "  AND (" + string.Join(" OR ", clauses) + ") " +
-            "ORDER BY granted_at DESC LIMIT 1";
+            // A grant naming the kind wins over a wildcard one.
+            "ORDER BY (kind_pattern = '*') ASC, granted_at DESC LIMIT 1";
 
         using var conn = _db.CreateConnection();
         await conn.OpenAsync(ct);

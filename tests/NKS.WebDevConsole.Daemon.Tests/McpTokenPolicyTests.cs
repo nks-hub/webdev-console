@@ -288,6 +288,42 @@ public class McpTokenPolicyTests
         Assert.Null(await McpTokenPolicy.EvaluateAsync(ToFile(), Only(McpCapabilities.DatabaseAdmin), null));
     }
 
+    // --- request shapes the shipped tools never send ------------------------------
+
+    [Fact]
+    public async Task Raw_where_on_table_browse_and_backup_out_path_are_refused()
+    {
+        var browse = WithQuery(Request("GET", "/api/databases/v2/{db}/tables/{table}/data"), "?where=1%3D1");
+        Assert.Equal("mcp_forbidden", BodyOf((await McpTokenPolicy.EvaluateAsync(browse, AllOn, null))!).GetProperty("error").GetString());
+        Assert.Null(await McpTokenPolicy.EvaluateAsync(Request("GET", "/api/databases/v2/{db}/tables/{table}/data"), AllOff, null));
+
+        var backup = WithQuery(Request("POST", "/api/backup"), "?out=C%3A%2Fx.zip");
+        Assert.Equal("mcp_forbidden", BodyOf((await McpTokenPolicy.EvaluateAsync(backup, AllOn, null))!).GetProperty("error").GetString());
+    }
+
+    [Fact]
+    public async Task A_body_the_policy_cannot_read_is_refused()
+    {
+        var utf16 = Request("PUT", "/api/settings");
+        utf16.Request.ContentType = "application/json; charset=utf-16";
+        utf16.Request.Body = new MemoryStream(Encoding.Unicode.GetBytes("""{"mcp.capabilities.unlisted_routes":"true"}"""));
+        var denial = await McpTokenPolicy.EvaluateAsync(utf16, AllOn, null);
+        Assert.Equal(400, denial!.StatusCode);
+        Assert.Equal("mcp_bad_body", BodyOf(denial).GetProperty("error").GetString());
+
+        var garbage = await McpTokenPolicy.EvaluateAsync(Request("PUT", "/api/settings", "{not json"), AllOn, null);
+        Assert.Equal(400, garbage!.StatusCode);
+    }
+
+    [Fact]
+    public async Task Validating_a_config_draft_needs_service_config()
+    {
+        const string draft = """{"serviceId":"apache","configPath":"x.conf","content":"LoadModule cgi_module x"}""";
+        AssertCapabilityDisabled(await McpTokenPolicy.EvaluateAsync(Request("POST", "/api/config/validate", draft), AllOff, null), McpCapabilities.ServiceConfig);
+        Assert.Null(await McpTokenPolicy.EvaluateAsync(Request("POST", "/api/config/validate", draft), Only(McpCapabilities.ServiceConfig), null));
+        Assert.Null(await McpTokenPolicy.EvaluateAsync(Request("POST", "/api/config/validate", """{"serviceId":"apache","configPath":"x.conf"}"""), AllOff, null));
+    }
+
     private static HttpContext WithQuery(HttpContext ctx, string query)
     {
         ctx.Request.QueryString = new QueryString(query);

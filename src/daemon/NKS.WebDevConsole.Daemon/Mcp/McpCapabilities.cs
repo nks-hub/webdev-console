@@ -389,6 +389,16 @@ public static class McpCapabilities
 
     public static McpCapability Get(string id) => All.First(c => c.Id == id);
 
+    /// <summary>
+    /// Intent kinds that belong to a capability group. A grant with the
+    /// wildcard kind pattern never auto-approves these; the operator has to
+    /// name the kind in the grant.
+    /// </summary>
+    public static readonly IReadOnlySet<string> CapabilityIntentKinds = All
+        .SelectMany(c => c.Routes.Select(r => r.IntentKind).Concat(c.BodyFields.Select(f => f.IntentKind)))
+        .OfType<string>()
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>Reads a capability switch from settings (<c>mcp.capabilities.&lt;id&gt;</c>).</summary>
     public static bool IsEnabled(SettingsStore settings, string id) =>
         settings.GetBool("mcp", "capabilities." + id, Get(id).DefaultEnabled);
