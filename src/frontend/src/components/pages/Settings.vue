@@ -22,6 +22,7 @@
           </el-button>
         </el-alert>
         <SettingsPanel
+          id="simple-general"
           panel-class="simple-settings-panel-main"
           :title="$t('settings.tabs.general')"
           :subtitle="$t('settings.general.tabDesc')"
@@ -54,6 +55,7 @@
         </SettingsPanel>
 
         <SettingsPanel
+          id="simple-update"
           :title="$t('settings.tabs.update')"
           :subtitle="updateSubtitle"
           :icon="Download"
@@ -62,6 +64,8 @@
             :t="t"
             :current-version="currentVersion"
             :update-check="updateCheck"
+            :latest-version="latestVersion"
+            :last-checked-iso="lastCheckedIso"
             :has-update="hasUpdate"
             :updater="updaterState"
             :format-relative-time="formatRelativeTime"
@@ -75,8 +79,8 @@
         <!-- Native OS notifications — same component as the Advanced
              "Notifications" section; changes apply immediately. -->
         <SettingsPanel
+          id="simple-notifications"
           :title="$t('osNotifications.settings.title')"
-          :subtitle="$t('osNotifications.settings.subtitle')"
           :icon="Bell"
         >
           <NotificationSettings :t="t" />
@@ -96,6 +100,7 @@
              beginners just need to see "what listens where" without
              leaving Simple. -->
         <SettingsPanel
+          id="simple-network"
           :title="$t('settings.simple.network.title')"
           :subtitle="$t('settings.simple.network.subtitle')"
           :icon="Connection"
@@ -126,14 +131,14 @@
              service with link to the per-service plugin page for full
              control. Full start/stop UX stays on Dashboard. -->
         <SettingsPanel
-          v-if="daemonStore.services.length > 0"
+          v-if="daemonStore.visibleServices.length > 0"
           :title="$t('settings.simple.services.title')"
           :subtitle="$t('settings.simple.services.subtitle')"
           :icon="Operation"
         >
           <div class="simple-runtime-grid">
             <div
-              v-for="svc in daemonStore.services"
+              v-for="svc in daemonStore.visibleServices"
               :key="svc.id"
               class="about-sys-row"
             >
@@ -179,6 +184,7 @@
              Wraps the same SSO/password/sync cards Advanced uses, just
              scoped to the simple-settings-grid. -->
         <SettingsPanel
+          id="simple-account"
           :title="$t('settings.tabs.account')"
           :subtitle="$t('settings.account.simpleSubtitle')"
           :icon="User"
@@ -195,7 +201,7 @@
           <AccountPasswordCard
             v-if="!accountToken"
             :t="$t"
-            :title="$t('settings.tabs.account')"
+            :title="$t('settings.account.passwordTitle')"
             v-model:email="authEmail"
             v-model:password="authPassword"
             :loading="authLoading"
@@ -206,7 +212,7 @@
           <AccountSimpleSyncCard
             v-else
             :t="$t"
-            :title="$t('settings.tabs.account')"
+            :title="$t('settings.sync.cloudSync')"
             :email="accountEmail"
             :syncing="syncing"
             :pulling="pulling"
@@ -218,6 +224,7 @@
 
         <SettingsPanel
           v-if="systemInfo"
+          id="simple-about"
           panel-class="simple-runtime-panel"
           :title="$t('settings.tabs.about')"
           :subtitle="`NKS WebDev Console v${appVersion}`"
@@ -226,7 +233,7 @@
           <div class="simple-runtime-grid">
             <div class="about-sys-row">
               <span class="sys-label">{{ $t('settings.about.services') }}</span>
-              <span class="sys-value">{{ systemInfo.services?.running }}/{{ systemInfo.services?.total }}</span>
+              <span class="sys-value">{{ daemonStore.runningServices.length }}/{{ daemonStore.visibleServices.length }}</span>
             </div>
             <div class="about-sys-row">
               <span class="sys-label">{{ $t('settings.about.sites') }}</span>
@@ -234,7 +241,7 @@
             </div>
             <div v-if="systemInfo.daemon?.version" class="about-sys-row">
               <span class="sys-label">{{ $t('settings.about.daemonVersion') }}</span>
-              <span class="sys-value mono">{{ systemInfo.daemon.version }}</span>
+              <span class="sys-value mono" :title="systemInfo.daemon.version">{{ shortVersion(systemInfo.daemon.version) }}</span>
             </div>
             <div v-if="systemInfo.daemon?.uptime !== undefined" class="about-sys-row">
               <span class="sys-label">{{ $t('settings.about.daemonUptime') }}</span>
@@ -279,7 +286,7 @@
                     :model-value="p.currentPort"
                     :min="1"
                     :max="65535"
-                    style="width: 100%"
+                    class="port-input"
                     disabled
                   />
                   <div class="hint">
@@ -319,28 +326,28 @@
               />
               <el-form label-position="left" label-width="200px" size="small">
                 <el-form-item :label="$t('settings.ports.httpPort')">
-                  <el-input-number v-model="ports.http" :min="1" :max="65535" style="width: 100%" />
+                  <el-input-number v-model="ports.http" :min="1" :max="65535" class="port-input" />
                 </el-form-item>
                 <el-form-item :label="$t('settings.ports.httpsPort')">
-                  <el-input-number v-model="ports.https" :min="1" :max="65535" style="width: 100%" />
+                  <el-input-number v-model="ports.https" :min="1" :max="65535" class="port-input" />
                 </el-form-item>
                 <el-form-item :label="$t('settings.ports.mysqlPort')">
-                  <el-input-number v-model="ports.mysql" :min="1" :max="65535" style="width: 100%" />
+                  <el-input-number v-model="ports.mysql" :min="1" :max="65535" class="port-input" />
                 </el-form-item>
                 <el-form-item :label="$t('settings.ports.redisPort')">
-                  <el-input-number v-model="ports.redis" :min="1" :max="65535" style="width: 100%" />
+                  <el-input-number v-model="ports.redis" :min="1" :max="65535" class="port-input" />
                 </el-form-item>
                 <el-form-item :label="$t('settings.ports.mailpitSmtp')">
-                  <el-input-number v-model="ports.mailpitSmtp" :min="1" :max="65535" style="width: 100%" />
+                  <el-input-number v-model="ports.mailpitSmtp" :min="1" :max="65535" class="port-input" />
                 </el-form-item>
                 <el-form-item :label="$t('settings.ports.mailpitHttp')">
-                  <el-input-number v-model="ports.mailpitHttp" :min="1" :max="65535" style="width: 100%" />
+                  <el-input-number v-model="ports.mailpitHttp" :min="1" :max="65535" class="port-input" />
                 </el-form-item>
                 <el-form-item :label="$t('settings.ports.postgresqlPort')">
-                  <el-input-number v-model="ports.postgresql" :min="1" :max="65535" style="width: 100%" />
+                  <el-input-number v-model="ports.postgresql" :min="1" :max="65535" class="port-input" />
                 </el-form-item>
                 <el-form-item :label="$t('settings.ports.phpFpmBase')">
-                  <el-input-number v-model="phpFpmBasePort" :min="9000" :max="9999" style="width: 100%" />
+                  <el-input-number v-model="phpFpmBasePort" :min="9000" :max="9999" class="port-input" />
                   <div class="hint">{{ $t('settings.ports.phpFpmFormula') }}</div>
                 </el-form-item>
               </el-form>
@@ -378,7 +385,11 @@
         <section v-show="activeTab === 'paths'" class="shell-section">
           <div class="tab-content">
             <SettingsCard :title="$t('settings.paths.dataDir')">
-              <el-input :model-value="systemInfo?.dataDir ?? ''" readonly class="mono-input" />
+              <el-input :model-value="systemInfo?.dataDir ?? ''" readonly class="mono-input">
+                <template v-if="systemInfo?.dataDir" #append>
+                  <el-button @click="revealDataDir">{{ $t('settings.paths.showInFolder') }}</el-button>
+                </template>
+              </el-input>
               <div class="hint">{{ $t('settings.paths.dataHint') }}</div>
             </SettingsCard>
             <SettingsCard :title="$t('settings.advancedBackups.title')">
@@ -415,7 +426,7 @@
               >
                 {{ $t('mcpConnect.openFromSettings') }} →
               </el-button>
-              <el-form label-position="left" label-width="320px" size="small">
+              <el-form label-position="top" size="small">
                 <!-- Phase 7.4e — strict kind validation. Default OFF (lenient
                      mode where any regex-valid kind passes). Turn ON to refuse
                      any kind not registered via IDestructiveOperationKinds. -->
@@ -535,7 +546,7 @@
                 >
                   <template #append>
                     <el-button :loading="refreshingCatalog" @click="refreshCatalog">
-                      {{ $t('common.refresh') }}
+                      {{ $t('settings.advanced.saveAndRefresh') }}
                     </el-button>
                   </template>
                 </el-input>
@@ -551,7 +562,6 @@
                 </el-button>
                 <el-button
                   size="small"
-                  type="primary"
                   @click="openCatalogAdmin"
                   :disabled="!catalogUrl"
                 >
@@ -794,7 +804,7 @@
               <AccountPasswordCard
                 v-if="!accountToken"
                 :t="$t"
-                :title="$t('settings.tabs.account')"
+                :title="$t('settings.account.passwordTitle')"
                 v-model:email="authEmail"
                 v-model:password="authPassword"
                 :loading="authLoading"
@@ -805,7 +815,7 @@
               <AccountSimpleSyncCard
                 v-else
                 :t="$t"
-                :title="$t('settings.tabs.account')"
+                :title="$t('settings.sync.cloudSync')"
                 :email="accountEmail"
                 :syncing="syncing"
                 :pulling="pulling"
@@ -866,6 +876,8 @@
               :t="t"
               :current-version="currentVersion"
               :update-check="updateCheck"
+              :latest-version="latestVersion"
+              :last-checked-iso="lastCheckedIso"
               :has-update="hasUpdate"
               :updater="updaterState"
               :format-relative-time="formatRelativeTime"
@@ -958,10 +970,10 @@
                    discoverable from inside the app instead of only inside the
                    README on GitHub. -->
               <div class="about-links">
-                <a href="https://github.com/nks-hub/webdev-console" target="_blank" class="about-link">webdev-console (app)</a>
-                <a href="https://github.com/nks-hub/webdev-console-plugins" target="_blank" class="about-link">plugins</a>
-                <a href="https://github.com/nks-hub/wdc-catalog-api" target="_blank" class="about-link">catalog-api</a>
-                <a href="https://github.com/nks-hub/webdev-console-binaries" target="_blank" class="about-link">binaries</a>
+                <a href="https://github.com/nks-hub/webdev-console" target="_blank" class="about-link">{{ $t('settings.about.links.app') }}</a>
+                <a href="https://github.com/nks-hub/webdev-console-plugins" target="_blank" class="about-link">{{ $t('settings.about.links.plugins') }}</a>
+                <a href="https://github.com/nks-hub/wdc-catalog-api" target="_blank" class="about-link">{{ $t('settings.about.links.catalog') }}</a>
+                <a href="https://github.com/nks-hub/webdev-console-binaries" target="_blank" class="about-link">{{ $t('settings.about.links.binaries') }}</a>
                 <a href="https://wdc.nks-hub.cz" target="_blank" class="about-link">{{ $t('settings.about.website') }}</a>
               </div>
 
@@ -1005,11 +1017,11 @@
                 </div>
                 <div v-if="systemInfo.daemon?.version" class="about-sys-row">
                   <span class="sys-label">{{ $t('settings.about.daemonVersion') }}</span>
-                  <span class="sys-value mono">{{ systemInfo.daemon.version }}</span>
+                  <span class="sys-value mono" :title="systemInfo.daemon.version">{{ shortVersion(systemInfo.daemon.version) }}</span>
                 </div>
                 <div class="about-sys-row">
                   <span class="sys-label">{{ $t('settings.about.services') }}</span>
-                  <span class="sys-value">{{ systemInfo.services?.running }}/{{ systemInfo.services?.total }} {{ $t('dashboard.running') }}</span>
+                  <span class="sys-value">{{ daemonStore.runningServices.length }}/{{ daemonStore.visibleServices.length }} {{ $t('dashboard.running') }}</span>
                 </div>
                 <div class="about-sys-row">
                   <span class="sys-label">{{ $t('settings.about.sites') }}</span>
@@ -1023,18 +1035,18 @@
                   <span class="sys-label">{{ $t('settings.about.binaries') }}</span>
                   <span class="sys-value">{{ systemInfo.binaries }}</span>
                 </div>
-                <div v-if="installedVersions.length" class="about-sys-title" style="margin-top: var(--wdc-space-3)">{{ $t('settings.about.installedVersions') }}</div>
-                <div v-for="bin in installedVersions" :key="bin.app" class="about-sys-row">
-                  <span class="sys-label">{{ bin.app }}</span>
-                  <span class="sys-value">{{ bin.version }}</span>
-                </div>
                 <div class="about-sys-row">
-                  <span class="sys-label">OS</span>
+                  <span class="sys-label">{{ $t('settings.about.os') }}</span>
                   <span class="sys-value">{{ systemInfo.os?.name ?? systemInfo.os?.version }}</span>
                 </div>
                 <div class="about-sys-row">
                   <span class="sys-label">.NET</span>
                   <span class="sys-value">{{ systemInfo.runtime?.dotnet }} ({{ systemInfo.runtime?.arch }})</span>
+                </div>
+                <div v-if="installedVersions.length" class="about-sys-title" style="margin-top: var(--wdc-space-3)">{{ $t('settings.about.installedVersions') }}</div>
+                <div v-for="bin in installedVersions" :key="bin.app" class="about-sys-row">
+                  <span class="sys-label">{{ appDisplayName(bin.app) }}</span>
+                  <span class="sys-value">{{ bin.version }}</span>
                 </div>
               </div>
             </div>
@@ -1094,6 +1106,7 @@ import SyncExportImportCard from '../settings/sync/SyncExportImportCard.vue'
 import SyncSnapshotsCard from '../settings/sync/SyncSnapshotsCard.vue'
 import { compareSemver, versionCore } from '../../utils/semver'
 import { pickSyncableSettings } from '../../utils/settingsSync'
+import { appDisplayName } from '../../utils/binaries'
 import { useAppVersion } from '../../utils/appVersion'
 
 const versionRef = useAppVersion()
@@ -1175,6 +1188,17 @@ watch(() => uiModeStore.isSimple, (simple) => {
 // scroll attribute lets us jump to a specific anchor.
 const route = useRoute()
 const router = useRouter()
+const SIMPLE_PANEL_FOR_TAB: Record<string, string> = {
+  general: 'simple-general',
+  update: 'simple-update',
+  notifications: 'simple-notifications',
+  mcp: 'simple-mcp',
+  ports: 'simple-network',
+  account: 'simple-account',
+  sync: 'simple-account',
+  about: 'simple-about',
+}
+
 // Set when a link asks for an Advanced-only section while in Simple mode.
 const hiddenTabRequested = ref<string | null>(null)
 
@@ -1196,15 +1220,15 @@ function applyDeepLink(): void {
     ? 'mcp'
     : (typeof route.query.tab === 'string' ? route.query.tab : '')
   if (tabParam && settingsSections.value.some(s => s.name === tabParam)) {
-    if (uiModeStore.isSimple && ADVANCED_ONLY_TABS.has(tabParam)) {
-      hiddenTabRequested.value = tabParam
-      return
+    if (uiModeStore.isSimple) {
+      hiddenTabRequested.value = ADVANCED_ONLY_TABS.has(tabParam) ? tabParam : null
+      const panel = SIMPLE_PANEL_FOR_TAB[tabParam]
+      if (panel) setTimeout(() => document.getElementById(panel)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
+      if (hiddenTabRequested.value) return
+    } else {
+      hiddenTabRequested.value = null
     }
-    hiddenTabRequested.value = null
     activeTab.value = tabParam
-    if (uiModeStore.isSimple && tabParam === 'mcp') {
-      setTimeout(() => document.getElementById('simple-mcp')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
-    }
   }
   if (scrollTarget) {
     // Defer to next tick so the tab content is in the DOM before we
@@ -1418,21 +1442,31 @@ const phpVersions = ref<string[]>([])
 const flushingDns = ref(false)
 const mampDiscovering = ref(false)
 
-// Simple-mode Services panel: a stopped service with no installed binary
-// is "not installed" (grey), not a red failure.
-const installedApps = computed(() => new Set(installedVersions.value.map(b => b.app.toLowerCase())))
+// Simple-mode Services panel: a service whose binary is not on disk is
+// "not installed" (grey), not a red failure.
 function serviceIsRunning(svc: { state?: number; status?: string }): boolean {
   return svc.state === 2 || svc.status === 'running'
 }
-function serviceNotInstalled(svc: { id: string; state?: number; status?: string }): boolean {
-  return !serviceIsRunning(svc) && installedVersions.value.length > 0 && !installedApps.value.has(svc.id.toLowerCase())
+function serviceNotInstalled(svc: { installed?: boolean; state?: number; status?: string }): boolean {
+  return !serviceIsRunning(svc) && svc.installed === false
 }
-function serviceDot(svc: { id: string; state?: number; status?: string }): 'ok' | 'err' | 'muted' {
+
+// "0.5.0-692b611d+692b611dbc3a…": the part after "+" is build metadata,
+// a full commit hash that only stretched the About table.
+function shortVersion(version: string): string {
+  return version.split('+')[0]
+}
+
+function revealDataDir(): void {
+  const dir = systemInfo.value?.dataDir
+  if (dir) void window.electronAPI?.revealInFolder?.(dir)
+}
+function serviceDot(svc: { installed?: boolean; state?: number; status?: string }): 'ok' | 'err' | 'muted' {
   if (serviceIsRunning(svc)) return 'ok'
   if (svc.state === 4 || svc.status === 'crashed' || svc.status === 'error') return 'err'
   return 'muted'
 }
-function serviceStateLabel(svc: { id: string; state?: number; status?: string }): string {
+function serviceStateLabel(svc: { installed?: boolean; state?: number; status?: string }): string {
   if (serviceIsRunning(svc)) return t('common.running')
   if (serviceNotInstalled(svc)) return t('settings.simple.services.notInstalled')
   if (svc.state === 4 || svc.status === 'crashed' || svc.status === 'error') return t('settings.simple.services.crashed')
@@ -2637,8 +2671,17 @@ const updateCheck = reactive<EasyUpdateCheck>({
 const updaterState = ref<AppUpdaterState | null>(null)
 let unsubscribeUpdater: (() => void) | null = null
 
-const hasUpdate = computed(() => !!updateCheck.latest
-  && compareSemver(versionCore(updateCheck.latest), versionCore(currentVersion.value)) > 0)
+// electron-updater checks on its own at startup. Until the GitHub check
+// runs, the version its feed reported is the newest one known.
+const latestVersion = computed<string | null>(() => {
+  if (updateCheck.latest) return updateCheck.latest
+  const u = updaterState.value
+  return u && (u.status === 'up-to-date' || u.status === 'downloading' || u.status === 'downloaded') ? u.version : null
+})
+const lastCheckedIso = computed<string | null>(() =>
+  [updateCheck.lastCheckedIso, updaterState.value?.checkedAt].filter((x): x is string => !!x).sort().pop() ?? null)
+const hasUpdate = computed(() => !!latestVersion.value
+  && compareSemver(versionCore(latestVersion.value), versionCore(currentVersion.value)) > 0)
 
 async function runUpdateCheck() {
   updateCheck.loading = true
@@ -2679,8 +2722,8 @@ const updateSubtitle = computed(() => {
   const u = updaterState.value
   if (u?.status === 'downloaded') return t('settings.update.state.downloaded', { v: u.version ?? '' })
   if (u?.status === 'downloading') return t('settings.update.state.downloading', { p: u.percent ?? 0 })
-  if (hasUpdate.value) return t('settings.update.state.available', { v: updateCheck.latest ?? '' })
-  if (updateCheck.latest) return t('settings.update.upToDate')
+  if (hasUpdate.value) return t('settings.update.state.available', { v: latestVersion.value ?? '' })
+  if (latestVersion.value) return t('settings.update.upToDate')
   return ''
 })
 
@@ -2851,7 +2894,7 @@ async function save() {
 }
 
 .page-body {
-  padding: var(--wdc-space-5);
+  padding: var(--wdc-space-5) 0;
 }
 
 .simple-settings-grid {
@@ -3137,8 +3180,13 @@ async function save() {
 .about-sso-status { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--el-text-color-secondary); }
 .about-sso-status .sys-label, .about-sso-status .sys-value { white-space: nowrap; }
 
+/* Wrapped action buttons line up on the left; the gap does the spacing. */
+.simple-settings-grid :deep(.settings-panel-actions .el-button + .el-button) { margin-left: 0; }
 .paths-backup-actions { display: flex; gap: var(--wdc-space-2); flex-wrap: wrap; }
 .mcp-tab { grid-template-columns: minmax(0, 1fr); }
+/* Same reading width as the capability list above it. */
+.mcp-tab > #mcp-section { max-width: 72ch; }
+.port-input { width: 180px; }
 .sync-sign-in { margin-bottom: var(--wdc-space-3); }
 .sync-sign-in :deep(.el-alert__description) { margin-top: var(--wdc-space-2); }
 

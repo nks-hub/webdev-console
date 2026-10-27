@@ -171,12 +171,12 @@ async function onTest(): Promise<void> {
 .notification-channels.muted .notification-text {
   opacity: 0.6;
 }
+/* Same look as the section headings on the General tab. */
 .notification-channels-title {
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--wdc-text-3);
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: var(--wdc-font-display);
+  color: var(--wdc-text-2);
   margin-bottom: var(--wdc-space-1);
 }
 .notification-actions {

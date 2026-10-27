@@ -27,6 +27,7 @@ interface AppUpdaterState {
   transferred: number | null
   total: number | null
   error: string | null
+  checkedAt: string | null
 }
 
 /** Result of electronAPI.getMcpServerInfo() (electron/main.ts 'mcp-server-info'). */

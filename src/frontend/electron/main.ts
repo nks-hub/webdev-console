@@ -196,9 +196,11 @@ interface UpdaterState {
   transferred: number | null
   total: number | null
   error: string | null
+  /** When the feed last answered; the newest version it knows is `version`. */
+  checkedAt: string | null
 }
 let updaterState: UpdaterState = {
-  status: 'idle', disabledReason: null, version: null, percent: null, transferred: null, total: null, error: null,
+  status: 'idle', disabledReason: null, version: null, percent: null, transferred: null, total: null, error: null, checkedAt: null,
 }
 function setUpdaterState(patch: Partial<UpdaterState>) {
   updaterState = { ...updaterState, ...patch }
@@ -1507,7 +1509,7 @@ async function setupAutoUpdater() {
     })
     autoUpdater.on('update-available', (info) => {
       updaterStatus = `Downloading ${info.version}`
-      setUpdaterState({ status: 'downloading', version: info.version, percent: 0, transferred: null, total: null, error: null })
+      setUpdaterState({ status: 'downloading', version: info.version, percent: 0, transferred: null, total: null, error: null, checkedAt: new Date().toISOString() })
       updateTray()
       console.log('[updater] Update available:', info.version)
       // Same key as the renderer's GitHub-release check, so whichever
@@ -1522,10 +1524,10 @@ async function setupAutoUpdater() {
         once: true,
       })
     })
-    autoUpdater.on('update-not-available', () => {
+    autoUpdater.on('update-not-available', (info) => {
       checkingForUpdates = false
       updaterStatus = 'Up to date'
-      if (!updateDownloaded) setUpdaterState({ status: 'up-to-date', error: null })
+      if (!updateDownloaded) setUpdaterState({ status: 'up-to-date', version: info.version, error: null, checkedAt: new Date().toISOString() })
       updateTray()
       console.log('[updater] No update available')
     })
