@@ -29,14 +29,26 @@ public sealed class ComposerInvokeTests
         }
     }
 
-    /// <summary>A build that accepts the per-site PHP path.</summary>
+    /// <summary>Same shape as ComposerInvoker from Composer plugin 1.0.2 (per-site PHP).</summary>
     public sealed class OverrideInvoker
     {
-        public string? LastPhp { get; private set; }
+        public List<string?> PhpSeen { get; } = [];
 
-        public Task<FakeResult> RunAsync(string siteRoot, IReadOnlyList<string> argv, string? phpPathOverride, CancellationToken ct = default)
+        public Task<FakeResult> InstallAsync(string siteRoot, string? phpPathOverride = null, CancellationToken ct = default)
         {
-            LastPhp = phpPathOverride;
+            PhpSeen.Add(phpPathOverride);
+            return Task.FromResult(new FakeResult(0, "", ""));
+        }
+
+        public Task<FakeResult> RequireAsync(string siteRoot, string package, string? phpPathOverride = null, CancellationToken ct = default)
+        {
+            PhpSeen.Add(phpPathOverride);
+            return Task.FromResult(new FakeResult(0, "", ""));
+        }
+
+        public Task<FakeResult> RunAsync(string siteRoot, IReadOnlyList<string> argv, string? phpPathOverride = null, CancellationToken ct = default)
+        {
+            PhpSeen.Add(phpPathOverride);
             return Task.FromResult(new FakeResult(3, "", "boom"));
         }
     }
@@ -63,10 +75,12 @@ public sealed class ComposerInvokeTests
 
         var (ok, code, _, stderr) = await ComposerEndpoints.InvokeComposerAsync(invoker, "RunAsync",
             ["C:/site", new[] { "diagnose" }, "C:/php/7.4/php.exe", CancellationToken.None]);
+        await ComposerEndpoints.InvokeComposerAsync(invoker, "InstallAsync", ["C:/site", "C:/php/8.1/php.exe", CancellationToken.None]);
+        await ComposerEndpoints.InvokeComposerAsync(invoker, "RequireAsync", ["C:/site", "nette/utils", "C:/php/8.4/php.exe", CancellationToken.None]);
 
         Assert.False(ok);
         Assert.Equal(3, code);
         Assert.Equal("boom", stderr);
-        Assert.Equal("C:/php/7.4/php.exe", invoker.LastPhp);
+        Assert.Equal(["C:/php/7.4/php.exe", "C:/php/8.1/php.exe", "C:/php/8.4/php.exe"], invoker.PhpSeen);
     }
 }

@@ -30,11 +30,11 @@ internal static class ComposerEndpoints
 {
     /// <summary>
     /// Calls a ComposerInvoker method by reflection. The daemon passes a
-    /// per-site PHP path as the argument before the CancellationToken, but the
-    /// published Composer plugin (1.0.x) has no such parameter; for a method
-    /// that is one parameter short the PHP override is dropped, so composer
-    /// runs under the plugin's global PHP instead of failing with
-    /// "Parameter count mismatch".
+    /// per-site PHP path as the argument before the CancellationToken; Composer
+    /// plugin 1.0.2+ takes it (exact-arity overload wins). Builds before 1.0.2
+    /// have no such parameter, so for a method one parameter short the PHP
+    /// override is dropped and composer runs under the plugin's global PHP
+    /// instead of failing with "Parameter count mismatch".
     /// </summary>
     internal static async Task<(bool ExitCode, int Code, string Stdout, string Stderr)>
         InvokeComposerAsync(object invoker, string method, object?[] args)
