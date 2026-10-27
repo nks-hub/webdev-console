@@ -140,7 +140,7 @@ function go(path: string, label: string, icon: Component, extra: Partial<Command
 }
 
 // Pages in Simple mode stay reachable here (tagged "Advanced"), unlike the
-// menu, which leaves them out. MCP pages only exist while MCP is switched on.
+// menu, which leaves them out.
 const navigation = computed<Command[]>(() => {
   const nav: Command[] = [
     go('/dashboard', t('commandPalette.gotoDashboard'), DataBoard, { recommended: true }),
@@ -155,14 +155,15 @@ const navigation = computed<Command[]>(() => {
     go('/backups', t('nav.backups'), FolderOpened),
     go('/settings', t('commandPalette.gotoSettings'), Setting, { recommended: true }),
   ]
-  if (featureFlagsStore.showMcpSurface) {
-    nav.push(
-      go('/mcp/activity', t('commandPalette.gotoMcpActivity'), DataLine, { description: t('commandPalette.gotoMcpActivityDesc') }),
-      go('/mcp/intents', t('commandPalette.gotoMcpRequests'), Lock, { description: t('commandPalette.gotoMcpRequestsDesc') }),
-      go('/mcp/grants', t('commandPalette.gotoMcpRules'), Key, { description: t('commandPalette.gotoMcpRulesDesc') }),
-      go('/mcp/kinds', t('commandPalette.gotoMcpCatalog'), Operation, { description: t('commandPalette.gotoMcpCatalogDesc') }),
-    )
-  }
+  // Always listed; while MCP is off the page itself offers the switch.
+  const off = !featureFlagsStore.mcpEnabled
+  const desc = (key: string) => off ? t('commandPalette.mcpOff') : t(key)
+  nav.push(
+    go('/mcp/activity', t('commandPalette.gotoMcpActivity'), DataLine, { description: desc('commandPalette.gotoMcpActivityDesc') }),
+    go('/mcp/intents', t('commandPalette.gotoMcpRequests'), Lock, { description: desc('commandPalette.gotoMcpRequestsDesc') }),
+    go('/mcp/grants', t('commandPalette.gotoMcpRules'), Key, { description: desc('commandPalette.gotoMcpRulesDesc') }),
+    go('/mcp/kinds', t('commandPalette.gotoMcpCatalog'), Operation, { description: desc('commandPalette.gotoMcpCatalogDesc') }),
+  )
   return nav
 })
 

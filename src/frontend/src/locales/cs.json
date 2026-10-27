@@ -40,7 +40,8 @@
       "sites": "Weby",
       "services": "Služby",
       "actions": "Akce"
-    }
+    },
+    "mcpOff": "MCP je vypnuté"
   },
   "common": {
     "save": "Uložit",
@@ -163,9 +164,8 @@
     "tools": "Nástroje",
     "composer": "Composer",
     "hosts": "Hosts soubor",
-    "mcpIntents": "MCP Intents",
     "mcpGrants": "MCP oprávnění",
-    "mcp": "MCP",
+    "mcp": "AI klienti (MCP)",
     "backups": "Zálohy",
     "help": "Nápověda",
     "signedIn": "Přihlášeno jako",
@@ -187,7 +187,9 @@
     "cloudflare": "Cloudflare",
     "problemsBadge": "{n} problém | {n} problémy | {n} problémů",
     "problemStartFailed": "Služba {name} se nespustila",
-    "problemExited": "Služba {name} spadla"
+    "problemExited": "Služba {name} spadla",
+    "mcpOff": "vypnuto",
+    "mcpPending": "Čeká na schválení: {n}"
   },
   "versions": {
     "active": "Aktivní",

@@ -40,7 +40,8 @@
       "sites": "Sites",
       "services": "Services",
       "actions": "Actions"
-    }
+    },
+    "mcpOff": "MCP is off"
   },
   "common": {
     "save": "Save",
@@ -163,9 +164,8 @@
     "tools": "Tools",
     "composer": "Composer",
     "hosts": "Hosts file",
-    "mcpIntents": "MCP Intents",
     "mcpGrants": "MCP Grants",
-    "mcp": "MCP",
+    "mcp": "AI clients (MCP)",
     "backups": "Backups",
     "help": "Help",
     "signedIn": "Signed in as",
@@ -187,7 +187,9 @@
     "cloudflare": "Cloudflare",
     "problemsBadge": "{n} problem | {n} problems",
     "problemStartFailed": "{name} did not start",
-    "problemExited": "{name} crashed"
+    "problemExited": "{name} crashed",
+    "mcpOff": "off",
+    "mcpPending": "Waiting for approval: {n}"
   },
   "versions": {
     "active": "Active",

@@ -37,7 +37,15 @@
               <span class="nav-problems-text">{{ item.problems.label }}</span>
               <span :id="`nav-problems-${item.key}`" class="visually-hidden">{{ item.problems.detail }}</span>
             </span>
-            <span v-else-if="item.count !== undefined" class="nav-count mono">{{ item.count }}</span>
+            <template v-else>
+              <span v-if="item.tag" class="nav-tag">{{ item.tag }}</span>
+              <span
+                v-if="item.count !== undefined"
+                class="nav-count mono"
+                :class="{ 'is-pending': item.pending }"
+                :title="item.pending ? $t('nav.mcpPending', { n: item.count }) : undefined"
+              >{{ item.count }}</span>
+            </template>
           </a>
         </li>
       </ul>
@@ -105,6 +113,7 @@ import { useUiModeStore } from '../../stores/uiMode'
 import { useFeatureFlagsStore } from '../../stores/featureFlags'
 import { usePluginsStore } from '../../stores/plugins'
 import { useAuthStore } from '../../stores/auth'
+import { useMcpConfirmStore } from '../../stores/mcpConfirm'
 import { useI18n } from 'vue-i18n'
 import { isRunning } from '../../utils/serviceState'
 
@@ -119,6 +128,7 @@ const uiModeStore = useUiModeStore()
 const featureFlagsStore = useFeatureFlagsStore()
 const pluginsStore = usePluginsStore()
 const authStore = useAuthStore()
+const mcpConfirmStore = useMcpConfirmStore()
 
 interface NavItem {
   key: string
@@ -126,6 +136,10 @@ interface NavItem {
   label: string
   icon: Component
   count?: number
+  /** Small muted label after the name ("off"). */
+  tag?: string
+  /** The count is a queue waiting for the user, so it stands out. */
+  pending?: boolean
   problems?: { count: number; label: string; detail: string }
   tunnelLive?: boolean
 }
@@ -229,7 +243,13 @@ const groups = computed<NavGroup[]>(() => {
     out.push({ id: 'network', labelKey: 'nav.groups.network', items: networkItems })
   }
   const ops: NavItem[] = [{ key: 'backups', route: '/backups', label: t('nav.backups'), icon: FolderOpened }]
-  if (featureFlagsStore.showMcpSurface) ops.push({ key: 'mcp', route: '/mcp', label: t('nav.mcp'), icon: Operation })
+  // Always listed: the MCP page holds the on/off switch, so it must be reachable while MCP is off.
+  ops.push({
+    key: 'mcp', route: '/mcp', label: t('nav.mcp'), icon: Operation,
+    tag: featureFlagsStore.mcpEnabled ? undefined : t('nav.mcpOff'),
+    count: mcpConfirmStore.count || undefined,
+    pending: mcpConfirmStore.count > 0,
+  })
   out.push({ id: 'operations', labelKey: 'nav.groups.operations', items: ops })
   return out
 })
@@ -356,6 +376,23 @@ function navigate(path: string, query?: Record<string, string>) {
 }
 .nav-count {
   font-size: 0.78rem;
+  color: var(--wdc-text-3);
+}
+.nav-count.is-pending {
+  min-width: 1.4em;
+  padding: 0 var(--wdc-space-1-5);
+  border-radius: 999px;
+  background: var(--wdc-accent-dim);
+  color: var(--wdc-accent-ink);
+  font-weight: 600;
+  text-align: center;
+}
+.nav-tag {
+  flex-shrink: 0;
+  padding: 0 var(--wdc-space-1-5);
+  border: 1px solid var(--wdc-border-strong);
+  border-radius: 999px;
+  font-size: 0.68rem;
   color: var(--wdc-text-3);
 }
 /* Problem badge: number + word on a solid red pill, readable without hover. */
