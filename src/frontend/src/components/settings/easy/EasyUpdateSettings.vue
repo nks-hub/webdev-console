@@ -1,5 +1,7 @@
 <template>
-  <div class="tab-content">
+  <!-- Not .tab-content: Settings.vue styles that class as a 480 px grid,
+       which overflowed the narrow Simple-mode column. -->
+  <div class="update-settings">
     <el-descriptions :column="1" border size="small">
       <el-descriptions-item :label="t('settings.update.current')">
         <span class="mono">v{{ currentVersion }}</span>
@@ -146,6 +148,10 @@ function formatBytes(bytes: number): string {
 </script>
 
 <style scoped>
+.update-settings :deep(.el-descriptions__cell) {
+  overflow-wrap: anywhere;
+}
+
 .update-actions {
   display: flex;
   gap: var(--wdc-space-2);

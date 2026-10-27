@@ -863,18 +863,20 @@
 
         <!-- Update tab — visible in both Simple and Advanced -->
         <section v-show="activeTab === 'update'" class="shell-section">
-          <EasyUpdateSettings
-            :t="t"
-            :current-version="currentVersion"
-            :update-check="updateCheck"
-            :has-update="hasUpdate"
-            :updater="updaterState"
-            :format-relative-time="formatRelativeTime"
-            :render-release-notes="renderReleaseNotes"
-            @check="runUpdateCheck"
-            @install="installUpdate"
-            @open-release="openReleasePage"
-          />
+          <div class="tab-content">
+            <EasyUpdateSettings
+              :t="t"
+              :current-version="currentVersion"
+              :update-check="updateCheck"
+              :has-update="hasUpdate"
+              :updater="updaterState"
+              :format-relative-time="formatRelativeTime"
+              :render-release-notes="renderReleaseNotes"
+              @check="runUpdateCheck"
+              @install="installUpdate"
+              @open-release="openReleasePage"
+            />
+          </div>
         </section>
         <!-- Notifications tab — visible in both Simple and Advanced. Stored
              by the Electron main process, so no Save step is involved. -->
