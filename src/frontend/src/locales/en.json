@@ -2599,10 +2599,6 @@
       "restarting": "Done. The app is restarting and the window will reload…"
     },
     "mcp": {
-      "title": "AI assistant connection (MCP)",
-      "description": "Lets AI assistants (Claude, Cursor and others) control NKS WebDev Console over the MCP protocol. Actions that cannot be undone, such as restoring a backup, deleting or deploying, wait for your approval in the app window.",
-      "warning": "Leave it off unless you use an AI assistant with the app.",
-      "enableLabel": "Allow MCP",
       "strictKindsLabel": "Known actions only",
       "strictKindsHint": "The AI may only ask for actions the app or its installed plugins know. Requests for unknown actions are refused. Off by default.",
       "alwaysConfirmKindsLabel": "Always ask for these actions",
