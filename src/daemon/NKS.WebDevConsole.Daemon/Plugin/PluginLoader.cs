@@ -429,6 +429,20 @@ public partial class PluginLoader
     /// missing/corrupt manifest must never prevent the plugin from
     /// loading.
     /// </summary>
+    /// <summary>
+    /// Most first-party plugin.json files write <c>"dependencies": []</c> for
+    /// "none"; the object shape is <see cref="PluginDependencies"/>. Treat the
+    /// empty array as no dependencies instead of rejecting the whole manifest.
+    /// </summary>
+    internal static PluginManifestData? ParseManifest(string json)
+    {
+        var node = System.Text.Json.Nodes.JsonNode.Parse(json);
+        if (node is System.Text.Json.Nodes.JsonObject obj
+            && obj.FirstOrDefault(kv => kv.Key.Equals("dependencies", StringComparison.OrdinalIgnoreCase)) is { Value: System.Text.Json.Nodes.JsonArray } deps)
+            obj.Remove(deps.Key);
+        return node.Deserialize<PluginManifestData>(ManifestJson);
+    }
+
     private PluginManifestData? TryLoadManifest(string dllDir, string assemblyName)
     {
         string[] candidates =
@@ -447,8 +461,7 @@ public partial class PluginLoader
             {
                 var full = Path.GetFullPath(path);
                 if (!File.Exists(full)) continue;
-                var json = File.ReadAllText(full);
-                return JsonSerializer.Deserialize<PluginManifestData>(json, ManifestJson);
+                return ParseManifest(File.ReadAllText(full));
             }
             catch (Exception ex)
             {
