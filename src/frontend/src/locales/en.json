@@ -2997,34 +2997,75 @@
   },
   "servicesPage": {
     "title": "Services",
-    "summary": "{running} of {total} running",
-    "filterLabel": "Filter services",
+    "summary": "{total} service, {running} running | {total} services, {running} running",
+    "summaryNotInstalled": "{n} not installed | {n} not installed",
+    "summaryProblems": "{n} has a problem | {n} have a problem",
+    "filterLabel": "Service filter",
     "filter": {
       "all": "All",
       "running": "Running",
-      "problems": "Crashed"
+      "problems": "Problems",
+      "notInstalled": "Not installed"
     },
-    "empty": "No services registered yet",
-    "noProblems": "No service has crashed.",
-    "whyTitle": "Why is it not running?",
+    "empty": "No services yet. Service programs are installed on the Binaries page.",
+    "emptyFilter": "No service matches this filter.",
+    "noProblems": "No service has a problem.",
+    "openBinaries": "Open Binaries",
+    "hiddenByPlugins": "{n} more service belongs to a disabled plugin. | {n} more services belong to disabled plugins.",
+    "openPlugins": "Plugins",
     "showLog": "Show log",
-    "logEmpty": "The service log is empty.",
+    "logEmpty": "The service log is empty. The service has not written anything yet.",
+    "logFailed": "Could not load the log: {err}",
     "fixRestart": "Start again",
     "fixConfig": "Edit configuration",
+    "manage": "Manage",
+    "install": "Install",
+    "start": "Start",
+    "stop": "Stop",
+    "restart": "Restart",
     "showAll": "Show all",
     "explain": {
-      "running": "Running and answering.",
-      "stopped": "Stopped. It does not run until you start it.",
-      "starting": "Starting…",
-      "stopping": "Stopping…",
-      "crashed": "Crashed: the process ended on its own. The end of its log usually says why.",
-      "disabled": "Disabled; its plugin is turned off."
+      "running": "The service is running.",
+      "stopped": "The service is not running. Start it when you need it.",
+      "starting": "The service is starting…",
+      "stopping": "The service is stopping…",
+      "crashed": "The service crashed: its process exited on its own. The end of the log usually says why.",
+      "disabled": "The service crashed several times in a row, so WDC stopped restarting it. The end of the log says why.",
+      "notInstalled": "{name} is not installed yet. Install it on the Binaries page, then it can be started."
+    },
+    "status": {
+      "running": "Running",
+      "stopped": "Stopped",
+      "starting": "Starting",
+      "stopping": "Stopping",
+      "crashed": "Crashed",
+      "disabled": "Off after crashes",
+      "notInstalled": "Not installed"
     },
     "facts": {
-      "uptime": "Running for"
+      "uptime": "Uptime",
+      "version": "Version",
+      "ports": "Ports"
     },
-    "logTitle": "End of the log",
-    "stop": "Stop"
+    "logTitle": "End of log",
+    "lastError": {
+      "title": "The last action failed",
+      "copy": "Copy",
+      "copied": "Copied to clipboard",
+      "openPorts": "Change port"
+    },
+    "cause": {
+      "port": "The port is taken by another program. Change the service port in Settings, or stop the program that holds it.",
+      "config": "The service configuration is invalid. Fix it in the configuration editor."
+    },
+    "toast": {
+      "start": "Started: {name}",
+      "stop": "Stopped: {name}",
+      "restart": "Restarted: {name}",
+      "startFailed": "{name} could not be started.",
+      "stopFailed": "{name} could not be stopped.",
+      "restartFailed": "{name} could not be restarted."
+    }
   },
   "overview": {
     "summary": "{running} of {total} services running · {sites} site | {running} of {total} services running · {sites} sites",

@@ -2997,34 +2997,75 @@
   },
   "servicesPage": {
     "title": "Služby",
-    "summary": "Běží {running} z {total}",
+    "summary": "{total} služba, běží {running} | {total} služby, běží {running} | {total} služeb, běží {running}",
+    "summaryNotInstalled": "{n} není nainstalovaná | {n} nejsou nainstalované | {n} není nainstalovaných",
+    "summaryProblems": "{n} má problém | {n} mají problém | {n} má problém",
     "filterLabel": "Filtr služeb",
     "filter": {
       "all": "Vše",
-      "running": "Běžící",
-      "problems": "Spadlé"
+      "running": "Běží",
+      "problems": "Problémy",
+      "notInstalled": "Nenainstalované"
     },
-    "empty": "Zatím nejsou registrované žádné služby",
-    "noProblems": "Žádná služba nespadla.",
-    "whyTitle": "Proč neběží?",
+    "empty": "Zatím nemáte žádnou službu. Programy služeb se instalují v Binárkách.",
+    "emptyFilter": "Tomuto filtru neodpovídá žádná služba.",
+    "noProblems": "Žádná služba nemá problém.",
+    "openBinaries": "Otevřít Binárky",
+    "hiddenByPlugins": "{n} další služba patří k vypnutému pluginu. | {n} další služby patří k vypnutým pluginům. | {n} dalších služeb patří k vypnutým pluginům.",
+    "openPlugins": "Pluginy",
     "showLog": "Zobrazit log",
-    "logEmpty": "Log služby je prázdný.",
+    "logEmpty": "Log služby je prázdný. Služba zatím nic nezapsala.",
+    "logFailed": "Log se nepodařilo načíst: {err}",
     "fixRestart": "Spustit znovu",
     "fixConfig": "Upravit konfiguraci",
+    "manage": "Spravovat",
+    "install": "Instalovat",
+    "start": "Spustit",
+    "stop": "Zastavit",
+    "restart": "Restartovat",
     "showAll": "Zobrazit vše",
     "explain": {
-      "running": "Běží a odpovídá.",
-      "stopped": "Zastaveno. Nepoběží, dokud ji nespustíte.",
-      "starting": "Spouští se…",
-      "stopping": "Zastavuje se…",
-      "crashed": "Spadla: proces skončil sám od sebe. Důvod obvykle najdete na konci logu.",
-      "disabled": "Vypnuto; její plugin je vypnutý."
+      "running": "Služba běží.",
+      "stopped": "Služba neběží. Spusťte ji, až ji budete potřebovat.",
+      "starting": "Služba se spouští…",
+      "stopping": "Služba se zastavuje…",
+      "crashed": "Služba spadla: proces skončil sám od sebe. Důvod obvykle najdete na konci logu.",
+      "disabled": "Služba několikrát za sebou spadla, proto ji WDC přestalo samo restartovat. Důvod najdete na konci logu.",
+      "notInstalled": "Služba {name} zatím není nainstalovaná. Nainstalujte ji v Binárkách, potom ji půjde spustit."
+    },
+    "status": {
+      "running": "Běží",
+      "stopped": "Zastaveno",
+      "starting": "Spouští se",
+      "stopping": "Zastavuje se",
+      "crashed": "Spadlo",
+      "disabled": "Vypnuto po pádech",
+      "notInstalled": "Nenainstalováno"
     },
     "facts": {
-      "uptime": "Běží"
+      "uptime": "Doba běhu",
+      "version": "Verze",
+      "ports": "Porty"
     },
     "logTitle": "Konec logu",
-    "stop": "Zastavit"
+    "lastError": {
+      "title": "Poslední akce se nepodařila",
+      "copy": "Kopírovat",
+      "copied": "Zkopírováno do schránky",
+      "openPorts": "Změnit port"
+    },
+    "cause": {
+      "port": "Port je obsazený jiným programem. Změňte port služby v Nastavení, nebo ukončete program, který ho drží.",
+      "config": "Konfigurace služby je neplatná. Opravte ji v editoru konfigurace."
+    },
+    "toast": {
+      "start": "Spuštěno: {name}",
+      "stop": "Zastaveno: {name}",
+      "restart": "Restartováno: {name}",
+      "startFailed": "Službu {name} se nepodařilo spustit.",
+      "stopFailed": "Službu {name} se nepodařilo zastavit.",
+      "restartFailed": "Službu {name} se nepodařilo restartovat."
+    }
   },
   "overview": {
     "summary": "Běží {running} z {total} služeb · {sites} web | Běží {running} z {total} služeb · {sites} weby | Běží {running} z {total} služeb · {sites} webů",
