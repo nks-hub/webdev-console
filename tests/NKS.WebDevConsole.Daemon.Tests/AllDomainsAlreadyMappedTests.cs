@@ -109,6 +109,52 @@ public class AllDomainsAlreadyMappedTests
         Assert.True(Invoke(hosts, "FOO.LOC"));
     }
 
+    private const string Begin = SiteOrchestrator.HostsBlockBegin;
+    private const string End = SiteOrchestrator.HostsBlockEnd;
+
+    [Fact]
+    public void DomainLeftInManagedBlock_ReturnsFalse()
+    {
+        // A deleted site's domain stays in the block; every required domain is still mapped,
+        // but the block must be rewritten to drop the leftover.
+        var hosts = $"127.0.0.1 localhost\n{Begin}\n127.0.0.1\tfoo.loc\n127.0.0.1\told.loc\n{End}\n";
+        Assert.False(Invoke(hosts, "foo.loc"));
+    }
+
+    [Fact]
+    public void ManagedBlockMatchingExactly_ReturnsTrue()
+    {
+        var hosts = $"127.0.0.1 localhost\r\n{Begin}\r\n127.0.0.1\tfoo.loc\r\n127.0.0.1\tBAR.loc\r\n{End}\r\n";
+        Assert.True(Invoke(hosts, "foo.loc", "bar.loc"));
+    }
+
+    [Fact]
+    public void ExtraDomainOutsideManagedBlock_IsIgnored()
+    {
+        var hosts = $"127.0.0.1 localhost mine.loc\n{Begin}\n127.0.0.1\tfoo.loc\n{End}\n127.0.0.1 other.loc\n";
+        Assert.True(Invoke(hosts, "foo.loc"));
+    }
+
+    [Fact]
+    public void CommentedLeftoverInManagedBlock_IsNotCounted()
+    {
+        var hosts = $"{Begin}\n127.0.0.1\tfoo.loc # was old.loc\n# 127.0.0.1\told.loc\n{End}\n";
+        Assert.True(Invoke(hosts, "foo.loc"));
+    }
+
+    [Fact]
+    public void RewriteDropsLeftoverAndThenMatches()
+    {
+        var hosts = $"127.0.0.1 localhost\n{Begin}\n127.0.0.1\tfoo.loc\n127.0.0.1\told.loc\n{End}\n";
+        var required = new[] { "foo.loc" };
+
+        Assert.False(Invoke(hosts, required));
+
+        var rewritten = SiteOrchestrator.RewriteManagedHostsContent(hosts, required);
+        Assert.DoesNotContain("old.loc", rewritten);
+        Assert.True(Invoke(rewritten, required));
+    }
+
     [Fact]
     public void BlankLinesAndCommentLines_Skipped()
     {

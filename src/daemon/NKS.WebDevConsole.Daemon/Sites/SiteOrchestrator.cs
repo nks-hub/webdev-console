@@ -949,7 +949,8 @@ ipconfig /flushdns | Out-Null
     }
 
     /// <summary>
-    /// Checks whether every required domain already maps to 127.0.0.1 in the hosts file content.
+    /// Checks whether the hosts file already matches the required domains: every one maps to 127.0.0.1
+    /// and the WDC block holds nothing else, so a domain left behind by a deleted site forces a rewrite.
     /// Works line-by-line, ignoring comments and whitespace. Used to skip UAC elevation when no write is needed.
     /// </summary>
     private static bool AllDomainsAlreadyMapped(string hostsContent, HashSet<string> requiredDomains)
@@ -968,9 +969,13 @@ ipconfig /flushdns | Out-Null
         }
 
         var mapped = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var managed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var inManagedBlock = false;
         foreach (var rawLine in hostsContent.Split('\n'))
         {
             var line = rawLine.Trim();
+            if (line.Contains(HostsBlockBegin, StringComparison.Ordinal)) { inManagedBlock = true; continue; }
+            if (line.Contains(HostsBlockEnd, StringComparison.Ordinal)) { inManagedBlock = false; continue; }
             if (line.Length == 0 || line.StartsWith("#")) continue;
 
             // Drop any inline comment BEFORE tokenising — a line like
@@ -987,11 +992,13 @@ ipconfig /flushdns | Out-Null
             for (int i = 1; i < parts.Length; i++)
             {
                 var host = parts[i];
-                if (host.Length > 0) mapped.Add(host);
+                if (host.Length == 0) continue;
+                mapped.Add(host);
+                if (inManagedBlock) managed.Add(host);
             }
         }
 
-        return requiredDomains.All(d => mapped.Contains(d));
+        return requiredDomains.All(mapped.Contains) && managed.All(requiredDomains.Contains);
     }
 
     private async Task WriteHostsFileDirectAsync(string hostsPath, HashSet<string> allDomains, CancellationToken ct)
