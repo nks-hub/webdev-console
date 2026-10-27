@@ -1186,12 +1186,12 @@
     "builtIn": "Vestavěný",
     "installedTag": "Nainstalováno",
     "sourceUnavailable": "Zdroj není dostupný",
-    "restore": "Obnovit",
+    "restore": "Vrátit plugin",
     "marketplaceCount": "{count} v marketplacu",
     "searchPlaceholder": "Hledat pluginy…",
     "copyUrl": "Kopírovat URL",
     "openPanel": "Otevřít panel",
-    "marketplaceUnreachable": "Marketplace nedostupný: {error}",
+    "marketplaceUnreachable": "Marketplace není dostupný: {error}",
     "noMarketplaceItems": "Žádné pluginy v marketplacu",
     "installConfirm": "Instalovat {name} v{version} z {url}? Po instalaci bude nutný restart démona.",
     "toast": {
@@ -1203,12 +1203,12 @@
       "installedNotification": "{name} nainstalován",
       "loadedAfterInstall": "Plugin načten.",
       "toggleFailed": "Přepnutí pluginu selhalo: {err}",
-      "restartTimeout": "Daemon se po restartu neozývá — zkus Ctrl+R",
-      "restartTimeoutLong": "Daemon se po restartu neozývá do 15 s — zkus Ctrl+R",
-      "restored": "Plugin {id} obnoven",
-      "restoreFailed": "Obnovení selhalo: {err}",
+      "restartTimeout": "Daemon po restartu neodpovídá. Zkuste stisknout Ctrl+R.",
+      "restartTimeoutLong": "Daemon po restartu neodpovídá ani po 15 s. Zkuste stisknout Ctrl+R.",
+      "restored": "Plugin {id} je vrácený",
+      "restoreFailed": "Vrácení pluginu selhalo: {err}",
       "rebuildTitle": "Plugin potřebuje rebuild",
-      "restoringTitle": "Obnovuji plugin",
+      "restoringTitle": "Vracím plugin",
       "uninstallConfirmMessage": "Opravdu odinstalovat „{name}\"? Soubory pluginu budou smazány.",
       "uninstallConfirmTitle": "Odinstalovat plugin",
       "uninstallBtn": "Odinstalovat",
@@ -1221,7 +1221,7 @@
     },
     "installSuccess": "{name} nainstalován",
     "installFailed": "Instalace selhala",
-    "restartRequired": "Restartuj démona pro načtení nového pluginu.",
+    "restartRequired": "Restartujte daemon, aby se nový plugin načetl.",
     "page": {
       "loadFailed": "Načtení pluginu selhalo",
       "backToDashboard": "Zpět na přehled",
@@ -1237,7 +1237,20 @@
       "bundleFailed": "Nepodařilo se načíst UI bundle pluginu: {error}",
       "fallback": "Použiji schema-driven panely.",
       "noPanel": "Tento plugin neposkytuje vlastní UI panel."
-    }
+    },
+    "reload": "Načíst znovu",
+    "byAuthor": "Autor: {author}",
+    "type": {
+      "service": "Služba",
+      "tool": "Nástroj"
+    },
+    "enableAria": "Plugin {name} zapnutý",
+    "marketplaceSource": "Zdroj: {source}",
+    "noMatching": "Žádný plugin neodpovídá „{q}“",
+    "noneLoaded": "Nejsou načtené žádné pluginy",
+    "binaryMissing": "Chybí binárka, služba se zatím nespustí.",
+    "installBinary": "Nainstalovat",
+    "disabledHint": "Vypnuto. Zapnete ho přepínačem nahoře."
   },
   "hosts": {
     "title": "Soubor hosts",

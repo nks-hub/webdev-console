@@ -51,4 +51,15 @@ test.describe('Tool pages — source contract', () => {
     expect(vue).toContain('installMkcert')
     expect(vue).toContain('<PluginMissingState')
   })
+
+  test('plugin cards show only real data and accept a marketplace deep link', () => {
+    const store = readFileSync(join(srcRoot, 'stores', 'plugins.ts'), 'utf-8')
+    expect(store).not.toMatch(/network: true, process: true, gui: true/)
+    const vue = page('PluginManager.vue')
+    expect(vue).not.toContain('plugin.permissions')
+    expect(vue).toMatch(/route\.query\.tab === 'marketplace'/)
+    expect(vue).toContain('missingBinary(plugin)')
+    expect(readFileSync(join(srcRoot, 'components', 'shared', 'PluginMissingState.vue'), 'utf-8'))
+      .toMatch(/query: \{ tab: 'marketplace', q: props\.pluginId \}/)
+  })
 })

@@ -1186,7 +1186,7 @@
     "builtIn": "Built-in",
     "installedTag": "Installed",
     "sourceUnavailable": "Source unavailable",
-    "restore": "Restore",
+    "restore": "Bring plugin back",
     "marketplaceCount": "{count} in marketplace",
     "searchPlaceholder": "Search plugins…",
     "copyUrl": "Copy URL",
@@ -1205,10 +1205,10 @@
       "toggleFailed": "Plugin toggle failed: {err}",
       "restartTimeout": "Daemon not responding after restart — try Ctrl+R",
       "restartTimeoutLong": "Daemon not responding 15 s after restart — try Ctrl+R",
-      "restored": "Plugin {id} restored",
-      "restoreFailed": "Restore failed: {err}",
+      "restored": "Plugin {id} is back",
+      "restoreFailed": "Bringing the plugin back failed: {err}",
       "rebuildTitle": "Plugin needs rebuild",
-      "restoringTitle": "Restoring plugin",
+      "restoringTitle": "Bringing plugin back",
       "uninstallConfirmMessage": "Really uninstall \"{name}\"? Plugin files will be deleted.",
       "uninstallConfirmTitle": "Uninstall plugin",
       "uninstallBtn": "Uninstall",
@@ -1237,7 +1237,20 @@
       "bundleFailed": "Plugin UI bundle failed to load: {error}",
       "fallback": "Falling back to schema-driven panels.",
       "noPanel": "This plugin does not expose a custom UI panel."
-    }
+    },
+    "reload": "Reload",
+    "byAuthor": "By {author}",
+    "type": {
+      "service": "Service",
+      "tool": "Tool"
+    },
+    "enableAria": "Plugin {name} enabled",
+    "marketplaceSource": "Source: {source}",
+    "noMatching": "No plugins matching ‘{q}’",
+    "noneLoaded": "No plugins loaded",
+    "binaryMissing": "Binary missing, the service will not start yet.",
+    "installBinary": "Install",
+    "disabledHint": "Off. Turn it on with the switch above."
   },
   "hosts": {
     "title": "Hosts file",
