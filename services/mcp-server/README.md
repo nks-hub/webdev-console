@@ -4,52 +4,75 @@ MCP (Model Context Protocol) server exposing the **NKS WebDev Console** daemon a
 
 > **108 tools across 17 modules** — built on the `McpServer.registerTool()` API with Zod input schemas, tool annotations (`readOnlyHint` / `destructiveHint` / `idempotentHint` / `openWorldHint`), shared response formatting with truncation at 25 KB, split read/write SQL tools (`wdc_query` vs `wdc_execute`), and human approval in the WDC app for destructive operations.
 
-## Quick start
+## Connect an AI client
+
+The WDC installer ships this server as one bundled file,
+`<WDC resources>/mcp-server/index.js`. In the app, **MCP → Connect an AI
+client** shows the exact path for your install with copy buttons, an MCP
+on/off switch and live status (MCP enabled, MCP token file present, last
+MCP call). The server runs with Node.js 18+ from `PATH`.
+
+Default locations of the bundled server:
+
+| OS | Path |
+|---|---|
+| Windows (per-user install) | `%LOCALAPPDATA%\Programs\NKS WebDev Console\resources\mcp-server\index.js` |
+| macOS | `/Applications/NKS WebDev Console.app/Contents/Resources/mcp-server/index.js` |
+| Linux (AppImage) | `~/.wdc/mcp-server/index.js` — copied there on demand, because the AppImage mount path changes on every launch |
+
+### Claude Code
+
+```bash
+claude mcp add --scope user nks-wdc -- node "<WDC resources>/mcp-server/index.js"
+```
+
+Options (`--scope`, `-e KEY=value`) go before the server name; `--`
+separates the server command so its arguments are not read as
+`claude mcp add` flags. Check with `claude mcp list`.
 
 ### Claude Desktop
 
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+Merge into `~/Library/Application Support/Claude/claude_desktop_config.json`
+(macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows), then
+restart Claude Desktop:
 
 ```json
 {
   "mcpServers": {
     "nks-wdc": {
-      "command": "npx",
-      "args": ["-y", "@nks-wdc/mcp-server"]
+      "command": "node",
+      "args": ["<WDC resources>/mcp-server/index.js"]
     }
   }
 }
 ```
 
-Restart Claude Desktop. The tools appear in the tool picker.
-
-### Claude Code
-
-Build the server once (`npm install && npm run build` in `services/mcp-server`), then register it for all your projects:
-
-```bash
-claude mcp add --scope user nks-wdc node <path>/services/mcp-server/dist/index.js
-```
-
-Append `-- --readonly` to register the read-only tool set. `claude mcp list` shows whether it connected.
-
 ### Cursor
 
-Add to `.cursor/mcp.json` in your project, same shape.
+Merge the same `mcpServers` entry into `.cursor/mcp.json` in your project
+(or `~/.cursor/mcp.json` for every project).
+
+### From a source checkout
+
+```bash
+npm install
+npm run build        # tsc → dist/index.js
+npm run bundle       # esbuild → dist-bundle/index.js (what the installer ships)
+claude mcp add --scope user nks-wdc -- node "$(pwd)/dist/index.js"
+```
+
+### Enabling MCP
+
+Approval requests (`wdc_request_confirmation`) need MCP enabled in WDC — the
+switch on the MCP card, or Settings → Advanced → MCP. While it is off the
+daemon answers `404 mcp_disabled` with a hint saying where to turn it on.
 
 ### Read-only mode
 
 Append `--readonly` to skip mutation tools (only list/get/metrics):
 
-```json
-{
-  "mcpServers": {
-    "nks-wdc": {
-      "command": "npx",
-      "args": ["-y", "@nks-wdc/mcp-server", "--readonly"]
-    }
-  }
-}
+```bash
+claude mcp add --scope user nks-wdc-readonly -- node "<WDC resources>/mcp-server/index.js" --readonly
 ```
 
 ## Tool catalog (108 tools)

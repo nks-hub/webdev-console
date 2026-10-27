@@ -18,6 +18,16 @@ interface ImportMetaEnv {
   readonly VITE_APP_VERSION?: string
 }
 
+/** Result of electronAPI.getMcpServerInfo() (electron/main.ts 'mcp-server-info'). */
+interface McpServerInfo {
+  /** Absolute path of the MCP server entry (index.js) — expected path when missing. */
+  serverPath: string
+  serverExists: boolean
+  packaged: boolean
+  /** The daemon wrote nks-wdc-mcp.port (the MCP token the server reads). */
+  portFilePresent: boolean
+}
+
 // Global injected by the Electron main process into the renderer window
 // at runtime (see electron/main.ts). Exists only after the main process
 // has a chance to eval scripts on the BrowserWindow; consumers must
@@ -77,5 +87,7 @@ interface Window {
     /** Phase 8 — runtime app version probe (reads main process app.getVersion
      * which resolves the bundled package.json, no rebuild needed for bumps). */
     getAppVersion: () => Promise<{ version: string; gitSha: string; full: string }>
+    /** Bundled MCP server location + whether the daemon wrote nks-wdc-mcp.port. */
+    getMcpServerInfo?: () => Promise<McpServerInfo>
   }
 }

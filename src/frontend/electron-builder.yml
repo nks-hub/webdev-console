@@ -13,6 +13,12 @@ files:
 extraResources:
   - from: resources/daemon
     to: daemon
+  # MCP server for AI clients (Claude Code, Claude Desktop, Cursor), bundled
+  # by `npm run stage:mcp` into one ESM file: resources/mcp-server/index.js
+  # + package.json. Users register it as `node "<resources>/mcp-server/index.js"`;
+  # the MCP hub's "Connect an AI client" card shows the exact command.
+  - from: resources/mcp-server
+    to: mcp-server
   # Ship the tray PNGs (and their @2x Retina companions) so the tray
   # loader in electron/main.ts can read them from
   # process.resourcesPath/build/. Without this they stay in buildResources

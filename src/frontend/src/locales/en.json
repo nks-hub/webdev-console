@@ -3276,5 +3276,52 @@
       "daemonMigrationFailedTitle": "Database upgrade failed",
       "daemonMigrationFailedBody": "The daemon stopped because its database couldn't be upgraded. Check the daemon log, then use \"Start daemon\" in the tray menu."
     }
+  },
+  "mcpConnect": {
+    "title": "Connect an AI client",
+    "hint": "Register the WDC MCP server with Claude Code, Claude Desktop or Cursor. Destructive operations still need your approval here, unless a rule allows them.",
+    "enableLabel": "MCP enabled",
+    "showSetup": "Show setup",
+    "hideSetup": "Hide setup",
+    "statusAria": "MCP connection status",
+    "status": {
+      "enabled": "MCP is enabled",
+      "disabled": "MCP is disabled — AI approval requests are refused",
+      "portFile": "MCP token file present",
+      "noPortFile": "MCP token file missing — is the daemon running?",
+      "serverFound": "MCP server bundled",
+      "serverMissing": "MCP server not found at the path below",
+      "lastCall": "Last MCP call {when} ({tool})",
+      "noCalls": "No MCP call seen yet"
+    },
+    "clients": {
+      "claudeCode": {
+        "title": "Claude Code",
+        "where": "Run once in a terminal; available in every project."
+      },
+      "claudeDesktop": {
+        "title": "Claude Desktop",
+        "where": "Merge into claude_desktop_config.json (macOS: ~/Library/Application Support/Claude/, Windows: %APPDATA%\\Claude\\), then restart Claude Desktop."
+      },
+      "cursor": {
+        "title": "Cursor",
+        "where": "Merge into .cursor/mcp.json in your project (or ~/.cursor/mcp.json for all projects)."
+      }
+    },
+    "copy": "Copy",
+    "copied": "Copied to clipboard",
+    "copyFailed": "Could not copy — select the text and copy it manually",
+    "nodeRequired": "The server runs with Node.js 18 or newer, which must be on PATH.",
+    "pathUnknown": "The real path is shown in the desktop app; this preview uses a placeholder.",
+    "enabledToast": "MCP enabled",
+    "disabledToast": "MCP disabled",
+    "toggleFailed": "Could not change MCP setting: {error}",
+    "ago": {
+      "seconds": "{n} s ago",
+      "minutes": "{n} min ago",
+      "hours": "{n} h ago",
+      "days": "{n} d ago"
+    },
+    "openFromSettings": "Connect an AI client"
   }
 }

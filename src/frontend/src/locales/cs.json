@@ -3276,5 +3276,52 @@
       "daemonMigrationFailedTitle": "Upgrade databáze selhal",
       "daemonMigrationFailedBody": "Daemon se zastavil, protože se nepodařilo upgradovat jeho databázi. Zkontrolujte log daemonu a pak použijte „Spustit daemon“ v nabídce v systémové liště."
     }
+  },
+  "mcpConnect": {
+    "title": "Připojit AI klienta",
+    "hint": "Zaregistruj MCP server WDC v Claude Code, Claude Desktop nebo Cursoru. Destruktivní operace i tak musíš schválit tady, pokud je nepovoluje některé pravidlo.",
+    "enableLabel": "MCP zapnuto",
+    "showSetup": "Zobrazit návod",
+    "hideSetup": "Skrýt návod",
+    "statusAria": "Stav připojení MCP",
+    "status": {
+      "enabled": "MCP je zapnuté",
+      "disabled": "MCP je vypnuté — žádosti AI o schválení se odmítají",
+      "portFile": "Soubor s MCP tokenem existuje",
+      "noPortFile": "Soubor s MCP tokenem chybí — běží daemon?",
+      "serverFound": "MCP server je součástí instalace",
+      "serverMissing": "MCP server na uvedené cestě nebyl nalezen",
+      "lastCall": "Poslední volání MCP {when} ({tool})",
+      "noCalls": "Zatím žádné volání MCP"
+    },
+    "clients": {
+      "claudeCode": {
+        "title": "Claude Code",
+        "where": "Spusť jednou v terminálu; server pak bude dostupný ve všech projektech."
+      },
+      "claudeDesktop": {
+        "title": "Claude Desktop",
+        "where": "Vlož do claude_desktop_config.json (macOS: ~/Library/Application Support/Claude/, Windows: %APPDATA%\\Claude\\) a restartuj Claude Desktop."
+      },
+      "cursor": {
+        "title": "Cursor",
+        "where": "Vlož do .cursor/mcp.json v projektu (nebo do ~/.cursor/mcp.json pro všechny projekty)."
+      }
+    },
+    "copy": "Kopírovat",
+    "copied": "Zkopírováno do schránky",
+    "copyFailed": "Kopírování selhalo — označ text a zkopíruj ho ručně",
+    "nodeRequired": "Server běží v Node.js 18 nebo novějším, který musí být v PATH.",
+    "pathUnknown": "Skutečnou cestu ukáže desktopová aplikace; tento náhled používá zástupný text.",
+    "enabledToast": "MCP zapnuto",
+    "disabledToast": "MCP vypnuto",
+    "toggleFailed": "Nastavení MCP se nepodařilo změnit: {error}",
+    "ago": {
+      "seconds": "před {n} s",
+      "minutes": "před {n} min",
+      "hours": "před {n} h",
+      "days": "před {n} d"
+    },
+    "openFromSettings": "Připojit AI klienta"
   }
 }

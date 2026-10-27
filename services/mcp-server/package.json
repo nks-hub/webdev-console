@@ -13,6 +13,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "bundle": "node scripts/bundle.mjs",
     "watch": "tsc --watch",
     "start": "node dist/index.js",
     "test": "vitest run",
@@ -24,6 +25,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
+    "esbuild": "^0.21.5",
     "typescript": "^5.4.0",
     "vitest": "^1.4.0"
   },

@@ -655,6 +655,17 @@
               <el-form label-position="left" label-width="320px" size="small">
                 <el-form-item :label="$t('settings.mcp.enableLabel')">
                   <el-switch v-model="mcpEnabled" />
+                  <!-- Copy-paste setup for Claude Code / Desktop / Cursor
+                       lives on the MCP page's "Connect an AI client" card. -->
+                  <el-button
+                    link
+                    type="primary"
+                    class="mcp-connect-link"
+                    data-testid="settings-mcp-connect-link"
+                    @click="$router.push('/mcp/activity')"
+                  >
+                    {{ $t('mcpConnect.openFromSettings') }} →
+                  </el-button>
                 </el-form-item>
                 <!-- Phase 7.4e — strict kind validation. Default OFF (lenient
                      mode where any regex-valid kind passes). Turn ON to refuse
@@ -2945,6 +2956,7 @@ async function save() {
   font-size: 0.82rem;
 }
 
+.mcp-connect-link { margin-left: var(--wdc-space-3); }
 .hint {
   margin-top: var(--wdc-space-2);
   font-size: 0.76rem;
