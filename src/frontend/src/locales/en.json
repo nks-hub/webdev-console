@@ -2511,7 +2511,8 @@
       "mailpitSmtp": "Mailpit SMTP",
       "mailpitHttp": "Mailpit HTTP",
       "phpFpmBase": "PHP-FPM base port",
-      "phpFpmFormula": "Per-version ports are derived as base + major×10 + minor. E.g. base 9000 + PHP 8.4 = port 9084."
+      "phpFpmFormula": "Per-version ports are derived as base + major×10 + minor. E.g. base 9000 + PHP 8.4 = port 9084.",
+      "postgresqlPort": "PostgreSQL Port"
     },
     "update": {
       "current": "Current version",
@@ -3156,6 +3157,38 @@
         "title": "Composer",
         "description": "Run Composer install, require and remove in site folders; package scripts run."
       }
+    }
+  },
+  "splash": {
+    "failedTitle": "The daemon failed to start",
+    "retry": "Try again",
+    "restartApp": "Restart the app",
+    "logHint": "Daemon log: {path}",
+    "status": {
+      "mounting": "Starting the frontend…",
+      "connecting": "Connecting to the backend…",
+      "daemonStarting": "The daemon is starting…",
+      "pluginsStarting": "The daemon is starting plugins…",
+      "slow": "The daemon is still responding slowly…",
+      "unresponsive": "The daemon has not responded for a long time — preparing diagnostics…",
+      "auth": "The daemon is running, syncing the token…",
+      "server": "The daemon reports an error — retrying…",
+      "waiting": "Waiting for the backend…"
+    },
+    "hint": {
+      "mount": "mount phase",
+      "first": "first attempt",
+      "attempt": "attempt {n}",
+      "network": "attempt {n} · port file / socket",
+      "auth": "attempt {n} · token rotation",
+      "server": "attempt {n} · 5xx response"
+    },
+    "attempts": "{n} attempt | {n} attempts",
+    "fail": {
+      "network": "The daemon is not responding (port file / socket) — {attempts} in {s}s.",
+      "auth": "The daemon is running, but the token could not be synced — {attempts}.",
+      "server": "The daemon returns an error (5xx) — {attempts} in {s}s.",
+      "unknown": "The backend did not respond within {s}s ({attempts})."
     }
   }
 }

@@ -58,7 +58,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { Check, Close, Remove } from '@element-plus/icons-vue'
@@ -91,8 +91,14 @@ function hintFor(name: string): string | null {
   return te(key) ? t(key) : null
 }
 
+// Reactive clock for relative(): Date.now() alone is not reactive, so
+// "applied just now" never aged while the page stayed open.
+const now = ref(Date.now())
+const nowTimer = setInterval(() => { now.value = Date.now() }, 30_000)
+onBeforeUnmount(() => clearInterval(nowTimer))
+
 function relative(at: number): string {
-  const s = Math.max(0, Math.round((Date.now() - at) / 1000))
+  const s = Math.max(0, Math.round((now.value - at) / 1000))
   if (s < 60) return t('common.justNow')
   const m = Math.round(s / 60)
   return m < 60 ? t('siteApply.minutesAgo', { n: m }) : new Date(at).toLocaleTimeString()
