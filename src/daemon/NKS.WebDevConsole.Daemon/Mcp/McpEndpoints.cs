@@ -32,6 +32,18 @@ public static class McpEndpoints
         ctx.RequestServices.GetRequiredService<SettingsStore>()
             .GetBool("mcp", "enabled", defaultValue: false);
 
+    /// <summary>
+    /// True when an active grant for every AI client (scope 'always')
+    /// auto-approves <paramref name="kind"/> on <paramref name="target"/>,
+    /// by the validator's rule: a '*' kind grant never covers a capability kind.
+    /// </summary>
+    internal static async Task<bool> IsCoveredForEveryClientAsync(
+        NKS.WebDevConsole.Core.Interfaces.IMcpSessionGrantsRepository grants, string kind, string target, CancellationToken ct)
+    {
+        var grant = await grants.FindMatchingActiveAsync(null, null, null, kind, target, ct);
+        return grant is not null && !(grant.KindPattern == "*" && McpCapabilities.CapabilityIntentKinds.Contains(kind));
+    }
+
     /// <summary>Body of GET /api/mcp/capabilities (contract in MapMcpEndpoints).</summary>
     internal static object CapabilitiesResponse(Func<string, bool> isEnabled) => new
     {
@@ -229,6 +241,11 @@ public static class McpEndpoints
             string? kind = null;
             string? domain = null;
             string? host = null;
+            // Who is asking, as the MCP server identified itself (not
+            // authentication, see McpCallerContext). Lets a trust grant from
+            // the banner cover this run or this AI client instead of all.
+            var sessionId = McpCallerContext.SessionId;
+            var clientId = McpCallerContext.ApiKeyId;
             try
             {
                 using var conn = db.CreateConnection();
@@ -247,13 +264,16 @@ public static class McpEndpoints
                     // can still load the request on start / reconnect.
                     await Dapper.SqlMapper.ExecuteAsync(conn,
                         "UPDATE deploy_intents SET " +
-                        "confirm_requested_at = COALESCE(confirm_requested_at, @Now), prompt = @Prompt " +
+                        "confirm_requested_at = COALESCE(confirm_requested_at, @Now), prompt = @Prompt, " +
+                        "requested_by_session = @SessionId, requested_by_client = @ClientId " +
                         "WHERE id = @Id",
                         new
                         {
                             Id = intentId,
                             Now = DateTimeOffset.UtcNow.ToString("o"),
                             Prompt = prompt is { Length: > 1000 } ? prompt[..1000] : prompt,
+                            SessionId = sessionId,
+                            ClientId = clientId,
                         });
                 }
             }
@@ -304,7 +324,7 @@ public static class McpEndpoints
             // to broadcast (no subscribers, etc.) is not fatal — the operator can
             // still approve the intent from the MCP Intents page.
             await broadcaster.BroadcastAsync("mcp:confirm-request",
-                new { intentId, prompt, expiresAt, kind, kindLabel, kindDanger, kindPluginId, domain, host, alwaysConfirm });
+                new { intentId, prompt, expiresAt, kind, kindLabel, kindDanger, kindPluginId, domain, host, alwaysConfirm, sessionId, clientId });
             return Results.Accepted(value: new { intentId, confirmed = false, autoApproved = false, alwaysConfirm });
         });
 
@@ -416,8 +436,9 @@ public static class McpEndpoints
             if (!string.IsNullOrWhiteSpace(matchedGrantId)) where.Add("matched_grant_id = @MatchedGrantId");
             if (pendingOnly)
                 where.Add("confirm_requested_at IS NOT NULL AND confirmed_at IS NULL AND used_at IS NULL");
-            var sql = "SELECT id, domain, host, release_id, kind, expires_at, used_at, " +
-                      "confirmed_at, created_at, matched_grant_id, confirm_requested_at, prompt " +
+            var sql = "SELECT id, domain, host, release_id, kind, expires_at, used_at, revoked_at, " +
+                      "confirmed_at, created_at, matched_grant_id, confirm_requested_at, prompt, " +
+                      "requested_by_session, requested_by_client " +
                       "FROM deploy_intents " +
                       (where.Count == 0 ? "" : "WHERE " + string.Join(" AND ", where) + " ") +
                       "ORDER BY created_at DESC LIMIT @Limit";
@@ -447,6 +468,7 @@ public static class McpEndpoints
                     kindPluginId = registered?.PluginId,
                     expiresAt = (string)r.expires_at,
                     usedAt = (string?)r.used_at,
+                    revokedAt = (string?)r.revoked_at,
                     confirmedAt = (string?)r.confirmed_at,
                     createdAt = (string)r.created_at,
                     // Phase 7.5+++ — audit trail: which grant auto-confirmed
@@ -457,12 +479,18 @@ public static class McpEndpoints
                     // intent (confirm-request), with the description it gave.
                     confirmRequestedAt = (string?)r.confirm_requested_at,
                     prompt = (string?)r.prompt,
+                    // The MCP session and AI client that asked for approval,
+                    // so the banner can scope a trust grant to them.
+                    sessionId = (string?)r.requested_by_session,
+                    clientId = (string?)r.requested_by_client,
                     alwaysConfirm = alwaysConfirmKinds.Contains(kindId),
                     // Derived state for UI rendering convenience.
-                    state = ComputeIntentState(
+                    state = McpIntentStatus.ComputeState(
                         (string?)r.used_at,
+                        (string?)r.revoked_at,
                         (string?)r.confirmed_at,
-                        (string)r.expires_at),
+                        (string)r.expires_at,
+                        DateTimeOffset.UtcNow),
                 };
             })
             .Where(e => !pendingOnly || e.state == "pending_confirmation")
@@ -504,15 +532,6 @@ public static class McpEndpoints
                 intent.MatchedGrantId,
             });
         });
-
-        static string ComputeIntentState(string? usedAt, string? confirmedAt, string expiresAtRaw)
-        {
-            if (!string.IsNullOrEmpty(usedAt)) return "consumed";
-            if (DateTimeOffset.TryParse(expiresAtRaw, out var exp) && exp < DateTimeOffset.UtcNow)
-                return "expired";
-            if (string.IsNullOrEmpty(confirmedAt)) return "pending_confirmation";
-            return "ready";
-        }
 
         // Phase 7.4b — discover destructive op kinds plugins have registered.
         // MCP clients call this to know what kinds they can include in
@@ -571,6 +590,9 @@ public static class McpEndpoints
                 // Phase 7.5+++ — true when operator has marked this kind as
                 // always-confirm via Settings → grants are bypassed for it.
                 alwaysConfirm = alwaysConfirmSet.Contains(k.Id),
+                // Kinds of the capability groups: a grant with kind '*' never
+                // approves them (DeployIntentValidator), only one naming the kind.
+                ignoresWildcardGrants = McpCapabilities.CapabilityIntentKinds.Contains(k.Id),
             }).ToList();
             return Results.Ok(new { count = list.Count, entries = list });
         });
@@ -1169,8 +1191,10 @@ public static class McpEndpoints
             HttpContext ctx,
             NKS.WebDevConsole.Daemon.Data.Database db,
             NKS.WebDevConsole.Core.Interfaces.IDestructiveOperationKinds kindsRegistry,
+            NKS.WebDevConsole.Core.Interfaces.IMcpSessionGrantsRepository grants,
             int? withinDays,
-            int? minOccurrences) =>
+            int? minOccurrences,
+            CancellationToken ct) =>
         {
             if (!IsMcpEnabled(ctx)) return McpDisabled();
             var days = Math.Clamp(withinDays ?? 7, 1, 90);
@@ -1193,7 +1217,16 @@ public static class McpEndpoints
                 LIMIT 25",
                 new { Cutoff = cutoff, MinN = minN });
 
-            var suggestions = rows.Select(r =>
+            // The past manual approvals stay in the window after the operator
+            // accepts a suggestion, so drop pairs a grant already covers.
+            var uncovered = new List<dynamic>();
+            foreach (var r in rows)
+            {
+                if (!await IsCoveredForEveryClientAsync(grants, (string)r.kind, (string)r.domain, ct))
+                    uncovered.Add(r);
+            }
+
+            var suggestions = uncovered.Select(r =>
             {
                 var kindId = (string)r.kind;
                 var registered = kindsRegistry.Get(kindId);

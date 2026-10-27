@@ -117,4 +117,29 @@ public sealed class McpApprovalQueueTests : IDisposable
         events.Verify(e => e.BroadcastAsync("mcp:intent-changed",
             It.Is<object>(p => p.ToString()!.Contains("consumed") && p.ToString()!.Contains(intentId))), Times.Once);
     }
+
+    [Fact]
+    public void Migration_AddsRequestedByColumns()
+    {
+        using var conn = _db.CreateConnection();
+        var columns = conn.Query<string>("SELECT name FROM pragma_table_info('deploy_intents')").ToList();
+        Assert.Contains("requested_by_session", columns);
+        Assert.Contains("requested_by_client", columns);
+    }
+
+    // The suggested-grants banner creates (kind, domain) grants; the daemon
+    // matches the target against the intent's domain, so "domain/*" never did.
+    [Theory]
+    [InlineData("database_drop", "blog_db", "database_drop", "blog_db", true)]
+    [InlineData("database_drop", "blog_db/*", "database_drop", "blog_db", false)]
+    [InlineData("*", "*", "database_drop", "blog_db", true)]
+    [InlineData("*", "*", "service_config_write", "httpd", false)]
+    [InlineData("service_config_write", "httpd", "service_config_write", "httpd", true)]
+    public async Task SuggestedPair_IsCoveredOnlyByAGrantTheValidatorApplies(
+        string grantKind, string grantTarget, string kind, string target, bool covered)
+    {
+        Assert.False(await McpEndpoints.IsCoveredForEveryClientAsync(_grants, kind, target, CancellationToken.None));
+        await AddAlwaysGrant(grantKind, grantTarget);
+        Assert.Equal(covered, await McpEndpoints.IsCoveredForEveryClientAsync(_grants, kind, target, CancellationToken.None));
+    }
 }
