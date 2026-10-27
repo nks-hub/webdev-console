@@ -1092,6 +1092,7 @@
       "lead": "Enter a domain and the folder of the site. Everything else has sensible defaults.",
       "willRunAt": "The site will run at",
       "domainHint": "For example myapp.loc. A .loc domain only works on this computer.",
+      "domainExample": "myapp.loc",
       "folder": "Site folder",
       "pick": "Choose…",
       "folderExists": "The folder exists",
