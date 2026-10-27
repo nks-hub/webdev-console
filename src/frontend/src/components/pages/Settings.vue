@@ -3144,7 +3144,8 @@ async function save() {
   flex: 1 1 0;
   min-width: 0;
 }
-.about-sso-status { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--el-text-color-secondary); }
+.about-sso-status { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--el-text-color-secondary); }
+.about-sso-status .sys-label, .about-sso-status .sys-value { white-space: nowrap; }
 
 .paths-backup-actions { display: flex; gap: var(--wdc-space-2); flex-wrap: wrap; }
 .sync-sign-in { margin-bottom: var(--wdc-space-3); }
