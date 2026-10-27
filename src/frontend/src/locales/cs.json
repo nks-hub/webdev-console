@@ -1092,6 +1092,7 @@
       "lead": "Zadejte doménu a složku s webem. Ostatní volby mají rozumné výchozí hodnoty.",
       "willRunAt": "Web poběží na",
       "domainHint": "Například mojeapp.loc. Doména .loc funguje jen na tomto počítači.",
+      "domainExample": "mojeapp.loc",
       "folder": "Složka webu",
       "pick": "Vybrat…",
       "folderExists": "Složka existuje",

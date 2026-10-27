@@ -22,7 +22,7 @@
         <el-input
           ref="domainInput"
           v-model="form.domain"
-          placeholder="myapp.loc"
+          :placeholder="$t('sites.new.domainExample')"
           autocomplete="off"
           spellcheck="false"
         />
@@ -538,6 +538,8 @@ async function submit() {
   line-height: 1.5;
 }
 .create-form :deep(.el-form-item) { margin-bottom: var(--wdc-space-3-5); }
+/* Element Plus floats the error into the item margin, which is now too small to hold it. */
+.create-form :deep(.el-form-item__error) { position: static; padding-top: var(--wdc-space-1-5); }
 .create-form :deep(.el-select),
 .create-form :deep(.el-input) { width: 100%; }
 .create-form :deep(.el-radio-group) { width: auto; }
