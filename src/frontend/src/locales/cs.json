@@ -1635,7 +1635,7 @@
     "openDatabasesPage": "Otevřít stránku Databáze",
     "databasesEmbedHint": "Tento panel spravuje lokální MySQL databáze přímo. Hlavní stránku Databáze použijte pro širší pracovní prostor.",
     "databasesCount": "{n} databáze | {n} databáze | {n} databází",
-    "systemAccount": "Systémový účet MySQL, neupravujte ho",
+    "systemAccount": "Systémový účet MySQL",
     "databaseSizeUnknown": "Velikost není načtená",
     "databaseNameInvalid": "Název databáze může mít 1–64 písmen, číslic nebo podtržítek.",
     "databaseCreated": "Databáze {name} vytvořena",

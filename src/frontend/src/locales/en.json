@@ -1635,7 +1635,7 @@
     "openDatabasesPage": "Open Databases page",
     "databasesEmbedHint": "This panel manages local MySQL databases directly. Use the main Databases page when you need the wider workspace.",
     "databasesCount": "{n} database | {n} databases",
-    "systemAccount": "MySQL system account, leave it as is",
+    "systemAccount": "MySQL system account",
     "databaseSizeUnknown": "Size not loaded",
     "databaseNameInvalid": "Use 1-64 letters, numbers, or underscores for the database name.",
     "databaseCreated": "Database {name} created",
