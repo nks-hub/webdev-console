@@ -19,10 +19,11 @@ public class ServiceInfoPortsTests
         public int DefaultPort { get; set; } = 1;
     }
 
+    // Same property names as the Mailpit plugin's config.
     private sealed class MailConfig
     {
         public int SmtpPort { get; set; } = 1025;
-        public int HttpPort { get; set; } = 8025;
+        public int WebPort { get; set; } = 8025;
     }
 
     private sealed class FakeModule(string id, object? config = null) : IServiceModule
@@ -60,7 +61,9 @@ public class ServiceInfoPortsTests
     {
         var dto = Build(new FakeModule("mailpit", new MailConfig()), Status("mailpit", ServiceState.Stopped));
 
+        // The web UI port is the one to open, SMTP is listed next to it.
         Assert.Equal(8025, dto.Port);
+        Assert.Equal(8025, dto.Ports!["http"]);
         Assert.Equal(1025, dto.Ports!["smtp"]);
     }
 

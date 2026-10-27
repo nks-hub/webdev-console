@@ -214,7 +214,7 @@ internal static class SettingsEndpoints
                                     "postgresql"  when moduleId == "postgresql"   => "Port",
                                     "redis"       when moduleId == "redis"        => "Port",
                                     "mailpitsmtp" when moduleId == "mailpit"      => "SmtpPort",
-                                    "mailpithttp" when moduleId == "mailpit"      => "HttpPort",
+                                    "mailpithttp" when moduleId == "mailpit"      => "WebPort",
                                     _ => null,
                                 };
                                 if (propName is null) continue;
