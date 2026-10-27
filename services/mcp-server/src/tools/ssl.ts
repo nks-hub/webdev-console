@@ -83,7 +83,9 @@ export function registerSslTools(server: McpServer, opts: RegisterOptions): void
       description:
         'DESTRUCTIVE: Delete a site certificate. The vhost will fall back to HTTP-only ' +
         'on next reload.\n\n' +
-        'Args:\n  domain: Domain to revoke.\n  confirm: Must be "YES".\n\n' +
+        'Needs the user\'s approval: wdc_request_confirmation(operation: "ssl_cert_delete", target: domain), ' +
+        'then pass the approved intentToken.\n\n' +
+        'Args:\n  domain: Domain to revoke.\n  confirm: Must be "YES".\n  intentToken: Approved intent.\n\n' +
         'You MUST show the user which cert will be removed before passing confirm="YES".',
       inputSchema: {
         domain: DomainSchema,

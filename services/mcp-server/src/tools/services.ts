@@ -34,7 +34,8 @@ export function registerServicesTools(server: McpServer, opts: RegisterOptions):
       description:
         'List all registered services (Apache, MySQL, PHP, Redis, Mailpit, etc.) ' +
         'with current state, PID, CPU%, memory, and uptime.\n\n' +
-        'Returns: Array of ServiceStatus objects.',
+        'Returns: Array of ServiceStatus objects. state is a number: 0 stopped, 1 starting, ' +
+        '2 running, 3 stopping, 4 crashed, 5 disabled.',
       inputSchema: {},
       annotations: {
         readOnlyHint: true,
@@ -110,7 +111,10 @@ export function registerServicesTools(server: McpServer, opts: RegisterOptions):
       title: 'Stop service',
       description:
         'Stop a service by id. The daemon performs a graceful shutdown with 15s timeout ' +
-        'then SIGKILL fallback.\n\nArgs:\n  serviceId: Service to stop.',
+        'then SIGKILL fallback.\n\n' +
+        'Needs the user\'s approval: wdc_request_confirmation(operation: "service_stop", target: serviceId), ' +
+        'then pass the approved intentToken.\n\n' +
+        'Args:\n  serviceId: Service to stop.\n  intentToken: Approved intent.',
       inputSchema: {
         serviceId: ServiceIdSchema,
         intentToken: IntentTokenSchema,

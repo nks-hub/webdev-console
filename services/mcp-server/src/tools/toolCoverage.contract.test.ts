@@ -345,6 +345,12 @@ describe('annotations and read-only mode', () => {
     },
   )
 
+  it('every tool that takes an intentToken says how to get one', () => {
+    const silent = [...allTools().tools.values()].filter(t =>
+      'intentToken' in (t.config.inputSchema ?? {}) && !/wdc_(request_confirmation|deploy_create_intent)/.test(t.config.description ?? ''))
+    expect(silent.map(t => t.name)).toEqual([])
+  })
+
   it('wdc_refresh_catalog is a mutation and is hidden in read-only mode', () => {
     expect(allTools().tools.get('wdc_refresh_catalog')!.config.annotations?.readOnlyHint).toBe(false)
     expect(allTools({ readonly: true, deployScopes: ['*'] }).tools.has('wdc_refresh_catalog')).toBe(false)
