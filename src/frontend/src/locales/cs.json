@@ -2929,7 +2929,8 @@
       "updaterError": "Aktualizaci se nepodařilo stáhnout",
       "restartInstall": "Restartovat a nainstalovat",
       "openReleasePage": "Otevřít stránku vydání",
-      "downloadingVersion": "Stahuji verzi {v}"
+      "downloadingVersion": "Stahuji verzi {v}",
+      "tabDesc": "Instalovaná verze hledá aktualizace sama při spuštění a stáhne je na pozadí. Nainstalují se po restartu aplikace."
     },
     "danger": {
       "title": "Nebezpečná zóna",

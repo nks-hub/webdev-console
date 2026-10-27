@@ -2929,7 +2929,8 @@
       "updaterError": "The update could not be downloaded",
       "restartInstall": "Restart and install",
       "openReleasePage": "Open the release page",
-      "downloadingVersion": "Downloading version {v}"
+      "downloadingVersion": "Downloading version {v}",
+      "tabDesc": "The installed app looks for updates on its own at start and downloads them in the background. They install when the app restarts."
     },
     "danger": {
       "title": "Danger zone",

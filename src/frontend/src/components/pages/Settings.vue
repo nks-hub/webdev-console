@@ -872,6 +872,7 @@
         <!-- Update tab — visible in both Simple and Advanced -->
         <section v-show="activeTab === 'update'" class="shell-section">
           <div class="tab-content">
+            <p class="tab-desc">{{ $t('settings.update.tabDesc') }}</p>
             <EasyUpdateSettings
               :t="t"
               :current-version="currentVersion"
