@@ -107,8 +107,16 @@ if (process.env.WDC_PLUGIN_STAGE_SOURCE === 'build' && listPluginDlls(monorepoBu
 
 // Source 1: sibling checkout of webdev-console-plugins repo.
 const siblingRoot = resolve(repoRoot, '..', 'webdev-console-plugins')
-if (!sourceUsed && existsSync(siblingRoot)) {
-  const pluginProjectDirs = readdirSync(siblingRoot)
+let siblingEntries = []
+try {
+  if (!sourceUsed && existsSync(siblingRoot)) siblingEntries = readdirSync(siblingRoot)
+} catch (err) {
+  // An unreadable sibling (EPERM, locked by another process) must not stop the
+  // build; fall through to the GitHub release download below.
+  console.warn(`[stage-plugins] cannot read ${siblingRoot} (${err.code ?? err.message}), using GitHub releases`)
+}
+if (!sourceUsed && siblingEntries.length > 0) {
+  const pluginProjectDirs = siblingEntries
     .filter(n => n.startsWith('NKS.WebDevConsole.Plugin.'))
     .map(n => join(siblingRoot, n, 'bin', 'Release', 'net9.0'))
     .filter(p => listPluginDlls(p).length > 0)
