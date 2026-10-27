@@ -9,7 +9,7 @@ namespace NKS.WebDevConsole.Daemon.Services;
 /// <summary>
 /// Pre-registers Windows Defender Firewall inbound rules for NKS WDC managed
 /// service ports so the user doesn't get the per-first-bind UAC prompt each
-/// time a managed binary (Apache, MySQL, PostgreSQL, Redis, Mailpit) opens a socket for
+/// time a managed binary (Apache, MySQL, PostgreSQL, Redis) opens a socket for
 /// the first time.
 ///
 /// Rule naming convention:
@@ -38,7 +38,8 @@ public sealed class WindowsFirewallManager
     /// <summary>
     /// Ports managed by the daemon that need inbound firewall rules.
     /// PHP-CGI is intentionally absent — mod_fcgid only speaks localhost to
-    /// Apache, never accepts inbound connections.
+    /// Apache, never accepts inbound connections. Mailpit too: it listens on
+    /// 127.0.0.1 only, and a port rule would open that port for any program.
     /// </summary>
     private static readonly (string Service, int Port)[] ManagedPorts =
     {
@@ -47,8 +48,6 @@ public sealed class WindowsFirewallManager
         ("mysql", 3306),
         ("postgresql", 5432),
         ("redis", 6379),
-        ("mailpit-smtp", 1025),
-        ("mailpit-web", 8025),
     };
 
     public WindowsFirewallManager(ILogger<WindowsFirewallManager> logger)
