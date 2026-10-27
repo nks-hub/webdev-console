@@ -2891,10 +2891,7 @@
       "revokedRetentionHint": "Revoked rules stay in the history for this many days. 0 = delete right after revoking.",
       "toolCallRetentionLabel": "Keep the call history for",
       "toolCallRetentionHint": "Activity entries (what the AI called) are deleted after this many days. Longer history takes more disk space. The default is 30 days.",
-      "daysSuffix": "days",
-      "enableConfirm": "A connected AI assistant will be able to create and change sites, databases and services. Actions that cannot be undone will wait for your approval.",
-      "enableConfirmTitle": "Allow MCP?",
-      "enableConfirmButton": "Allow"
+      "daysSuffix": "days"
     },
     "deploySubsystem": {
       "title": "Deploys",
@@ -2920,6 +2917,10 @@
       "leaveMessage": "You have unsaved changes in Settings. Leaving the page discards them.",
       "leave": "Discard and leave",
       "stay": "Stay"
+    },
+    "mcpTab": {
+      "optionsTitle": "More MCP options",
+      "simpleSubtitle": "What AI assistants connected over MCP may do. With MCP off, no AI client gets in."
     }
   },
   "mcpGrants": {

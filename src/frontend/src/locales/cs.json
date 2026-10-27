@@ -2892,10 +2892,7 @@
       "revokedRetentionHint": "Zrušená pravidla zůstanou v historii tolik dní. 0 = smazat hned po zrušení.",
       "toolCallRetentionLabel": "Uchovávat historii volání",
       "toolCallRetentionHint": "Záznamy v Aktivitě (co AI volala) se po tolika dnech smažou. Delší historie zabírá víc místa na disku. Výchozí je 30 dní.",
-      "daysSuffix": "dní",
-      "enableConfirm": "Připojený AI asistent bude moct zakládat a upravovat weby, databáze a služby. Nevratné akce budou čekat na vaše schválení.",
-      "enableConfirmTitle": "Povolit MCP?",
-      "enableConfirmButton": "Povolit"
+      "daysSuffix": "dní"
     },
     "deploySubsystem": {
       "title": "Nasazení (deploy)",
@@ -2921,6 +2918,10 @@
       "leaveMessage": "V Nastavení máte neuložené změny. Když stránku opustíte, zahodí se.",
       "leave": "Zahodit a odejít",
       "stay": "Zůstat"
+    },
+    "mcpTab": {
+      "optionsTitle": "Další volby MCP",
+      "simpleSubtitle": "Co smějí AI asistenti připojení přes MCP. Vypnuté MCP žádného AI klienta nepustí."
     }
   },
   "mcpGrants": {
