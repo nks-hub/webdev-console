@@ -55,7 +55,9 @@ public sealed class BackupManager
 
     private string UniquePath(string prefix)
     {
-        var timestamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture);
+        // Local time, the clock the Backups page shows: a UTC name read an hour
+        // or two off next to "Last backup 22:10".
+        var timestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture);
         var path = Path.Combine(_backupRoot, $"{prefix}-{timestamp}.zip");
         for (var i = 2; File.Exists(path); i++)
             path = Path.Combine(_backupRoot, $"{prefix}-{timestamp}-{i}.zip");

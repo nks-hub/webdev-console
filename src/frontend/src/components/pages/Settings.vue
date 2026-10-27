@@ -11,6 +11,7 @@
       <div v-if="uiModeStore.isSimple" class="simple-settings-grid">
         <el-alert
           v-if="hiddenTabRequested"
+          id="simple-hidden-tab"
           type="info"
           :closable="false"
           show-icon
@@ -233,7 +234,7 @@
           <div class="simple-runtime-grid">
             <div class="about-sys-row">
               <span class="sys-label">{{ $t('settings.about.services') }}</span>
-              <span class="sys-value">{{ daemonStore.runningServices.length }}/{{ daemonStore.visibleServices.length }}</span>
+              <span class="sys-value">{{ daemonStore.runningServices.length }}/{{ installedServiceCount }}</span>
             </div>
             <div class="about-sys-row">
               <span class="sys-label">{{ $t('settings.about.sites') }}</span>
@@ -552,9 +553,9 @@
                   {{ $t('settings.advanced.testConnection') }}
                 </el-button>
                 <el-button
+                  v-if="catalogUrl"
                   size="small"
                   @click="openCatalogAdmin"
-                  :disabled="!catalogUrl"
                 >
                   {{ $t('settings.advanced.openCatalogAdmin') }}
                 </el-button>
@@ -1185,9 +1186,7 @@ const SIMPLE_PANEL_FOR_TAB: Record<string, string> = {
   update: 'simple-update',
   notifications: 'simple-notifications',
   mcp: 'simple-mcp',
-  ports: 'simple-network',
   account: 'simple-account',
-  sync: 'simple-account',
   about: 'simple-about',
 }
 
@@ -1214,7 +1213,9 @@ function applyDeepLink(): void {
   if (tabParam && settingsSections.value.some(s => s.name === tabParam)) {
     if (uiModeStore.isSimple) {
       hiddenTabRequested.value = ADVANCED_ONLY_TABS.has(tabParam) ? tabParam : null
-      const panel = SIMPLE_PANEL_FOR_TAB[tabParam]
+      // An Advanced-only section has no panel here; show the banner that says
+      // so (the page keeps its scroll position between visits).
+      const panel = hiddenTabRequested.value ? 'simple-hidden-tab' : SIMPLE_PANEL_FOR_TAB[tabParam]
       if (panel) setTimeout(() => document.getElementById(panel)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
       if (hiddenTabRequested.value) return
     } else {
@@ -1448,6 +1449,11 @@ function serviceNotInstalled(svc: { installed?: boolean; state?: number; status?
 function shortVersion(version: string): string {
   return version.split('+')[0]
 }
+
+// Not-installed services are neither running nor a fault; the simple status
+// bar says "all running" when every installed one runs.
+const installedServiceCount = computed(() =>
+  daemonStore.visibleServices.filter(s => s.installed !== false).length)
 
 function revealDataDir(): void {
   const dir = systemInfo.value?.dataDir

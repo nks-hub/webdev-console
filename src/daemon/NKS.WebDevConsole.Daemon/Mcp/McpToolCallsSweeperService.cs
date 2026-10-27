@@ -17,7 +17,7 @@ namespace NKS.WebDevConsole.Daemon.Mcp;
 public sealed class McpToolCallsSweeperService : BackgroundService
 {
     private static readonly TimeSpan Interval = TimeSpan.FromHours(1);
-    private const int DefaultRetentionDays = 30;
+    internal const int DefaultRetentionDays = 30;
     private const int MinRetentionDays = 1;
     private const int MaxRetentionDays = 365;
 
