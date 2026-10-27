@@ -55,6 +55,7 @@
             <template #default="{ row }">
               <el-switch
                 :model-value="row.enabled"
+                :aria-label="$t('hosts.enableEntryAria', { hostname: row.hostname })"
                 size="small"
                 @change="(v: boolean) => toggleEnabled(row, v)"
               />

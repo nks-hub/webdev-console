@@ -50,26 +50,22 @@
         </el-button>
       </div>
       <ul class="simple-recent-list">
-        <li
-          v-for="s in recentSimpleSites"
-          :key="s.domain"
-          class="simple-recent-item"
-          role="button"
-          tabindex="0"
-          :aria-label="t('sites.card.openSiteAria', { domain: s.domain })"
-          @click="router.push(`/sites/${encodeURIComponent(s.domain)}/edit`)"
-          @keydown.enter.prevent="router.push(`/sites/${encodeURIComponent(s.domain)}/edit`)"
-          @keydown.space.prevent="router.push(`/sites/${encodeURIComponent(s.domain)}/edit`)"
-        >
-          <HealthStatusDot
-            :level="s.enabled === false ? 'muted' : 'ok'"
-          />
-          <span class="simple-recent-domain">{{ s.domain }}</span>
-          <span class="simple-recent-meta mono">
-            <template v-if="s.phpVersion && s.phpVersion !== 'none'">PHP {{ s.phpVersion }}</template>
-            <template v-else>{{ t('sites.phpNone') }}</template>
-          </span>
-          <el-icon class="simple-recent-arrow"><ArrowRight /></el-icon>
+        <li v-for="s in recentSimpleSites" :key="s.domain">
+          <router-link
+            class="simple-recent-item"
+            :to="`/sites/${encodeURIComponent(s.domain)}/edit`"
+            :aria-label="t('sites.card.openSiteAria', { domain: s.domain })"
+          >
+            <HealthStatusDot
+              :level="s.enabled === false ? 'muted' : 'ok'"
+            />
+            <span class="simple-recent-domain">{{ s.domain }}</span>
+            <span class="simple-recent-meta mono">
+              <template v-if="s.phpVersion && s.phpVersion !== 'none'">PHP {{ s.phpVersion }}</template>
+              <template v-else>{{ t('sites.phpNone') }}</template>
+            </span>
+            <el-icon class="simple-recent-arrow"><ArrowRight /></el-icon>
+          </router-link>
         </li>
       </ul>
     </div>
@@ -278,6 +274,8 @@ defineExpose({ reload: loadAggregates })
   border-top: 1px solid var(--wdc-border);
 }
 .simple-recent-item {
+  color: inherit;
+  text-decoration: none;
   display: grid;
   grid-template-columns: 10px minmax(0, 1fr) auto 16px;
   gap: var(--wdc-space-2-5);

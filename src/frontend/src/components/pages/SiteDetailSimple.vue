@@ -81,6 +81,7 @@
         <div class="sd-control-wrap">
           <el-select
             v-model="phpVersion"
+            :aria-label="$t('sites.detail.simple.phpVersion')"
             size="large"
             class="sd-control-medium"
             @change="onPhpChange"
@@ -116,7 +117,7 @@
           <span class="sd-hint">{{ $t('sites.detail.simple.sslHint') }}</span>
         </div>
         <div class="sd-control-wrap">
-          <el-switch v-model="sslEnabled" @change="onSslChange" />
+          <el-switch v-model="sslEnabled" :aria-label="$t('sites.detail.simple.ssl')" @change="onSslChange" />
           <Transition name="flash">
             <span v-if="savedSsl" class="sd-saved">{{ $t('sites.detail.simple.saved') }}</span>
           </Transition>
@@ -135,6 +136,7 @@
         <div class="sd-control-wrap sd-bind-control">
           <el-select
             v-model="bindAddresses"
+            :aria-label="$t('sites.bindIp')"
             class="bind-address-select"
             size="large"
             multiple
@@ -175,7 +177,7 @@
           <span class="sd-hint">{{ $t('sites.detail.simple.tunnelHint') }}</span>
         </div>
         <div class="sd-control-wrap">
-          <el-switch v-model="tunnelEnabled" @change="onTunnelChange" />
+          <el-switch v-model="tunnelEnabled" :aria-label="$t('sites.detail.simple.tunnel')" @change="onTunnelChange" />
           <Transition name="flash">
             <span v-if="savedTunnel" class="sd-saved">{{ $t('sites.detail.simple.saved') }}</span>
           </Transition>

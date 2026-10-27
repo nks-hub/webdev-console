@@ -427,7 +427,8 @@
       "allDanger": "Všechny úrovně",
       "toolName": "Filter podle nástroje…",
       "search": "Hledat v nástrojích a argumentech…",
-      "collapseReads": "Sbalit read volání"
+      "collapseReads": "Sbalit read volání",
+      "dangerAria": "Filtrovat podle úrovně nebezpečí"
     },
     "view": {
       "sessions": "Podle session",
@@ -1201,7 +1202,8 @@
     "hostnameColumn": "Hostname",
     "sourceColumn": "Zdroj (web)",
     "entriesCount": "{n} záznamů",
-    "loadingHosts": "Parsování systémového hosts souboru…"
+    "loadingHosts": "Parsování systémového hosts souboru…",
+    "enableEntryAria": "Záznam pro {hostname} zapnutý"
   },
   "apache": {
     "title": "Apache Web Server",
