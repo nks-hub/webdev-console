@@ -58,7 +58,7 @@ defineProps<{
 }
 .edit-card-title {
   font-size: 0.82rem;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--wdc-text);
   font-family: var(--wdc-font-display);
 }

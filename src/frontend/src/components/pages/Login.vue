@@ -240,7 +240,7 @@ onMounted(loadCatalogUrl)
   font-size: 0.78rem;
   color: var(--el-text-color-secondary);
 }
-.login-catalog-hint .label { text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.82rem;
+.login-catalog-hint .label { font-size: 0.82rem;
   font-family: var(--wdc-font-display);
 }
 .mono { font-family: 'JetBrains Mono', monospace; }

@@ -1045,7 +1045,6 @@ function cooldownActiveSec(g: McpGrantRow): number {
   color: var(--wdc-text);
 }
 .page-header .actions { display: flex; gap: 8px; }
-.page > *:not(.page-header) { padding: 0 24px; }
 .page > .page-header + * { padding-top: 16px; }
 .muted { color: var(--el-text-color-secondary); }
 .grants-table { margin-top: 8px; }

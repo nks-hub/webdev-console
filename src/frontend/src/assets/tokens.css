@@ -369,6 +369,12 @@ h1, h2, h3, h4,
   max-width: 1320px;
 }
 
+/* A page rendered inside another page (MCP hub tabs) does not pad again. */
+:where(.wdc-page, .page, .dashboard-page, .settings-page, .plugin-page) :where(.page, .mcp-activity-page, .plugin-page) {
+  padding: 0;
+  max-width: none;
+}
+
 /* Page header: title left, actions right, aligned on the baseline. */
 .wdc-page-hero {
   display: flex;
@@ -503,6 +509,8 @@ h1, h2, h3, h4,
   .el-button.is-text:hover:not(.is-disabled) { --el-button-bg-color: var(--wdc-hover); transform: none; }
   .el-button.is-link:hover:not(.is-disabled) { transform: none; text-decoration: underline; text-decoration-color: var(--wdc-accent); }
 }
+.el-button.is-link:hover:not(.is-disabled),
+.el-button.is-link:focus:not(.is-disabled) { --el-button-bg-color: transparent; }
 .el-button.is-text:active:not(.is-disabled),
 .el-button.is-link:active:not(.is-disabled) { box-shadow: none !important; transform: none; }
 .el-button.is-text.el-button--primary, .el-button.is-link.el-button--primary { --el-button-text-color: var(--wdc-accent-ink); --el-button-hover-text-color: var(--wdc-accent-ink); }
@@ -1105,6 +1113,7 @@ html:not(.dark) .el-switch.is-checked .el-switch__core .el-switch__action {
 .el-radio-button__inner {
   background: transparent !important;
   border: 1px solid transparent !important;
+  outline: none !important;
   border-radius: var(--wdc-radius) !important;
   color: var(--wdc-text-2) !important;
   font-family: var(--wdc-font-display);

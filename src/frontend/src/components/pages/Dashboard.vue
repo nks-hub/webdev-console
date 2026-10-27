@@ -215,8 +215,8 @@ function formatWhen(iso: string): string {
   if (isNaN(d.getTime())) return iso
   const sameDay = d.toDateString() === new Date().toDateString()
   return sameDay
-    ? d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
-    : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+    ? d.toLocaleTimeString(String(locale.value), { hour: '2-digit', minute: '2-digit' })
+    : d.toLocaleDateString(String(locale.value), { day: 'numeric', month: 'short' })
 }
 
 // Node.js process count — shown in the stat cards when the plugin is loaded.

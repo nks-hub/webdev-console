@@ -271,7 +271,7 @@ onMounted(() => { void loadVersions() })
   font-family: 'JetBrains Mono', monospace;
 }
 
-.page-body { padding: 0 24px 24px; }
+.page-body { padding: 0 0 24px; }
 
 /* Version grid */
 .version-grid {

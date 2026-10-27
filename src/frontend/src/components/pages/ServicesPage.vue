@@ -43,13 +43,20 @@
             v-for="svc in visible"
             :key="svc.id"
             :class="{ 'is-selected': selected?.id === svc.id }"
-            :aria-selected="selected?.id === svc.id"
-            tabindex="0"
             @click="select(svc.id)"
-            @keydown.enter.prevent="select(svc.id)"
-            @keydown.space.prevent="select(svc.id)"
           >
-            <th scope="row">{{ shortName(svc) }}</th>
+            <!-- The row is clickable with the mouse; the name is a real
+                 button for keyboard and screen readers, pressed when its
+                 service is the one shown in the panel. -->
+            <th scope="row">
+              <button
+                type="button"
+                class="row-select"
+                :aria-pressed="selected?.id === svc.id"
+                :aria-controls="`svc-panel`"
+                @click.stop="select(svc.id)"
+              >{{ shortName(svc) }}</button>
+            </th>
             <td>
               <span class="status" :class="`st-${stateOf(svc)}`">
                 <el-icon :size="14" aria-hidden="true">
@@ -67,7 +74,7 @@
         </tbody>
       </table>
 
-      <section v-if="selected" class="panel" :aria-labelledby="`svc-${selected.id}`">
+      <section v-if="selected" id="svc-panel" class="panel" aria-live="polite" :aria-labelledby="`svc-${selected.id}`">
         <h2 :id="`svc-${selected.id}`" class="panel-title">{{ shortName(selected) }}</h2>
         <p class="panel-status" :class="`st-${stateOf(selected)}`">
           <el-icon :size="16" aria-hidden="true">
@@ -259,7 +266,8 @@ async function act(svc: ServiceInfo, op: 'start' | 'stop' | 'restart') {
       ElMessage.success(t('overview.restarted', { name }))
     }
   } catch (e) {
-    ElMessage.error(t('toast.startFailed', { err: errorMessage(e) }))
+    const key = op === 'stop' ? 'toast.stopFailed' : op === 'restart' ? 'toast.restartFailed' : 'toast.startFailed'
+    ElMessage.error(t(key, { err: errorMessage(e) }))
     void loadLogs(svc.id)
   }
 }
@@ -336,7 +344,16 @@ async function act(svc: ServiceInfo, op: 'start' | 'stop' | 'restart') {
 .table tbody tr { cursor: pointer; transition: background-color var(--wdc-dur-micro) var(--wdc-ease-out); }
 @media (hover: hover) { .table tbody tr:hover { background: var(--wdc-hover); } }
 .table tbody tr.is-selected { background: var(--wdc-accent-dim); }
-.table tbody tr:focus-visible { outline: 2px solid var(--wdc-accent); outline-offset: -2px; }
+.row-select {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.row-select:focus-visible { outline: 2px solid var(--wdc-accent); outline-offset: 2px; border-radius: var(--wdc-radius-xs); }
 .num { text-align: right !important; font-variant-numeric: tabular-nums; }
 .muted { color: var(--wdc-text-2); }
 

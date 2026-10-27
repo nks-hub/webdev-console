@@ -492,7 +492,7 @@ function phpFullLabel(stored: string): string {
 function rowRuntimeLabel(site: SiteInfo): string {
   if (site.nodeUpstreamPort && site.nodeUpstreamPort > 0) return `Node:${site.nodeUpstreamPort}`
   if (site.phpVersion && site.phpVersion !== 'none') return phpFullLabel(site.phpVersion)
-  return 'Static'
+  return t('sites.runtimeStatic')
 }
 // Native-looking Document Root placeholder. Windows keeps the legacy
 // C:\work\htdocs\<app> hint; macOS/Linux get a path rooted at the user's

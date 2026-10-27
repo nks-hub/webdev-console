@@ -267,18 +267,18 @@ onMounted(() => { void loadVersions() })
   border-bottom: 1px solid var(--wdc-border);
   background: transparent;
 }
-.page-autostart-row { padding: 10px 24px 0; width: 100%; }
+.page-autostart-row { padding: 10px 0 0; width: 100%; }
 .header-left { display: flex; flex-direction: column; gap: 2px; }
 .page-title { font-size: 1.6rem; font-weight: 800; color: var(--wdc-text); margin: 0; letter-spacing: -0.02em; }
 .page-subtitle { font-size: 0.78rem; color: var(--wdc-text-3); }
 .header-actions { display: flex; gap: 8px; }
-.status-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 18px 24px 4px; }
+.status-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 18px 0 4px; }
 .status-card { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--wdc-surface); border: 1px solid var(--wdc-border); border-radius: var(--wdc-radius); }
 .status-icon { font-size: 1.4rem; width: 30px; text-align: center; color: var(--wdc-text-3); }
 .status-body { display: flex; flex-direction: column; min-width: 0; }
 .status-title { font-size: 0.92rem; font-weight: 700; color: var(--wdc-text); }
 .status-meta { font-size: 0.72rem; color: var(--wdc-text-3); }
-.cf-tabs { padding: 16px 24px; }
+.cf-tabs { padding: 16px 0; }
 .tab-content { display: flex; flex-direction: column; gap: 16px; }
 /* .edit-card CSS lives in EditCard shared primitive (plan §6). */
 .hint { margin-top: 6px; font-size: 0.78rem; color: var(--wdc-text-3); }

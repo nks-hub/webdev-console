@@ -217,12 +217,10 @@ onMounted(async () => {
   justify-content: space-between;
   gap: var(--wdc-space-4);
   flex-wrap: wrap;
-  padding: var(--wdc-space-4-5) var(--wdc-space-5);
+  padding: 0 0 var(--wdc-space-4);
   border-bottom: 1px solid var(--wdc-border);
   background: transparent;
 }
-.plugin-page > *:not(.plugin-page-header) { padding: 0 24px; }
-.plugin-page > *:last-child { padding-bottom: 24px; }
 
 .plugin-page-identity {
   display: flex;

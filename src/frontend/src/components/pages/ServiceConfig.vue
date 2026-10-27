@@ -368,7 +368,7 @@ onMounted(() => { void load() })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--wdc-space-4-5) var(--wdc-space-5);
+  padding: 0 0 var(--wdc-space-4);
   border-bottom: 1px solid var(--wdc-border);
   background: transparent;
   flex-shrink: 0;
