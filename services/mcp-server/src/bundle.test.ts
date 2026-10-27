@@ -24,10 +24,10 @@ function registeredToolCount(): number {
     .reduce((n, f) => n + (readFileSync(join(dir, f), 'utf8').match(/server\.registerTool\(/g)?.length ?? 0), 0)
 }
 
-function talk(entry: string, home: string, messages: object[]): Promise<RpcMessage[]> {
+function talk(entry: string, home: string, messages: object[], args: string[] = []): Promise<RpcMessage[]> {
   return new Promise((resolvePromise, reject) => {
     // Empty temp/home dirs: no daemon port file, so nothing reaches a real WDC.
-    const child = spawn(process.execPath, [entry], {
+    const child = spawn(process.execPath, [entry, ...args], {
       cwd: home,
       env: { ...process.env, TMPDIR: home, TEMP: home, TMP: home, HOME: home, USERPROFILE: home },
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -74,6 +74,18 @@ describe('bundled MCP server', () => {
       const tools = (replies.find((r) => r.id === 2)?.result?.tools ?? []) as { name: string }[]
       expect(tools.length).toBe(registeredToolCount())
       expect(tools.every((t) => t.name.startsWith('wdc_'))).toBe(true)
+
+      // The set the Cursor snippet uses stays under Cursor's 40-tool warning
+      // and still lets the agent ask for approval.
+      const essential = await talk(join(out, 'index.js'), home, [
+        { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'bundle-test', version: '1' } } },
+        { jsonrpc: '2.0', method: 'notifications/initialized' },
+        { jsonrpc: '2.0', id: 2, method: 'tools/list' },
+      ], ['--modules=essential'])
+      const essentialTools = ((essential.find((r) => r.id === 2)?.result?.tools ?? []) as { name: string }[]).map((t) => t.name)
+      expect(essentialTools.length).toBeLessThanOrEqual(40)
+      expect(essentialTools).toContain('wdc_request_confirmation')
+      expect(essentialTools).toContain('wdc_create_database')
     } finally {
       rmSync(out, { recursive: true, force: true })
       rmSync(home, { recursive: true, force: true })

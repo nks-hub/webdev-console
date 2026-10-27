@@ -53,7 +53,9 @@ restart Claude Desktop:
 ### Cursor
 
 Merge the same `mcpServers` entry into `.cursor/mcp.json` in your project
-(or `~/.cursor/mcp.json` for every project).
+(or `~/.cursor/mcp.json` for every project). Cursor warns above 40 tools
+and may leave the rest out, so the snippet in WDC adds `--modules=essential`
+to `args` (39 tools, see [Fewer tools](#fewer-tools)).
 
 ### Without Node.js
 
@@ -100,6 +102,21 @@ refuses every request made with the MCP token (`403 mcp_disabled`, the
 `/api/mcp/*` routes answer `404 mcp_disabled`) with a hint saying where to
 turn it on. Turning MCP off also cuts an MCP server that is already
 running; it works again once MCP is back on.
+
+### Fewer tools
+
+All 17 modules register 108 tools. `--modules=<list>` registers only the
+named modules (comma-separated); `confirmation` is always included so
+destructive tools can still be approved. The preset `essential` is
+`system,sites,services,databases` (39 tools with `confirmation`).
+
+Modules: `sites`, `services`, `system`, `databases`, `mysql`, `ssl`, `php`,
+`binaries`, `plugins`, `backup`, `settings`, `cloudflare`, `deploy`,
+`confirmation`, `composer`, `node`, `hosts`.
+
+```bash
+claude mcp add --scope user nks-wdc -- node "<WDC resources>/mcp-server/index.js" --modules=essential,php
+```
 
 ### Read-only mode
 
