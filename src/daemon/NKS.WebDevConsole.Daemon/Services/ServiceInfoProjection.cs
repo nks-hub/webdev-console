@@ -1,4 +1,7 @@
 using System.Collections.Concurrent;
+using System.Reflection;
+using System.Text.Json.Serialization;
+using NKS.WebDevConsole.Core.Interfaces;
 using NKS.WebDevConsole.Core.Models;
 using NKS.WebDevConsole.Daemon.Binaries;
 
@@ -7,7 +10,8 @@ namespace NKS.WebDevConsole.Daemon.Services;
 /// <summary>
 /// Service status as the UI receives it: the module's own status plus whether
 /// the binary behind it is installed, which version, and (when crashed)
-/// whether the process ever reached the running state.
+/// whether the process ever reached the running state. Uptime also comes as
+/// whole seconds, and the ports are the ones the module is configured for.
 /// </summary>
 public sealed record ServiceInfoDto(
     string Id, string DisplayName,
@@ -15,7 +19,11 @@ public sealed record ServiceInfoDto(
     double CpuPercent, long MemoryBytes,
     TimeSpan? Uptime,
     bool Installed, string? Version, string? BinaryApp,
-    string? CrashKind);
+    string? CrashKind,
+    // Left out of the JSON when unknown, so the UI reads them as optional numbers.
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] long? UptimeSeconds = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? Port = null,
+    IReadOnlyDictionary<string, int>? Ports = null);
 
 /// <summary>
 /// Remembers per service whether it was seen running since the last start
@@ -67,10 +75,21 @@ public static class ServiceInfoProjection
         ["cloudflared"] = ["cloudflared"],
     };
 
+    // Config properties the plugins use for their listen ports; the same names
+    // Program.cs hydrates from the ports.* settings at boot.
+    private static readonly (string Property, string Key)[] PortProperties =
+    [
+        ("Port", "port"),
+        ("HttpPort", "http"),
+        ("HttpsPort", "https"),
+        ("SmtpPort", "smtp"),
+    ];
+
     public static ServiceInfoDto Build(
         ServiceStatus status,
         IReadOnlyList<InstalledBinary> installed,
-        ServiceRunTracker tracker)
+        ServiceRunTracker tracker,
+        IServiceModule? module = null)
     {
         tracker.Observe(status);
 
@@ -94,15 +113,56 @@ public static class ServiceInfoProjection
         // A module that is up is installed, whatever the folder scan says.
         if (!isInstalled && status.State == ServiceState.Running) isInstalled = true;
 
+        var ports = module is null ? new Dictionary<string, int>() : ReadPorts(module);
+        int? port = ports.TryGetValue("port", out var p) ? p
+            : ports.TryGetValue("http", out p) ? p
+            : ports.TryGetValue("smtp", out p) ? p
+            : null;
+
         return new ServiceInfoDto(
             status.Id, status.DisplayName, status.State, status.Pid,
             status.CpuPercent, status.MemoryBytes, status.Uptime,
-            isInstalled, version, app, tracker.CrashKind(status));
+            isInstalled, version, app, tracker.CrashKind(status),
+            status.Uptime is { } up ? (long)up.TotalSeconds : null,
+            port, ports);
     }
 
+    /// <param name="modules">Same order as <paramref name="statuses"/>; supplies the ports.</param>
     public static ServiceInfoDto[] BuildAll(
         IEnumerable<ServiceStatus> statuses,
         IReadOnlyList<InstalledBinary> installed,
-        ServiceRunTracker tracker)
-        => statuses.Select(s => Build(s, installed, tracker)).ToArray();
+        ServiceRunTracker tracker,
+        IReadOnlyList<IServiceModule>? modules = null)
+        => statuses.Select((s, i) => Build(s, installed, tracker, modules?[i])).ToArray();
+
+    /// <summary>
+    /// Ports from the module's private <c>_config</c> (the object the ports.*
+    /// settings are written into), falling back to properties on the module itself.
+    /// </summary>
+    internal static Dictionary<string, int> ReadPorts(IServiceModule module)
+    {
+        var ports = new Dictionary<string, int>();
+        try
+        {
+            var config = module.GetType()
+                .GetField("_config", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?.GetValue(module);
+            foreach (var source in new[] { config, module })
+            {
+                if (source is null) continue;
+                var type = source.GetType();
+                foreach (var (property, key) in PortProperties)
+                {
+                    if (ports.ContainsKey(key)) continue;
+                    if (type.GetProperty(property, BindingFlags.Instance | BindingFlags.Public)?.GetValue(source) is int value && value > 0)
+                        ports[key] = value;
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // Reflection into plugin types is best-effort; no ports beats a failed status call.
+        }
+        return ports;
+    }
 }
