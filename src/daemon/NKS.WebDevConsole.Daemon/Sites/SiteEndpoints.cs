@@ -573,6 +573,23 @@ internal static class SiteEndpoints
                 }
             }
 
+            try { SiteManager.ValidateDocumentRoot(site.DocumentRoot); }
+            catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+
+            bool createdRoot;
+            try { createdRoot = SiteManager.EnsureDocumentRoot(site.DocumentRoot); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)
+            {
+                return Results.BadRequest(new { error = $"Cannot create the site folder {site.DocumentRoot}: {ex.Message}" });
+            }
+
+            // A rejected create must not leave an empty folder behind (Delete is non-recursive).
+            void DropCreatedRoot()
+            {
+                if (!createdRoot || sm.Get(site.Domain) is not null) return;
+                try { Directory.Delete(site.DocumentRoot); } catch { /* not empty or in use: leave it */ }
+            }
+
             try
             {
                 var created = await sm.CreateAsync(site);
@@ -613,8 +630,8 @@ internal static class SiteEndpoints
                 }
                 return Results.Created($"/api/sites/{created.Domain}", created);
             }
-            catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
-            catch (UnauthorizedAccessException ex) { return Results.BadRequest(new { error = ex.Message }); }
+            catch (ArgumentException ex) { DropCreatedRoot(); return Results.BadRequest(new { error = ex.Message }); }
+            catch (UnauthorizedAccessException ex) { DropCreatedRoot(); return Results.BadRequest(new { error = ex.Message }); }
         });
 
         app.MapPost("/api/sites/{domain}/duplicate", async (
