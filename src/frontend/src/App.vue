@@ -25,11 +25,17 @@
              "clicking feels slow" complaint in dev mode, where Vite's
              module graph warm-up overlaps with SSE reconnect and store
              re-hydration. Excluding SiteEdit because it's keyed by
-             :domain and needs fresh state per domain. -->
+             :domain and needs fresh state per domain. `max` evicts the
+             least recently used page, so its timers and subscriptions
+             end instead of piling up across a long session. The boundary
+             replaces a page that fails to render with a recoverable
+             message instead of an empty area. -->
         <router-view v-slot="{ Component }">
-          <keep-alive :exclude="['SiteEdit']">
-            <component :is="Component" />
-          </keep-alive>
+          <PageErrorBoundary>
+            <keep-alive :exclude="['SiteEdit']" :max="8">
+              <component :is="Component" />
+            </keep-alive>
+          </PageErrorBoundary>
         </router-view>
       </main>
       </div>
@@ -100,6 +106,7 @@ import AppHeader from './components/layout/AppHeader.vue'
 import AppSidebar from './components/layout/AppSidebar.vue'
 import AppStatusBar from './components/layout/AppStatusBar.vue'
 import CommandPalette from './components/shared/CommandPalette.vue'
+import PageErrorBoundary from './components/shared/PageErrorBoundary.vue'
 import OnboardingWizard from './components/shared/OnboardingWizard.vue'
 import DeployRunDrawer from './components/deploy/DeployRunDrawer.vue'
 import McpConfirmBanner from './components/mcp/McpConfirmBanner.vue'

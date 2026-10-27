@@ -3326,5 +3326,13 @@
       "days": "před {n} d"
     },
     "openFromSettings": "Připojit AI klienta"
+  },
+  "pageError": {
+    "title": "Tuto stránku se nepodařilo zobrazit",
+    "lead": "Při zobrazení stránky nastala chyba. Zbytek aplikace funguje dál. Zkuste stránku načíst znovu nebo přejděte jinam v menu. Pokud se chyba opakuje, zkopírujte její text a pošlete ho vývojářům.",
+    "reload": "Načíst znovu",
+    "copy": "Kopírovat chybu",
+    "copied": "Zkopírováno do schránky",
+    "copyFailed": "Text chyby se nepodařilo zkopírovat."
   }
 }

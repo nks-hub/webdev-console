@@ -3326,5 +3326,13 @@
       "days": "{n} d ago"
     },
     "openFromSettings": "Connect an AI client"
+  },
+  "pageError": {
+    "title": "This page could not be shown",
+    "lead": "Something went wrong while showing this page. The rest of the app keeps working. Reload the page or pick another one in the menu. If it keeps happening, copy the error text and send it to the developers.",
+    "reload": "Reload",
+    "copy": "Copy error",
+    "copied": "Copied to clipboard",
+    "copyFailed": "Could not copy the error text."
   }
 }
