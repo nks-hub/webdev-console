@@ -30,18 +30,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { CircleCloseFilled, WarningFilled, InfoFilled, CircleCheckFilled } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
 import { useDaemonStore } from '../../stores/daemon'
-import { useServicesStore } from '../../stores/services'
 import { useSitesStore } from '../../stores/sites'
 import { useSiteApplyStore } from '../../stores/siteApply'
 import { useUpdatesStore } from '../../stores/updates'
-import { usePluginsStore } from '../../stores/plugins'
-import { fetchBackups } from '../../api/daemon'
+import { runServiceAction } from '../../utils/serviceActions'
+import { isRunning, serviceViewState, shortServiceName } from '../../utils/serviceState'
+import { lastBackup } from '../../utils/lastBackup'
 
 /**
  * One list of "what to do now": every entry is a sentence plus one action.
@@ -64,57 +63,49 @@ interface AttentionItem {
 const { t, te } = useI18n()
 const router = useRouter()
 const daemonStore = useDaemonStore()
-const servicesStore = useServicesStore()
 const sitesStore = useSitesStore()
 const siteApplyStore = useSiteApplyStore()
 const updatesStore = useUpdatesStore()
-const pluginsStore = usePluginsStore()
 
 const BACKUP_STALE_DAYS = 7
-// null = unknown (not loaded or endpoint failed), so no false alarm.
-const lastBackupAgeMs = ref<number | null>(null)
-const backupsLoaded = ref(false)
 const startingApache = ref(false)
-
-onMounted(async () => {
-  try {
-    const data = await fetchBackups()
-    lastBackupAgeMs.value = data.backups.length > 0
-      ? Date.now() - new Date(data.backups[0].createdUtc).getTime()
-      : Number.POSITIVE_INFINITY
-    backupsLoaded.value = true
-  } catch { /* offline or no backup endpoint: say nothing */ }
-})
 
 function stepLabel(name: string): string {
   const key = `siteApply.steps.${name}`
   return te(key) ? t(key) : name
 }
 
-const services = computed(() => daemonStore.services.filter(s => pluginsStore.isServiceVisible(s.id)))
+const services = computed(() => daemonStore.visibleServices)
 const apache = computed(() => services.value.find(s => s.id === 'apache' || s.id === 'httpd'))
+const php = computed(() => services.value.find(s => s.id === 'php'))
 
 async function startApache() {
   if (!apache.value) return
   startingApache.value = true
   try {
-    await servicesStore.start(apache.value.id)
-  } catch (err) {
-    ElMessage.error(t('toast.prefixedError', { name: 'Apache', err: err instanceof Error ? err.message : String(err) }))
+    await runServiceAction(apache.value, 'start')
   } finally {
     startingApache.value = false
+  }
+}
+
+function installAction(app: string, label: string): Pick<AttentionItem, 'action' | 'run'> {
+  return {
+    action: t('overview.attention.install', { name: label }),
+    run: () => void router.push({ path: '/binaries', query: { app } }),
   }
 }
 
 const items = computed<AttentionItem[]>(() => {
   const out: AttentionItem[] = []
 
-  for (const svc of services.value.filter(s => s.state === 4)) {
+  for (const svc of daemonStore.crashedServices) {
+    const name = shortServiceName(svc)
     out.push({
       key: `crashed:${svc.id}`,
       tone: 'err',
-      subject: svc.displayName || svc.id,
-      text: t('overview.attention.crashed'),
+      subject: t('overview.attention.serviceSubject', { name }),
+      text: t(svc.crashKind === 'startFailed' ? 'overview.attention.startFailed' : 'overview.attention.crashed'),
       action: t('overview.attention.showWhy'),
       run: () => void router.push({ path: '/services', query: { filter: 'problems' } }),
     })
@@ -136,28 +127,50 @@ const items = computed<AttentionItem[]>(() => {
     })
   }
 
-  if (sitesStore.sites.length > 0 && apache.value && apache.value.state === 0) {
+  const hasSites = sitesStore.sites.length > 0
+  if (hasSites && apache.value) {
+    const state = serviceViewState(apache.value)
+    if (state === 'notInstalled') {
+      out.push({
+        key: 'apache-missing',
+        tone: 'warn',
+        text: t('overview.attention.apacheMissing'),
+        ...installAction(apache.value.binaryApp ?? 'apache', 'Apache'),
+      })
+    } else if (state === 'stopped') {
+      out.push({
+        key: 'apache-stopped',
+        tone: 'warn',
+        text: t('overview.attention.apacheStopped'),
+        action: t('overview.attention.startApache'),
+        busy: startingApache.value,
+        run: () => void startApache(),
+      })
+    }
+  }
+  if (hasSites && php.value && !isRunning(php.value) && serviceViewState(php.value) === 'notInstalled') {
     out.push({
-      key: 'apache-stopped',
+      key: 'php-missing',
       tone: 'warn',
-      text: t('overview.attention.apacheStopped'),
-      action: t('overview.attention.startApache'),
-      busy: startingApache.value,
-      run: () => void startApache(),
+      text: t('overview.attention.phpMissing'),
+      ...installAction(php.value.binaryApp ?? 'php', 'PHP'),
     })
   }
 
-  if (sitesStore.sites.length > 0 && backupsLoaded.value && lastBackupAgeMs.value !== null
-    && lastBackupAgeMs.value > BACKUP_STALE_DAYS * 86_400_000) {
-    out.push({
-      key: 'backup',
-      tone: 'info',
-      text: Number.isFinite(lastBackupAgeMs.value)
-        ? t('overview.attention.backupOld', { days: BACKUP_STALE_DAYS })
-        : t('overview.attention.backupNever'),
-      action: t('overview.attention.openBackups'),
-      run: () => void router.push('/backups'),
-    })
+  const { loaded, createdAt } = lastBackup.value
+  if (hasSites && loaded) {
+    const age = createdAt === null ? Number.POSITIVE_INFINITY : Date.now() - createdAt
+    if (age > BACKUP_STALE_DAYS * 86_400_000) {
+      out.push({
+        key: 'backup',
+        tone: 'info',
+        text: Number.isFinite(age)
+          ? t('overview.attention.backupOld', { days: BACKUP_STALE_DAYS })
+          : t('overview.attention.backupNever'),
+        action: t('overview.attention.openBackups'),
+        run: () => void router.push('/backups'),
+      })
+    }
   }
 
   if (updatesStore.hasUpdate) {

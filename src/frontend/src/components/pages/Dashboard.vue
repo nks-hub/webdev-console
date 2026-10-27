@@ -9,12 +9,12 @@
         <template v-if="uiMode.isAdvanced">
           <el-button
             :loading="startingAll"
-            :disabled="allRunning || !daemonStore.connected"
+            :disabled="startable.length === 0 || !daemonStore.connected"
             @click="startAll"
           >{{ $t('dashboard.startAll') }}</el-button>
           <el-button
             :loading="stoppingAll"
-            :disabled="noneRunning || !daemonStore.connected"
+            :disabled="running.length === 0 || !daemonStore.connected"
             @click="stopAll"
           >{{ $t('dashboard.stopAll') }}</el-button>
         </template>
@@ -29,10 +29,10 @@
       {{ $t('dashboard.connectingDesc') }}
     </p>
 
-    <!-- What to do now (left) and the state of the stack (right). Shared
-         by both densities; Advanced adds columns and the sections below. -->
-    <div class="overview-grid">
-      <AttentionList />
+    <!-- What to do now (left) and the state of the stack (right). With at
+         most one thing to do, the list becomes a strip above the table. -->
+    <div class="overview-grid" :class="{ 'is-stacked': attentionCount <= 1 }">
+      <AttentionList ref="attention" />
       <StackTable @logs="openLogs" @config="openConfig" />
     </div>
 
@@ -61,33 +61,38 @@
             <dt>{{ $t('dashboard.stats.lastBackup') }}</dt>
             <dd class="mono"><router-link class="figure-link" to="/backups">{{ lastBackupAge }}</router-link></dd>
           </div>
-          <div class="figure">
-            <dt>{{ $t('dashboard.metrics.cpuUsage') }}</dt>
-            <dd class="mono">{{ totalCpu.toFixed(1) }} %</dd>
-          </div>
-          <div class="figure">
-            <dt>{{ $t('dashboard.metrics.memory') }}</dt>
-            <dd class="mono">{{ totalRamMB }} MB</dd>
-          </div>
         </dl>
       </section>
 
-      <div v-if="daemonStore.cpuHistory.length > 2" class="metrics-grid">
-        <section class="metric-panel">
-          <h2 class="metric-title">{{ $t('dashboard.metrics.cpuUsage') }}</h2>
-          <MetricsChart :data="daemonStore.cpuHistory" tone="accent" />
+      <!-- Current value next to each chart instead of a second row of the same numbers. -->
+      <div v-if="daemonStore.connected" class="metrics-grid">
+        <section class="metric-panel" aria-labelledby="metric-cpu">
+          <div class="metric-head">
+            <h2 id="metric-cpu" class="metric-title">{{ $t('dashboard.metrics.cpuUsage') }}</h2>
+            <span class="metric-now mono">{{ formatPercent(totalCpu, localeName) }}</span>
+            <span class="metric-range">{{ $t('dashboard.metrics.range') }}</span>
+          </div>
+          <MetricsChart v-if="daemonStore.cpuHistory.length > 2" :data="daemonStore.cpuHistory" tone="accent" unit="%" />
+          <p v-else class="metric-wait">{{ $t('dashboard.metrics.collecting') }}</p>
         </section>
-        <section class="metric-panel">
-          <h2 class="metric-title">{{ $t('dashboard.metrics.memory') }}</h2>
-          <MetricsChart :data="daemonStore.ramHistory" tone="success" />
+        <section class="metric-panel" aria-labelledby="metric-ram">
+          <div class="metric-head">
+            <h2 id="metric-ram" class="metric-title">{{ $t('dashboard.metrics.memory') }}</h2>
+            <span class="metric-now mono">{{ formatBytes(totalRamBytes, localeName) }}</span>
+            <span class="metric-range">{{ $t('dashboard.metrics.range') }}</span>
+          </div>
+          <MetricsChart v-if="daemonStore.ramHistory.length > 2" :data="daemonStore.ramHistory" tone="success" unit="MB" />
+          <p v-else class="metric-wait">{{ $t('dashboard.metrics.collecting') }}</p>
         </section>
       </div>
 
       <!-- Shortcuts. Plugin-contributed buttons come through <PluginSlot>. -->
       <div class="quick-actions">
-        <el-button size="small" @click="openMailpit">{{ $t('dashboard.openMailpit') }}</el-button>
-        <el-button size="small" @click="$router.push('/databases')">{{ $t('nav.databases') }}</el-button>
-        <el-button size="small" @click="$router.push('/binaries')">{{ $t('dashboard.binaries') }}</el-button>
+        <el-tooltip v-if="mailpit" :disabled="mailpitUsable" :content="$t('dashboard.mailpitDown')" placement="top">
+          <span>
+            <el-button size="small" :disabled="!mailpitUsable" @click="openMailpit">{{ $t('dashboard.openMailpit') }}</el-button>
+          </span>
+        </el-tooltip>
         <PluginSlot name="dashboard-quick-actions" :context="{ size: 'small' }" />
       </div>
 
@@ -101,10 +106,10 @@
         <ol class="activity-list">
           <li v-for="row in activity" :key="row.id" class="activity-row">
             <span class="activity-dot" :class="`tone-${activityColor(row.operation)}`" aria-hidden="true" />
-            <span class="activity-op mono">{{ row.operation }}</span>
-            <span class="activity-entity">{{ row.entityType }}</span>
+            <span class="activity-op">{{ activityLabel('op', row.operation) }}</span>
+            <span class="activity-entity">{{ activityLabel('entity', row.entityType) }}</span>
             <span class="activity-name mono" v-if="row.entityName">{{ row.entityName }}</span>
-            <span class="activity-source" v-if="row.source && row.source !== 'app'">via {{ row.source }}</span>
+            <span class="activity-source" v-if="row.source && row.source !== 'app'">{{ $t('dashboard.activity.via', { source: activityLabel('source', row.source) }) }}</span>
             <time class="activity-time mono" :datetime="row.createdAt">{{ formatWhen(row.createdAt) }}</time>
           </li>
         </ol>
@@ -114,7 +119,7 @@
     <!-- Logs: full-view modal (NOT drawer). Opens large el-dialog with xterm-backed viewer. -->
     <el-dialog
       v-model="logsDialog.open"
-      :title="`Logs — ${logsDialog.serviceId}`"
+      :title="$t('overview.logsTitle', { name: logsDialog.name })"
       width="92%"
       top="3vh"
       class="full-dialog"
@@ -137,8 +142,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted, reactive, ref } from 'vue'
+import { computed, defineAsyncComponent, onActivated, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useNow } from '@vueuse/core'
 import { Loading } from '@element-plus/icons-vue'
 import AttentionList from '../overview/AttentionList.vue'
 import StackTable from '../overview/StackTable.vue'
@@ -150,7 +156,6 @@ import StackTable from '../overview/StackTable.vue'
 // chunk that loads only when uiMode flips to 'simple'.
 const DashboardSimple = defineAsyncComponent(() => import('./DashboardSimple.vue'))
 import { useDaemonStore } from '../../stores/daemon'
-import { useServicesStore } from '../../stores/services'
 import { useSitesStore } from '../../stores/sites'
 import { useUiModeStore } from '../../stores/uiMode'
 import { usePluginsStore } from '../../stores/plugins'
@@ -159,18 +164,19 @@ import MetricsChart from '../shared/MetricsChart.vue'
 import LogViewer from '../shared/LogViewer.vue'
 import ConfigSidePanel from '../shared/ConfigSidePanel.vue'
 import PluginSlot from '../shared/PluginSlot.vue'
-import { useAppVersion } from '../../utils/appVersion'
 import { useI18n } from 'vue-i18n'
+import { isRunning, serviceViewState, shortServiceName } from '../../utils/serviceState'
+import { runServiceBatch } from '../../utils/serviceActions'
+import { formatBytes, formatDuration, formatPercent } from '../../utils/format'
+import { lastBackup, loadLastBackup } from '../../utils/lastBackup'
+import { openMailpit } from '../../utils/mailpit'
 
-const { t, locale } = useI18n()
+const { t, te, locale } = useI18n()
+const localeName = computed(() => String(locale.value))
 
 const router = useRouter()
 
-const versionRef = useAppVersion()
-const appVersion = computed(() => versionRef.value.full)
-
 const daemonStore = useDaemonStore()
-const servicesStore = useServicesStore()
 const sitesStore = useSitesStore()
 const uiMode = useUiModeStore()
 const pluginsStore = usePluginsStore()
@@ -178,35 +184,32 @@ const pluginsStore = usePluginsStore()
 const startingAll = ref(false)
 const stoppingAll = ref(false)
 
-// F91.3: hide services belonging to disabled plugins from every Dashboard
-// tile / counter / quick-action. isServiceVisible fails open until plugin
-// manifests load so the initial render isn't empty.
-const services = computed(() =>
-  daemonStore.services.filter(s => pluginsStore.isServiceVisible(s.id))
-)
-const totalCount = computed(() => services.value.length)
-const runningCount = computed(() => services.value.filter(s => s.state === 2 || s.status === 'running').length)
-const allRunning = computed(() => totalCount.value > 0 && runningCount.value === totalCount.value)
-const noneRunning = computed(() => runningCount.value === 0)
+// The same visible-services set as the menu badge and the status bar.
+const services = computed(() => daemonStore.visibleServices)
+const running = computed(() => daemonStore.runningServices)
+// "Start all" only touches what can start: installed and stopped.
+const startable = computed(() => services.value.filter(s => serviceViewState(s) === 'stopped'))
+const mailpit = computed(() => services.value.find(s => s.id === 'mailpit'))
+const mailpitUsable = computed(() => !!mailpit.value && isRunning(mailpit.value))
 
-// Advanced-mode summary numbers — sitesCount + runningServices are
-// also used by header chips. Simple-mode aggregates (hits, errors,
-// loading state) live in DashboardSimple.vue.
+const attention = ref<InstanceType<typeof AttentionList> | null>(null)
+const attentionCount = computed(() => attention.value?.count ?? 0)
+
 const sitesCount = computed(() => sitesStore.sites.length)
-const runningServices = computed(() => services.value.filter(s => s.state === 2).length)
-const totalServices = computed(() => services.value.length)
 const totalCpu = computed(() => services.value.reduce((s, x) => s + (x.cpuPercent ?? 0), 0))
-const totalRamMB = computed(() => Math.round(services.value.reduce((s, x) => s + (x.memoryBytes ?? 0), 0) / 1024 / 1024))
+const totalRamBytes = computed(() => services.value.reduce((s, x) => s + (x.memoryBytes ?? 0), 0))
 
 // One-sentence state of the stack under the page title.
-const crashedCount = computed(() => services.value.filter(s => s.state === 4).length)
 const summary = computed(() => {
   if (!daemonStore.connected) return t('dashboard.connectingTitle')
-  if (totalServices.value === 0) return t('overview.summaryNoServices', { sites: sitesCount.value }, sitesCount.value)
-  const base = t('overview.summary', { running: runningServices.value, total: totalServices.value, sites: sitesCount.value }, sitesCount.value)
-  return crashedCount.value > 0
-    ? `${base} · ${t('overview.summaryCrashed', { n: crashedCount.value }, crashedCount.value)}`
-    : base
+  const total = services.value.length
+  if (total === 0) return t('overview.summaryNoServices', { sites: sitesCount.value }, sitesCount.value)
+  let text = t('overview.summary', { running: running.value.length, total, sites: sitesCount.value }, sitesCount.value)
+  const crashed = daemonStore.crashedServices.length
+  if (crashed > 0) text += ` · ${t('overview.summaryCrashed', { n: crashed }, crashed)}`
+  const missing = services.value.filter(s => serviceViewState(s) === 'notInstalled').length
+  if (missing > 0) text += ` · ${t('overview.summaryNotInstalled', { n: missing }, missing)}`
+  return text
 })
 
 // Activity timestamps: time today, otherwise a short date.
@@ -230,26 +233,21 @@ async function loadNodeProcessCount() {
   } catch { nodeProcessCount.value = -1 }
 }
 
-// Last backup age — shown in stat cards
-const lastBackupAge = ref('')
-async function loadLastBackup() {
-  try {
-    const { fetchBackups } = await import('../../api/daemon')
-    const data = await fetchBackups()
-    if (data.backups.length > 0) {
-      const age = Date.now() - new Date(data.backups[0].createdUtc).getTime()
-      const h = Math.floor(age / 3600000)
-      const rtf = new Intl.RelativeTimeFormat(String(locale.value), { numeric: 'auto' })
-      lastBackupAge.value = h < 1
-        ? rtf.format(-Math.max(0, Math.floor(age / 60000)), 'minute')
-        : h < 24 ? rtf.format(-h, 'hour') : rtf.format(-Math.floor(h / 24), 'day')
-    }
-  } catch { /* optional */ }
-}
+// Last backup age, recomputed from the timestamp as time passes instead of
+// frozen at the moment the page was first opened.
+const now = useNow({ interval: 30_000 })
+const lastBackupAge = computed(() => {
+  const at = lastBackup.value.createdAt
+  if (at === null) return ''
+  const minutes = Math.max(0, Math.floor((now.value.getTime() - at) / 60000))
+  const rtf = new Intl.RelativeTimeFormat(localeName.value, { numeric: 'auto' })
+  if (minutes < 60) return rtf.format(-minutes, 'minute')
+  return minutes < 1440 ? rtf.format(-Math.floor(minutes / 60), 'hour') : rtf.format(-Math.floor(minutes / 1440), 'day')
+})
 
 // Recent activity timeline — Phase 4 plan item. Backed by /api/activity
-// which queries the config_history SQLite table. Loaded on mount and
-// refreshable via the section-header button. Empty array (first-run or
+// which queries the config_history SQLite table. Loaded when the page is
+// shown and refreshable via the section-header button. Empty array (first-run or
 // migration-in-flight) keeps the section hidden.
 interface ActivityRow {
   id: number
@@ -261,6 +259,13 @@ interface ActivityRow {
   createdAt: string
 }
 const activity = ref<ActivityRow[]>([])
+
+// Operation, entity and source codes come straight from the daemon; show a
+// translated word when we know the code, the raw code otherwise.
+function activityLabel(kind: 'op' | 'entity' | 'source', code: string): string {
+  const key = `dashboard.activity.${kind}.${(code || '').toLowerCase()}`
+  return te(key) ? t(key) : code
+}
 
 const activityLoading = ref(false)
 async function loadActivity() {
@@ -288,44 +293,33 @@ function activityColor(operation: string): 'primary' | 'success' | 'warning' | '
   return 'info'
 }
 
-onMounted(async () => {
-  await sitesStore.load()
+// The page stays mounted (keep-alive), so everything that changes outside it
+// (backups, activity, sites) is reloaded each time it is shown again.
+function loadAll() {
+  if (!daemonStore.connected) return
+  void sitesStore.load()
   void loadActivity()
   void loadNodeProcessCount()
   void loadLastBackup()
-  // Simple-mode aggregates (hits, errors) are loaded by DashboardSimple
-  // on its own onMounted — no need to duplicate the fetch from here.
-})
+}
+onActivated(loadAll)
+watch(() => daemonStore.connected, (connected) => { if (connected) loadAll() })
 
 function formatUptime(uptime: string | number): string {
-  if (typeof uptime === 'number') {
-    const s = uptime
-    if (s < 60) return `${s}s`
-    if (s < 3600) return `${Math.floor(s / 60)}m`
-    return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`
-  }
+  const loc = localeName.value
+  if (typeof uptime === 'number') return formatDuration(uptime, loc)
   // TimeSpan string "HH:MM:SS.xxx"
   const parts = String(uptime).split(':')
   if (parts.length >= 3) {
-    const h = parseInt(parts[0]), m = parseInt(parts[1])
-    if (h > 0) return `${h}h ${m}m`
-    if (m > 0) return `${m}m`
-    return `${parseInt(parts[2])}s`
+    return formatDuration(parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]), loc)
   }
   return String(uptime)
 }
 
-
-// Simple-mode apache-stopped banner + start button moved to DashboardSimple.
-
 async function startAll() {
   startingAll.value = true
   try {
-    await Promise.allSettled(
-      services.value
-        .filter(s => s.state === 0 || s.status === 'stopped')
-        .map(s => servicesStore.start(s.id))
-    )
+    await runServiceBatch('start', startable.value)
   } finally {
     startingAll.value = false
   }
@@ -334,11 +328,7 @@ async function startAll() {
 async function stopAll() {
   stoppingAll.value = true
   try {
-    await Promise.allSettled(
-      services.value
-        .filter(s => s.state === 2 || s.status === 'running')
-        .map(s => servicesStore.stop(s.id))
-    )
+    await runServiceBatch('stop', running.value)
   } finally {
     stoppingAll.value = false
   }
@@ -348,16 +338,13 @@ async function stopAll() {
 const logsDialog = reactive({
   open: false,
   serviceId: '',
+  name: '',
 })
-
-function openMailpit() {
-  const mailpitUrl = 'http://127.0.0.1:8025'
-  if (window.electronAPI?.openExternal) window.electronAPI.openExternal(mailpitUrl)
-  else window.open(mailpitUrl, '_blank')
-}
 
 function openLogs(id: string) {
   logsDialog.serviceId = id
+  const svc = services.value.find(s => s.id === id)
+  logsDialog.name = svc ? shortServiceName(svc) : id
   logsDialog.open = true
 }
 
@@ -424,13 +411,15 @@ function closeConfig() {
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Attention (5) | Stack (7); stacks under 75rem. */
+/* Attention (5) | Stack (7); stacks under 75rem, and whenever there is at
+   most one thing to do (a strip above the table beats a mostly empty column). */
 .overview-grid {
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   gap: var(--wdc-space-6-5);
   align-items: start;
 }
+.overview-grid.is-stacked { grid-template-columns: minmax(0, 1fr); gap: var(--wdc-space-5); }
 @media (max-width: 75rem) {
   .overview-grid { grid-template-columns: minmax(0, 1fr); }
 }
@@ -474,11 +463,20 @@ function closeConfig() {
   display: grid;
   gap: var(--wdc-space-2);
 }
+.metric-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--wdc-space-1) var(--wdc-space-3);
+}
 .metric-title {
   font-size: 0.93rem;
   font-weight: 500;
   color: var(--wdc-text-2);
 }
+.metric-now { font-size: 1.2rem; color: var(--wdc-text); }
+.metric-range { margin-left: auto; font-size: 0.78rem; color: var(--wdc-text-3); }
+.metric-wait { margin: 0; font-size: 0.87rem; color: var(--wdc-text-3); }
 
 .quick-actions {
   display: flex;
@@ -520,7 +518,7 @@ function closeConfig() {
 .tone-danger { background: var(--wdc-status-error); }
 .tone-primary { background: var(--wdc-accent); }
 .tone-warning { background: var(--wdc-status-starting); }
-.activity-op { color: var(--wdc-text); }
+.activity-op { color: var(--wdc-text); font-weight: 500; }
 .activity-entity, .activity-source { color: var(--wdc-text-2); }
 .activity-name { color: var(--wdc-text); }
 .activity-time { margin-left: auto; color: var(--wdc-text-3); font-size: 0.78rem; }

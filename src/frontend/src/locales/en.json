@@ -604,7 +604,9 @@
     },
     "metrics": {
       "cpuUsage": "CPU Usage",
-      "memory": "Memory"
+      "memory": "Memory",
+      "range": "last 5 min",
+      "collecting": "Collecting data…"
     },
     "running": "running",
     "simple": {
@@ -646,6 +648,48 @@
         "never": "No backup has been created yet.",
         "olderThanDays": "Last backup is older than {days} days.",
         "openBtn": "Open backups"
+      }
+    },
+    "mailpitDown": "Mailpit is not running. Start it in the services table.",
+    "activity": {
+      "via": "via {source}",
+      "op": {
+        "create": "Created",
+        "insert": "Created",
+        "update": "Changed",
+        "edit": "Changed",
+        "delete": "Deleted",
+        "remove": "Removed",
+        "apply": "Applied",
+        "restore": "Restored",
+        "rename": "Renamed",
+        "enable": "Enabled",
+        "disable": "Disabled",
+        "install": "Installed",
+        "uninstall": "Uninstalled",
+        "start": "Started",
+        "stop": "Stopped",
+        "restart": "Restarted"
+      },
+      "entity": {
+        "site": "Site",
+        "service": "Service",
+        "setting": "Setting",
+        "settings": "Settings",
+        "plugin": "Plugin",
+        "database": "Database",
+        "binary": "Binary",
+        "cert": "Certificate",
+        "certificate": "Certificate",
+        "backup": "Backup",
+        "vhost": "Virtual host",
+        "config": "Configuration",
+        "hosts": "Hosts file"
+      },
+      "source": {
+        "mcp": "MCP",
+        "cli": "command line",
+        "api": "API"
       }
     }
   },
@@ -3046,10 +3090,15 @@
       "backupOld": "The last backup is more than {days} days old.",
       "openBackups": "Open backups",
       "update": "Version {version} is ready to install.",
-      "openUpdate": "Open update"
+      "openUpdate": "Open update",
+      "startFailed": "did not start. The log usually says why.",
+      "serviceSubject": "{name}",
+      "apacheMissing": "The Apache web server is not installed, so sites will not load.",
+      "phpMissing": "PHP is not installed, so PHP sites will not run.",
+      "install": "Install {name}"
     },
     "stack": {
-      "title": "Stack",
+      "title": "Services",
       "all": "All services",
       "caption": "Service status",
       "loading": "Loading service status",
@@ -3069,7 +3118,9 @@
       "starting": "Starting",
       "stopping": "Stopping",
       "crashed": "Crashed",
-      "disabled": "Disabled"
+      "disabled": "Disabled",
+      "startFailed": "Failed to start",
+      "notInstalled": "Not installed"
     },
     "actions": {
       "start": "Start",
@@ -3077,10 +3128,19 @@
       "why": "Why?",
       "logs": "Logs",
       "config": "Config",
-      "more": "More actions for {name}"
+      "more": "More actions for {name}",
+      "install": "Install"
     },
     "figures": {
       "title": "At a glance"
+    },
+    "summaryNotInstalled": "{n} not installed | {n} not installed",
+    "logsTitle": "Logs – {name}",
+    "batch": {
+      "started": "Services started: {n}",
+      "stopped": "Services stopped: {n}",
+      "startFailed": "Failed to start: {n}",
+      "stopFailed": "Failed to stop: {n}"
     }
   },
   "mcpCapabilities": {

@@ -582,8 +582,8 @@
     "stopAll": "Zastavit vše",
     "recentActivity": "Nedávná aktivita",
     "connectingTitle": "Připojování k démonu…",
-    "connectingDesc": "Čekání na připojení NKS WDC démona…",
-    "noServices": "Žádné registrované služby. Zkontroluj konfiguraci démona.",
+    "connectingDesc": "Čekám na připojení k démonu NKS WDC…",
+    "noServices": "Žádné registrované služby. Zkontrolujte konfiguraci démona.",
     "logs": "Logy",
     "config": "Konfigurace",
     "newSite": "Nový web",
@@ -604,13 +604,15 @@
     },
     "metrics": {
       "cpuUsage": "Vytížení CPU",
-      "memory": "Paměť"
+      "memory": "Paměť",
+      "range": "posledních 5 min",
+      "collecting": "Sbírám data…"
     },
     "running": "běží",
     "simple": {
       "subtitle": "Lokální vývojové prostředí pro vaše weby",
       "welcomeTitle": "Vítejte v NKS WDC",
-      "summary": "{sites} webů · {running}/{total} služeb · {hits} hits · {errors} chyb",
+      "summary": "{sites} webů · běží {running} z {total} služeb · {hits} požadavků · {errors} chyb",
       "tiles": {
         "sites": "Weby",
         "services": "Služby",
@@ -623,7 +625,7 @@
         "backup": "Zálohování"
       },
       "apacheStopped": {
-        "title": "Web server je zastavený",
+        "title": "Webový server je zastavený",
         "subtitle": "Weby se nenačtou, dokud Apache neběží.",
         "startBtn": "Spustit Apache"
       },
@@ -632,8 +634,8 @@
         "viewAll": "Zobrazit vše"
       },
       "empty": {
-        "title": "Vytvoř svůj první web",
-        "subtitle": "Pár klikem rozjedi lokální web — doména, document root, PHP verze.",
+        "title": "Vytvořte svůj první web",
+        "subtitle": "Několika kliknutími rozjedete lokální web: doména, složka webu a verze PHP.",
         "cta": "Vytvořit nový web"
       },
       "updateAvailable": {
@@ -646,6 +648,48 @@
         "never": "Zatím nebyla vytvořena žádná záloha.",
         "olderThanDays": "Poslední záloha je starší než {days} dní.",
         "openBtn": "Otevřít zálohy"
+      }
+    },
+    "mailpitDown": "Mailpit neběží. Spusťte ho v tabulce služeb.",
+    "activity": {
+      "via": "přes {source}",
+      "op": {
+        "create": "Vytvořeno",
+        "insert": "Vytvořeno",
+        "update": "Změněno",
+        "edit": "Změněno",
+        "delete": "Smazáno",
+        "remove": "Odebráno",
+        "apply": "Použito",
+        "restore": "Obnoveno",
+        "rename": "Přejmenováno",
+        "enable": "Zapnuto",
+        "disable": "Vypnuto",
+        "install": "Nainstalováno",
+        "uninstall": "Odinstalováno",
+        "start": "Spuštěno",
+        "stop": "Zastaveno",
+        "restart": "Restartováno"
+      },
+      "entity": {
+        "site": "Web",
+        "service": "Služba",
+        "setting": "Nastavení",
+        "settings": "Nastavení",
+        "plugin": "Plugin",
+        "database": "Databáze",
+        "binary": "Binárka",
+        "cert": "Certifikát",
+        "certificate": "Certifikát",
+        "backup": "Záloha",
+        "vhost": "Virtuální host",
+        "config": "Konfigurace",
+        "hosts": "Soubor hosts"
+      },
+      "source": {
+        "mcp": "MCP",
+        "cli": "příkazový řádek",
+        "api": "API"
       }
     }
   },
@@ -3037,8 +3081,8 @@
       "title": "Vyžaduje pozornost",
       "none": "Teď nic nevyžaduje vaši pozornost.",
       "crashed": "spadla. Důvod obvykle najdete v logu.",
-      "showWhy": "Zobrazit proč",
-      "applyFailed": "Při posledním použití selhal krok {step}. | při posledním použití selhaly kroky: {step}. | při posledním použití selhaly kroky: {step}.",
+      "showWhy": "Zobrazit důvod",
+      "applyFailed": "při posledním použití selhal krok {step}. | při posledním použití selhaly kroky: {step}. | při posledním použití selhaly kroky: {step}.",
       "openSite": "Otevřít web",
       "apacheStopped": "Webový server je zastavený, weby se nenačtou.",
       "startApache": "Spustit Apache",
@@ -3046,10 +3090,15 @@
       "backupOld": "Poslední záloha je starší než {days} dní.",
       "openBackups": "Otevřít zálohy",
       "update": "Verze {version} je připravená k instalaci.",
-      "openUpdate": "Otevřít aktualizaci"
+      "openUpdate": "Otevřít aktualizaci",
+      "startFailed": "se nespustila. Důvod obvykle najdete v logu.",
+      "serviceSubject": "Služba {name}",
+      "apacheMissing": "Webový server Apache není nainstalovaný, weby se nenačtou.",
+      "phpMissing": "PHP není nainstalované, weby v PHP nepoběží.",
+      "install": "Instalovat {name}"
     },
     "stack": {
-      "title": "Stack",
+      "title": "Služby",
       "all": "Všechny služby",
       "caption": "Stav služeb",
       "loading": "Načítám stav služeb",
@@ -3068,8 +3117,10 @@
       "stopped": "Zastaveno",
       "starting": "Spouští se",
       "stopping": "Zastavuje se",
-      "crashed": "Spadla",
-      "disabled": "Vypnuto"
+      "crashed": "Spadlo",
+      "disabled": "Vypnuto",
+      "startFailed": "Nespuštěno",
+      "notInstalled": "Nenainstalováno"
     },
     "actions": {
       "start": "Spustit",
@@ -3077,10 +3128,19 @@
       "why": "Proč?",
       "logs": "Logy",
       "config": "Konfigurace",
-      "more": "Další akce pro {name}"
+      "more": "Další akce pro {name}",
+      "install": "Instalovat"
     },
     "figures": {
       "title": "Přehled čísel"
+    },
+    "summaryNotInstalled": "{n} nenainstalovaná | {n} nenainstalované | {n} nenainstalovaných",
+    "logsTitle": "Logy – {name}",
+    "batch": {
+      "started": "Spuštěno služeb: {n}",
+      "stopped": "Zastaveno služeb: {n}",
+      "startFailed": "Nepodařilo se spustit služeb: {n}",
+      "stopFailed": "Nepodařilo se zastavit služeb: {n}"
     }
   },
   "mcpCapabilities": {
