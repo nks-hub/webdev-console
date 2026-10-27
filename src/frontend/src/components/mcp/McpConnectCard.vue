@@ -36,6 +36,13 @@
         <span class="dot" aria-hidden="true" />
         {{ serverInfo.serverExists ? t('mcpConnect.status.serverFound') : t('mcpConnect.status.serverMissing') }}
       </li>
+      <!-- An AI client starts the server with `node` from PATH; without
+           Node.js the snippets switch to WDC's own binary. -->
+      <li v-if="serverInfo" :class="serverInfo.nodeVersion ? 'ok' : 'idle'" data-testid="mcp-connect-node">
+        <span class="dot" aria-hidden="true" />
+        <template v-if="serverInfo.nodeVersion">{{ t('mcpConnect.status.nodeFound', { version: serverInfo.nodeVersion }) }}</template>
+        <template v-else>{{ t('mcpConnect.status.nodeMissing') }}</template>
+      </li>
       <li :class="lastCallAt ? 'ok' : 'idle'">
         <span class="dot" aria-hidden="true" />
         <template v-if="lastCallAt">
@@ -46,28 +53,59 @@
     </ul>
 
     <div v-if="expanded" class="connect-body">
+      <div class="connect-runtime">
+        <span class="runtime-label">{{ t('mcpConnect.runtime.label') }}</span>
+        <el-radio-group v-model="runtime" size="small" data-testid="mcp-connect-runtime" @change="runtimePicked = true">
+          <el-radio-button value="node">{{ t('mcpConnect.runtime.node') }}</el-radio-button>
+          <el-radio-button value="app" :disabled="!serverInfo">{{ t('mcpConnect.runtime.app') }}</el-radio-button>
+        </el-radio-group>
+        <span class="muted runtime-hint">
+          {{ runtime === 'node' ? t('mcpConnect.runtime.nodeHint') : t('mcpConnect.runtime.appHint') }}
+          <a v-if="runtime === 'node' && serverInfo && !serverInfo.nodeVersion" href="https://nodejs.org/" target="_blank" rel="noopener">nodejs.org</a>
+        </span>
+      </div>
       <div v-for="snippet in snippets" :key="snippet.id" class="snippet" :data-snippet="snippet.id">
         <div class="snippet-head">
           <div>
             <div class="snippet-title">{{ t(`mcpConnect.clients.${snippet.id}.title`) }}</div>
             <div class="snippet-where muted">{{ t(`mcpConnect.clients.${snippet.id}.where`) }}</div>
           </div>
-          <el-button size="small" :icon="DocumentCopy" :data-testid="`mcp-connect-copy-${snippet.id}`" @click="copy(snippet.text)">
-            {{ t('mcpConnect.copy') }}
-          </el-button>
+          <div class="snippet-actions">
+            <el-button size="small" :icon="DocumentCopy" :data-testid="`mcp-connect-copy-${snippet.id}`" @click="copy(snippet.text)">
+              {{ snippet.entry ? t('mcpConnect.copyFile') : t('mcpConnect.copy') }}
+            </el-button>
+            <el-button v-if="snippet.entry" size="small" text @click="copy(snippet.entry)">
+              {{ t('mcpConnect.copyEntry') }}
+            </el-button>
+          </div>
         </div>
         <pre class="snippet-code"><code>{{ snippet.text }}</code></pre>
       </div>
-      <p class="connect-footnote muted">
-        {{ t('mcpConnect.nodeRequired') }}
-        <template v-if="!serverInfo">{{ t('mcpConnect.pathUnknown') }}</template>
-      </p>
+      <div class="connect-test">
+        <el-button
+          size="small"
+          :loading="testing"
+          :disabled="!canTest"
+          data-testid="mcp-connect-test"
+          @click="runTest"
+        >
+          {{ t('mcpConnect.test.button') }}
+        </el-button>
+        <span v-if="!canTest" class="muted">{{ t('mcpConnect.test.unavailable') }}</span>
+        <span v-else-if="testResult" :class="testResult.ok ? 'test-ok' : 'test-bad'" role="status">
+          {{ testResult.ok
+            ? t('mcpConnect.test.ok')
+            : testResult.started ? t('mcpConnect.test.daemonRefused') : t('mcpConnect.test.notStarted') }}
+          <code v-if="!testResult.ok && testResult.message" class="test-detail">{{ testResult.message }}</code>
+        </span>
+      </div>
+      <p v-if="!serverInfo" class="connect-footnote muted">{{ t('mcpConnect.pathUnknown') }}</p>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { DocumentCopy } from '@element-plus/icons-vue'
@@ -75,8 +113,11 @@ import { fetchMcpToolCalls, saveSettings, subscribeEventsMap } from '../../api/d
 import { useFeatureFlagsStore } from '../../stores/featureFlags'
 import {
   MCP_SERVER_PATH_PLACEHOLDER,
+  appLaunch,
   claudeCodeCommand,
+  mcpServerEntryJson,
   mcpServersJson,
+  nodeLaunch,
 } from '../../utils/mcpConnect'
 
 const { t } = useI18n()
@@ -91,10 +132,19 @@ const expanded = ref(true)
 
 const serverPath = computed(() => serverInfo.value?.serverPath ?? MCP_SERVER_PATH_PLACEHOLDER)
 
+// Which program the AI client starts the server with. Follows the Node.js
+// check until the operator picks one.
+const runtime = ref<'node' | 'app'>('node')
+const runtimePicked = ref(false)
+
+const launch = computed(() => runtime.value === 'app' && serverInfo.value
+  ? appLaunch(serverInfo.value.appRuntimePath, serverPath.value, serverInfo.value.platform)
+  : nodeLaunch(serverPath.value))
+
 const snippets = computed(() => [
-  { id: 'claudeCode', text: claudeCodeCommand(serverPath.value) },
-  { id: 'claudeDesktop', text: mcpServersJson(serverPath.value) },
-  { id: 'cursor', text: mcpServersJson(serverPath.value) },
+  { id: 'claudeCode', text: claudeCodeCommand(launch.value), entry: '' },
+  { id: 'claudeDesktop', text: mcpServersJson(launch.value), entry: mcpServerEntryJson(launch.value) },
+  { id: 'cursor', text: mcpServersJson(launch.value), entry: mcpServerEntryJson(launch.value) },
 ])
 
 async function refreshServerInfo(): Promise<void> {
@@ -102,6 +152,27 @@ async function refreshServerInfo(): Promise<void> {
     serverInfo.value = (await window.electronAPI?.getMcpServerInfo?.()) ?? null
   } catch {
     serverInfo.value = null
+  }
+  if (serverInfo.value && !runtimePicked.value) runtime.value = serverInfo.value.nodeVersion ? 'node' : 'app'
+}
+
+// Starts the server the way the copied snippet does and calls one tool,
+// so "does it work?" has an answer before the AI client is restarted.
+const canTest = computed(() => !!window.electronAPI?.testMcpServer && !!serverInfo.value?.serverExists)
+const testing = ref(false)
+const testResult = ref<{ started: boolean; ok: boolean; message: string } | null>(null)
+watch(runtime, () => { testResult.value = null })
+
+async function runTest(): Promise<void> {
+  if (!window.electronAPI?.testMcpServer) return
+  testing.value = true
+  try {
+    testResult.value = await window.electronAPI.testMcpServer(runtime.value)
+    if (testResult.value.ok) void refreshLastCall()
+  } catch (err) {
+    testResult.value = { started: false, ok: false, message: err instanceof Error ? err.message : String(err) }
+  } finally {
+    testing.value = false
   }
 }
 
@@ -126,7 +197,7 @@ async function onToggleEnabled(value: string | number | boolean): Promise<void> 
   const enabled = value === true
   savingEnabled.value = true
   try {
-    // Same setting as Settings → Advanced → MCP.
+    // Same setting as the switch in Settings → AI clients (MCP).
     await saveSettings({ 'mcp.enabled': String(enabled) })
     await flags.load()
     ElMessage.success(enabled ? t('mcpConnect.enabledToast') : t('mcpConnect.disabledToast'))
@@ -273,6 +344,28 @@ onBeforeUnmount(() => {
   grid-column: 1 / -1;
   margin: 0;
   font-size: 12px;
+}
+.connect-runtime,
+.connect-test {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--wdc-space-2);
+  font-size: 12px;
+}
+.runtime-label { font-weight: 600; font-size: 13px; }
+.snippet-actions { display: flex; flex-direction: column; align-items: flex-end; gap: var(--wdc-space-1); }
+.snippet-actions :deep(.el-button + .el-button) { margin-left: 0; }
+.test-ok { color: var(--el-color-success); font-weight: 600; }
+.test-bad { color: var(--el-color-danger); }
+.test-detail {
+  display: block;
+  margin-top: var(--wdc-space-1);
+  font-family: ui-monospace, Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--el-text-color-regular);
 }
 .muted { color: var(--el-text-color-secondary); }
 

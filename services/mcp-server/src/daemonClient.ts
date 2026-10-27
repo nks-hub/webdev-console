@@ -1,11 +1,10 @@
 // Discovery + auth + HTTP plumbing for the NKS WDC daemon.
 //
-// Reads the same `~/.wdc/daemon.port` file the wdc CLI uses: one line port,
-// next line the per-session Bearer token. Token rotates every daemon restart
-// — on 401 we re-read the file and retry once.
+// Reads the daemon's `nks-wdc-mcp.port` file from the temp folder: one line
+// port, next line the per-session MCP Bearer token. Token rotates every
+// daemon restart — on 401 we re-read the file and retry once.
 
 import { existsSync, readFileSync, statSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 
@@ -41,7 +40,7 @@ class DaemonNotRunningError extends Error {
   constructor() {
     super(
       'NKS WDC daemon is not running. Start the WDC GUI or run `wdc daemon start`. ' +
-        'The MCP server reads ~/.wdc/daemon.port to discover the local daemon.',
+        'The MCP server reads nks-wdc-mcp.port in the temp folder, which the daemon writes on start.',
     )
   }
 }
@@ -72,7 +71,7 @@ const NEXT_STEPS: Record<string, string> = {
   nonce_mismatch: 'The intentToken is not valid; request a new confirmation and pass its intentToken unchanged.',
   malformed_token: 'The intentToken is not valid; request a new confirmation and pass its intentToken unchanged.',
   signature_mismatch: 'The intentToken is not valid; request a new confirmation and pass its intentToken unchanged.',
-  mcp_disabled: 'MCP is turned off in WDC; ask the user to enable MCP in WDC → Settings.',
+  mcp_disabled: 'MCP is turned off in WDC; ask the user to enable MCP in WDC → Settings → AI clients (MCP).',
   mcp_forbidden: 'The MCP token may not do this; the user has to do it in the WDC app.',
   mcp_capability_disabled:
     'This capability is turned off for MCP in WDC; ask the user to enable it in WDC → Settings → AI clients (MCP) if they want you to do this.',
@@ -190,17 +189,11 @@ export class DaemonClient {
    * don't collide on a shared `~/.wdc` location.
    */
   private readPortFile(): PortFile | null {
-    // Order matches what wdc CLI checks: first the OS temp path used by
-    // the daemon's Lifetime callback, then the legacy ~/.wdc location.
     // The daemon writes a separate MCP token to nks-wdc-mcp.port. Requests
     // with it must present GUI-confirmed intents for destructive operations
-    // and cannot approve intents themselves. The GUI port file is only a
-    // fallback for daemons that predate the MCP token.
-    const candidates = this.portFiles ?? [
-      join(tmpdir(), 'nks-wdc-mcp.port'),
-      join(tmpdir(), 'nks-wdc-daemon.port'),
-      join(homedir(), '.wdc', 'daemon.port'),
-    ]
+    // and cannot approve intents themselves. The GUI port file
+    // (nks-wdc-daemon.port) is deliberately never read: its token can approve.
+    const candidates = this.portFiles ?? [join(tmpdir(), 'nks-wdc-mcp.port')]
     for (const path of candidates) {
       if (!existsSync(path)) continue
       // In the shared temp dir another local user could pre-create this file

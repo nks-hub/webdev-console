@@ -71,7 +71,7 @@ public class McpTokenPolicyTests
         Assert.Equal("mcp_capability_disabled", body.GetProperty("error").GetString());
         Assert.Equal(capability, body.GetProperty("capability").GetString());
         Assert.Equal("mcp.capabilities." + capability, body.GetProperty("settingKey").GetString());
-        Assert.Contains("WDC → Settings → MCP", body.GetProperty("hint").GetString());
+        Assert.Contains("WDC → Settings → AI clients (MCP)", body.GetProperty("hint").GetString());
     }
 
     // --- trust root ----------------------------------------------------------
@@ -557,7 +557,7 @@ public class McpTokenPolicyTests
         }
     }
 
-    private static async Task<TestDaemon> StartAsync()
+    private static async Task<TestDaemon> StartAsync(bool mcpEnabled = true)
     {
         var dbPath = Path.Combine(Path.GetTempPath(), "nks-mcp-policy-" + Guid.NewGuid().ToString("N") + ".db");
         var database = new Database(dbPath);
@@ -575,6 +575,7 @@ public class McpTokenPolicyTests
                 """);
         }
         var settings = new SettingsStore(database);
+        if (mcpEnabled) settings.Set("mcp", "enabled", "true");
 
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseUrls("http://127.0.0.1:0");
@@ -664,7 +665,7 @@ public class McpTokenPolicyTests
         using var doc = JsonDocument.Parse(body);
         Assert.Equal("mcp_capability_disabled", doc.RootElement.GetProperty("error").GetString());
         Assert.Equal(capability, doc.RootElement.GetProperty("capability").GetString());
-        Assert.Contains("Settings → MCP", doc.RootElement.GetProperty("hint").GetString());
+        Assert.Contains("Settings → AI clients (MCP)", doc.RootElement.GetProperty("hint").GetString());
     }
 
     [Fact]
@@ -716,6 +717,43 @@ public class McpTokenPolicyTests
     {
         await using var d = await StartAsync();
         Assert.Equal(HttpStatusCode.OK, (await SendAsync(d.Client, method, path, GuiToken, """{"mcp.capabilities.hosts_file":"true"}""")).Status);
+    }
+
+    [Theory]
+    [InlineData("GET", "/api/sites", null)]
+    [InlineData("POST", "/api/sites", """{"domain":"a.loc","documentRoot":"/srv/a"}""")]
+    [InlineData("PUT", "/api/settings", """{"ports.http":"8080"}""")]
+    [InlineData("POST", "/api/services/httpd/start", null)]
+    [InlineData("POST", "/api/mcp/intents", "{}")]
+    [InlineData("GET", "/api/does-not-exist", null)]
+    [InlineData("GET", "//API/sites/", null)]
+    public async Task Mcp_token_is_refused_everywhere_while_mcp_is_off(string method, string path, string? body)
+    {
+        await using var d = await StartAsync(mcpEnabled: false);
+        // Even with every capability switched on, the master switch wins.
+        foreach (var c in McpCapabilities.All) d.Settings.Set("mcp", "capabilities." + c.Id, "true");
+
+        var (status, json) = await SendAsync(d.Client, method, path, McpToken, body);
+
+        Assert.Equal(HttpStatusCode.Forbidden, status);
+        using var doc = JsonDocument.Parse(json);
+        Assert.Equal("mcp_disabled", doc.RootElement.GetProperty("error").GetString());
+        Assert.Equal(McpEndpoints.McpDisabledHint, doc.RootElement.GetProperty("hint").GetString());
+    }
+
+    [Fact]
+    public async Task Turning_mcp_off_cuts_a_running_client_and_turning_it_on_restores_it()
+    {
+        await using var d = await StartAsync();
+        Assert.Equal(HttpStatusCode.OK, (await SendAsync(d.Client, "GET", "/api/sites", McpToken)).Status);
+
+        d.Settings.Set("mcp", "enabled", "false");
+        Assert.Equal(HttpStatusCode.Forbidden, (await SendAsync(d.Client, "GET", "/api/sites", McpToken)).Status);
+        // The GUI token is not affected by the MCP switch.
+        Assert.Equal(HttpStatusCode.OK, (await SendAsync(d.Client, "GET", "/api/sites", GuiToken)).Status);
+
+        d.Settings.Set("mcp", "enabled", "true");
+        Assert.Equal(HttpStatusCode.OK, (await SendAsync(d.Client, "GET", "/api/sites", McpToken)).Status);
     }
 
     [Theory]

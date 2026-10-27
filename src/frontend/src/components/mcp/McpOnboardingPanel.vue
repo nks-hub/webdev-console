@@ -2,30 +2,26 @@
   <div v-if="visible" class="mcp-onboarding-panel">
     <div class="onboarding-header">
       <div class="onboarding-title">
-        🚀 {{ t('mcpOnboarding.title') }}
+        {{ t('mcpOnboarding.title') }}
       </div>
-      <el-button size="small" text class="dismiss-btn" @click="dismissed = true">
+      <el-button size="small" text class="dismiss-btn" @click="dismiss">
         {{ t('mcpOnboarding.dismiss') }}
       </el-button>
     </div>
     <p class="onboarding-hint muted">{{ t('mcpOnboarding.hint') }}</p>
 
+    <!-- Only the button applies a profile: a click anywhere on a card used
+         to create grants, Full trust included. -->
     <div class="profile-cards">
       <div
-        v-for="profile in profiles"
+        v-for="profile in MCP_PROFILES"
         :key="profile.id"
         class="profile-card"
-        :class="{ pending: pending === profile.id, recommended: profile.id === DEFAULT_PROFILE }"
+        :class="{ pending: pending === profile.id, recommended: profile.id === DEFAULT_PROFILE, risky: profile.id === 'permissive' }"
         :data-profile="profile.id"
-        role="button"
-        tabindex="0"
-        :aria-label="t(`mcpOnboarding.profiles.${profile.id}.name`) + ' — ' + t(`mcpOnboarding.profiles.${profile.id}.desc`)"
-        @click="apply(profile)"
-        @keydown.enter.prevent="apply(profile)"
-        @keydown.space.prevent="apply(profile)"
       >
-        <div class="profile-icon">{{ profile.icon }}</div>
         <div class="profile-name">
+          <el-icon v-if="profile.id === 'permissive'" class="risky-icon" aria-hidden="true"><Warning /></el-icon>
           {{ t(`mcpOnboarding.profiles.${profile.id}.name`) }}
           <el-tag v-if="profile.id === DEFAULT_PROFILE" type="success" size="small" effect="plain" class="recommended-tag">
             {{ t('mcpOnboarding.default') }}
@@ -39,10 +35,12 @@
         </ul>
         <el-button
           size="small"
-          :type="profile.id === DEFAULT_PROFILE ? 'primary' : 'default'"
+          :type="profile.id === DEFAULT_PROFILE ? 'primary' : profile.id === 'permissive' ? 'warning' : 'default'"
+          :plain="profile.id === 'permissive'"
           :loading="pending === profile.id"
           :disabled="pending !== null && pending !== profile.id"
           class="profile-cta"
+          @click="apply(profile)"
         >
           {{ t(`mcpOnboarding.profiles.${profile.id}.cta`) }}
         </el-button>
@@ -54,8 +52,10 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ElMessage } from 'element-plus'
-import { createMcpGrant, listMcpGrants, subscribeEventsMap, type McpGrantCreateBody } from '../../api/daemon'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Warning } from '@element-plus/icons-vue'
+import { createMcpGrant, listMcpGrants, subscribeEventsMap } from '../../api/daemon'
+import { DEFAULT_PROFILE, MCP_PROFILES, type McpProfileDefinition } from './mcpProfiles'
 
 const { t, tm, rt } = useI18n()
 
@@ -64,97 +64,6 @@ const grantsCount = ref<number | null>(null)
 const pending = ref<string | null>(null)
 
 const ONBOARDING_KEY = 'mcp.onboarding.dismissed.v1'
-
-interface ProfileDefinition {
-  id: 'minimal' | 'balanced' | 'localDev' | 'permissive' | 'custom'
-  icon: string
-  grants: McpGrantCreateBody[]
-}
-
-// Strict is the default: with no grants every destructive request needs the
-// operator's approval. Every other profile is an explicit opt-in.
-const DEFAULT_PROFILE: ProfileDefinition['id'] = 'minimal'
-
-// Local development: services can be restarted and databases whose name
-// ends in _dev can be dropped, queried or re-imported without a banner.
-// Grant targets accept a '*' wildcard (matched case-insensitively).
-const DEV_DATABASE_PATTERN = '*_dev'
-const localDevDatabaseGrant = (kind: string, what: string): McpGrantCreateBody => ({
-  scopeType: 'always',
-  scopeValue: null,
-  kindPattern: kind,
-  targetPattern: DEV_DATABASE_PATTERN,
-  grantedBy: 'onboarding-local-dev',
-  note: `Auto-approve ${what} on ${DEV_DATABASE_PATTERN} databases (local development)`,
-})
-
-const profiles: ProfileDefinition[] = [
-  {
-    id: 'minimal',
-    icon: '🛡️',
-    grants: [], // no grants — every destructive op asks
-  },
-  {
-    id: 'balanced',
-    icon: '⚖️',
-    grants: [
-      // Auto-approve only reversible deploy/rollback (no destructive
-      // restore / db_drop / settings_write).
-      {
-        scopeType: 'always',
-        scopeValue: null,
-        kindPattern: 'deploy',
-        targetPattern: '*',
-        grantedBy: 'onboarding-balanced',
-        note: 'Auto-approve deploy on any site (reversible)',
-      },
-      {
-        scopeType: 'always',
-        scopeValue: null,
-        kindPattern: 'rollback',
-        targetPattern: '*',
-        grantedBy: 'onboarding-balanced',
-        note: 'Auto-approve rollback on any site (reversible)',
-      },
-    ],
-  },
-  {
-    id: 'localDev',
-    icon: '🧪',
-    grants: [
-      {
-        scopeType: 'always',
-        scopeValue: null,
-        kindPattern: 'service_restart',
-        targetPattern: '*',
-        grantedBy: 'onboarding-local-dev',
-        note: 'Auto-approve stopping/restarting local services (local development)',
-      },
-      localDevDatabaseGrant('database_drop', 'drop'),
-      localDevDatabaseGrant('database_query', 'data-changing SQL'),
-      localDevDatabaseGrant('database_import', 'dump import'),
-    ],
-  },
-  {
-    id: 'permissive',
-    icon: '🚀',
-    grants: [
-      {
-        scopeType: 'always',
-        scopeValue: null,
-        kindPattern: '*',
-        targetPattern: '*',
-        grantedBy: 'onboarding-permissive',
-        note: 'Auto-approve everything — explicit operator opt-in',
-      },
-    ],
-  },
-  {
-    id: 'custom',
-    icon: '🎯',
-    grants: [],
-  },
-]
 
 // Bullets are an array in the locale files: t() cannot return arrays, so
 // read the raw messages with tm() and render each with rt().
@@ -179,7 +88,26 @@ async function refresh(): Promise<void> {
   }
 }
 
-async function apply(profile: ProfileDefinition): Promise<void> {
+// Full trust lets any AI client do anything without asking, so it has to
+// be typed, not clicked.
+async function confirmPermissive(): Promise<boolean> {
+  const word = t('mcpOnboarding.permissiveWord')
+  try {
+    await ElMessageBox.prompt(t('mcpOnboarding.permissiveConfirm', { word }), t('mcpOnboarding.profiles.permissive.name'), {
+      type: 'warning',
+      confirmButtonText: t('mcpOnboarding.profiles.permissive.cta'),
+      cancelButtonText: t('common.cancel'),
+      inputPlaceholder: word,
+      inputValidator: (value: string) => value.trim().toUpperCase() === word.toUpperCase() || t('mcpOnboarding.permissiveMismatch', { word }),
+    })
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function apply(profile: McpProfileDefinition): Promise<void> {
+  if (profile.id === 'permissive' && !(await confirmPermissive())) return
   pending.value = profile.id
   try {
     if (profile.id === 'custom') {
@@ -188,7 +116,7 @@ async function apply(profile: ProfileDefinition): Promise<void> {
       dismiss()
       return
     }
-    if (profile.grants.length === 0 && profile.id === 'minimal') {
+    if (profile.grants.length === 0) {
       // Minimal = explicit "no grants, ask every time" — just dismiss.
       ElMessage.success(t('mcpOnboarding.minimalApplied'))
       dismiss()
@@ -203,8 +131,14 @@ async function apply(profile: ProfileDefinition): Promise<void> {
         console.warn('[McpOnboardingPanel] create failed:', err)
       }
     }
-    ElMessage.success(t('mcpOnboarding.applied', { n: okCount, profile: t(`mcpOnboarding.profiles.${profile.id}.name`) }))
-    dismiss()
+    const name = t(`mcpOnboarding.profiles.${profile.id}.name`)
+    if (okCount < profile.grants.length) {
+      // Keep the panel so the operator can retry; say how far it got.
+      ElMessage.error(t('mcpOnboarding.applyFailed', { profile: name, ok: okCount, total: profile.grants.length }))
+    } else {
+      ElMessage.success(t('mcpOnboarding.applied', { profile: name }))
+      dismiss()
+    }
     void refresh()
   } finally {
     pending.value = null
@@ -217,9 +151,7 @@ function dismiss(): void {
 }
 
 // SSE — if a grant is created/revoked elsewhere (Rules tab, banner
-// shortcut, suggested-grants banner), re-evaluate visibility. Without
-// this the panel keeps showing after `void refresh()` ran once on mount
-// because grantsCount stays at the stale 0 value.
+// shortcut, suggested-grants banner), re-evaluate visibility.
 let unsubscribe: (() => void) | null = null
 
 onMounted(() => {
@@ -262,26 +194,21 @@ onBeforeUnmount(() => {
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
   padding: var(--wdc-space-4);
-  cursor: pointer;
-  transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s;
+  transition: box-shadow 0.15s, border-color 0.15s;
   display: flex; flex-direction: column; gap: 6px;
   position: relative;
   box-shadow: var(--wdc-shadow-sm);
 }
 .profile-card:hover {
   border-color: var(--wdc-accent);
-  transform: translateY(-2px);
   box-shadow: var(--wdc-shadow-card), 0 0 0 1px var(--wdc-accent-glow);
 }
-.profile-card:focus-visible {
-  outline: 2px solid var(--el-color-primary);
-  outline-offset: 2px;
-}
+.profile-card.risky { border-color: var(--el-color-warning-light-5); }
+.risky-icon { color: var(--el-color-warning); }
 .profile-card.recommended {
   border-color: var(--el-color-success-light-5);
 }
 .profile-card.pending { opacity: 0.7; pointer-events: none; }
-.profile-icon { font-size: 28px; }
 .profile-name {
   font-size: 14px; font-weight: 600;
   display: flex; align-items: center; gap: 8px;

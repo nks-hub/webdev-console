@@ -161,5 +161,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     serverExists: boolean
     packaged: boolean
     portFilePresent: boolean
+    nodeVersion: string | null
+    appRuntimePath: string
+    platform: string
   }> => ipcRenderer.invoke('mcp-server-info'),
+
+  // Starts the bundled MCP server with Node.js ('node') or WDC's own binary
+  // ('app') and calls wdc_get_status, like an AI client would.
+  testMcpServer: (runtime: 'node' | 'app'): Promise<{ started: boolean; ok: boolean; message: string }> =>
+    ipcRenderer.invoke('mcp-server-selftest', runtime),
 })

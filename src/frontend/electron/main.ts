@@ -1,7 +1,7 @@
 import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog, protocol, net, ipcMain, clipboard } from 'electron'
 import { dirname, join, resolve, sep } from 'path'
 import { pathToFileURL } from 'node:url'
-import { spawn, ChildProcess } from 'child_process'
+import { spawn, execFile, ChildProcess } from 'child_process'
 import { readFileSync, writeFileSync, existsSync, unlinkSync, rmSync, readdirSync, lstatSync, readlinkSync, statSync, copyFileSync, mkdirSync } from 'fs'
 import { tmpdir, homedir } from 'os'
 import http from 'http'
@@ -26,6 +26,7 @@ import {
   showOsNotification,
   updateNotificationPrefs,
 } from './notifications'
+import { runMcpSelftest } from './mcpSelftest'
 import type { OsNotifyPayload } from '../src/services/osNotificationShared'
 
 // Wire `console.log`/`console.warn`/`console.error` (and daemon stdout,
@@ -2124,6 +2125,31 @@ function findMcpServerEntry(): { path: string; exists: boolean } {
   return { path: candidates[0], exists: false }
 }
 
+// `node --version` from this process's PATH, the same lookup an AI client
+// does for `"command": "node"`; null when there is no Node.js.
+function detectNodeVersion(): Promise<string | null> {
+  return new Promise((done) => {
+    execFile('node', ['--version'], { timeout: 5000, windowsHide: true }, (err, stdout) => {
+      const version = String(stdout ?? '').trim()
+      done(!err && /^v\d+/.test(version) ? version : null)
+    })
+  })
+}
+
+// Without Node.js the AI client can start the server with WDC's own binary
+// in Node mode (ELECTRON_RUN_AS_NODE=1; the RunAsNode fuse is left on). An
+// AppImage re-mounts on every launch, so it is started through its file.
+const mcpAppRuntimePath = (): string => (app.isPackaged && process.env.APPIMAGE) || process.execPath
+
+// Same env as the renderer's appLaunch() snippet (src/utils/mcpConnect.ts).
+// The Windows binary is requireAdministrator, which an AI client cannot
+// satisfy; RunAsInvoker starts it with the caller's rights.
+function mcpAppRuntimeEnv(): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = { ...process.env, ELECTRON_RUN_AS_NODE: '1' }
+  if (process.platform === 'win32') env.__COMPAT_LAYER = 'RunAsInvoker'
+  return env
+}
+
 ipcMain.handle('mcp-server-info', async () => {
   const entry = findMcpServerEntry()
   const portFile = join(tmpdir(), 'nks-wdc-mcp.port')
@@ -2132,7 +2158,22 @@ ipcMain.handle('mcp-server-info', async () => {
     serverExists: entry.exists,
     packaged: app.isPackaged,
     portFilePresent: existsSync(portFile),
+    nodeVersion: await detectNodeVersion(),
+    appRuntimePath: mcpAppRuntimePath(),
+    platform: process.platform,
   }
+})
+
+// "Test the connection": start the server exactly like the copied snippet
+// and call wdc_get_status. The renderer only picks the runtime; command and
+// server path are decided here.
+ipcMain.handle('mcp-server-selftest', async (_event, runtime: unknown) => {
+  const entry = findMcpServerEntry()
+  if (!entry.exists) return { started: false, ok: false, message: `MCP server not found: ${entry.path}` }
+  if (runtime === 'app') return runMcpSelftest(mcpAppRuntimePath(), [entry.path], mcpAppRuntimeEnv())
+  const env = { ...process.env }
+  delete env.ELECTRON_RUN_AS_NODE
+  return runMcpSelftest('node', [entry.path], env)
 })
 
 ipcMain.handle('app-get-version', async () => {

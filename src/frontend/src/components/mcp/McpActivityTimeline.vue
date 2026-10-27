@@ -9,7 +9,7 @@
       preserveAspectRatio="none"
       class="chart-svg"
       role="img"
-      :aria-label="t('mcpActivity.timeline.title', { hours: withinHours }) + ' — ' + totalCalls + ' calls'"
+      :aria-label="t('mcpActivity.timeline.title', { hours: withinHours }) + ' – ' + t('mcpActivity.callsCount', { n: totalCalls }, totalCalls)"
     >
       <!-- Y-axis baseline + 50% gridline so the chart reads as a chart
            instead of "scattered rectangles". Drawn first so bars overlay

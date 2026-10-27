@@ -3,19 +3,16 @@ import { ElNotification, ElButton, ElMessage } from 'element-plus'
 import { i18n } from '../i18n'
 import { useMcpConfirmStore } from '../stores/mcpConfirm'
 import { mcpKindLabel } from './mcpKindLabel'
+import { mcpTargetLabel } from './mcpApproval'
 
 /**
- * Phase 8 (3a) — inline approve toast for MCP confirm-requests.
+ * Phase 8 (3a) — corner toast for MCP confirm-requests.
  *
- * Complements the full McpConfirmBanner stack — when an SSE
- * `mcp:confirm-request` arrives, in addition to mounting a banner row
- * we also pop a corner toast with one-click Approve / Reject so the
- * operator doesn't need to scroll to the banner if they were focused
- * elsewhere.
- *
- * The banner is still authoritative — it carries the queue, expiry
- * countdown, trust shortcuts. The toast is the "right here, right
- * now" surface.
+ * Complements the McpConfirmBanner stack: it says what the AI wants and
+ * offers Reject and Show. Approving stays with the banner and the
+ * Requests page, which confirm it first (and ask for the target to be
+ * typed for anything irreversible); a one-click approve here would be the
+ * weakest door to a destructive action.
  */
 interface ToastEvent {
   intentId: string
@@ -41,22 +38,8 @@ export function showMcpConfirmToast(evt: ToastEvent): void {
     }
   }
 
-  // Approve/reject through the banner store so the matching banner goes
-  // away together with the toast instead of lingering until expiry.
-  const onApprove = async (): Promise<void> => {
-    try {
-      if (await useMcpConfirmStore().approve(evt.intentId)) ElMessage.success(t('mcp.toast.approveSuccess'))
-      else ElMessage.info(t('mcp.banner.toastAlreadyConsumed'))
-    } catch (err) {
-      // Surface the failure visibly — silent close was leaving operator
-      // wondering whether the request actually went through. Most common
-      // case: intent expired between SSE arrival and click.
-      const msg = err instanceof Error ? err.message : String(err)
-      ElMessage.error(t('mcp.toast.approveFailed', { error: msg }))
-    } finally {
-      close()
-    }
-  }
+  // Reject through the banner store so the matching banner goes away
+  // together with the toast instead of lingering until expiry.
   const onReject = async (): Promise<void> => {
     try {
       if (await useMcpConfirmStore().reject(evt.intentId)) ElMessage.info(t('mcp.toast.rejectSuccess'))
@@ -79,18 +62,13 @@ export function showMcpConfirmToast(evt: ToastEvent): void {
     h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap;margin-top:8px' }, [
       h(
         ElButton,
-        { type: 'primary', size: 'small', onClick: onApprove },
-        () => t('mcp.toast.approve'),
+        { type: 'primary', size: 'small', plain: true, onClick: onDetail },
+        () => t('mcp.toast.detail'),
       ),
       h(
         ElButton,
         { type: 'danger', size: 'small', plain: true, onClick: onReject },
         () => t('mcp.toast.reject'),
-      ),
-      h(
-        ElButton,
-        { size: 'small', link: true, onClick: onDetail },
-        () => t('mcp.toast.detail'),
       ),
     ])
 
@@ -98,15 +76,21 @@ export function showMcpConfirmToast(evt: ToastEvent): void {
   const titleText = kindText
     ? t('mcp.toast.kindRequest', { kind: kindText })
     : t('mcp.toast.genericRequest')
-  const targetText = evt.domain && evt.host ? `${evt.domain}/${evt.host}` : ''
+  const targetText = mcpTargetLabel(evt)
 
   const message = (): VNode =>
     h('div', [
       targetText
-        ? h('div', { style: 'font-family:ui-monospace,Consolas,monospace;font-size:12px;opacity:0.85' }, targetText)
+        ? h('div', { style: 'font-size:12px' }, [
+            t('mcp.banner.target') + ' ',
+            h('code', { style: 'font-family:ui-monospace,Consolas,monospace' }, targetText),
+          ])
         : null,
       evt.prompt
-        ? h('div', { style: 'margin-top:4px;font-size:13px' }, evt.prompt)
+        ? h('div', { style: 'margin-top:4px;font-size:13px' }, [
+            h('div', { style: 'font-size:11px;opacity:0.75' }, t('mcp.banner.aiSays')),
+            evt.prompt,
+          ])
         : null,
       action(),
     ].filter(Boolean) as VNode[])

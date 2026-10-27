@@ -138,17 +138,20 @@ OpenAPI spec is exposed at `/openapi/v1.json`.
 ### MCP server (Claude Code, Claude Desktop, Cursor)
 
 The installer ships the MCP server as `resources/mcp-server/index.js`. Open
-**MCP** in the app: the **Connect an AI client** card has the MCP switch,
-live status and copy buttons with the exact path for your install. For
-Claude Code it is:
+**AI clients (MCP)** in the app: the **Connect an AI client** card has the
+MCP switch, live status, a connection test and copy buttons with the exact
+path for your install. For Claude Code it is:
 
 ```bash
 claude mcp add --scope user nks-wdc -- node "<WDC resources>/mcp-server/index.js"
 ```
 
 Options go before the server name and `--` separates the server command.
-Node.js 18+ must be on `PATH`. Claude Desktop (`claude_desktop_config.json`)
-and Cursor (`.cursor/mcp.json`) take the same `mcpServers` entry:
+This needs Node.js 18+ on `PATH`; without Node.js the card switches to
+running the server with the WDC binary itself (see
+[services/mcp-server/README.md](services/mcp-server/README.md#without-nodejs)).
+Claude Desktop (`claude_desktop_config.json`) and Cursor (`.cursor/mcp.json`)
+take the same `mcpServers` entry:
 
 ```json
 { "mcpServers": { "nks-wdc": { "command": "node", "args": ["<WDC resources>/mcp-server/index.js"] } } }
@@ -162,8 +165,9 @@ npm install && npm run build      # or `npm run bundle` for the single-file buil
 claude mcp add --scope user nks-wdc -- node "$(pwd)/dist/index.js"
 ```
 
-MCP must be enabled (MCP card switch, or Settings → Advanced → MCP);
-otherwise approval requests fail with `mcp_disabled`.
+MCP must be enabled (the switch on the AI clients (MCP) page or in
+Settings → AI clients (MCP)); while it is off the daemon refuses every
+request made with the MCP token (`mcp_disabled`).
 
 | Module       | Tools | Examples                                                      |
 | ------------ | ----- | ------------------------------------------------------------- |

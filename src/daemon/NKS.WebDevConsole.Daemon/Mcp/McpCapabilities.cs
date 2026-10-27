@@ -54,7 +54,7 @@ public sealed record McpCapability(
 ///   <item><see cref="AlwaysAllowed"/>: the routes the shipped MCP tools use for
 ///   everyday work. Destructive ones keep their intent gate.</item>
 ///   <item><see cref="All"/>: capability groups the operator switches on in
-///   WDC → Settings → MCP (<c>mcp.capabilities.&lt;id&gt;</c>). The dangerous
+///   WDC → Settings → AI clients (MCP) (<c>mcp.capabilities.&lt;id&gt;</c>). The dangerous
 ///   ones default off; <see cref="UnlistedRoutes"/> covers every route that
 ///   is in no other tier.</item>
 ///   <item>Never: the trust root (approving intents, managing grants, any
@@ -73,6 +73,7 @@ public static class McpCapabilities
     public const string NodeProcess = "node_process";
     public const string SiteAdvancedFields = "site_advanced_fields";
     public const string CloudflareCredentials = "cloudflare_credentials";
+    public const string CloudflareDns = "cloudflare_dns";
     public const string PluginInstall = "plugin_install";
     public const string Composer = "composer";
     public const string DatabaseAdmin = "database_admin";
@@ -141,13 +142,13 @@ public static class McpCapabilities
         new("POST", "/api/binaries/catalog/refresh"),
         new("POST", "/api/binaries/install"),
         new("DELETE", "/api/binaries/{app}/{version}"),
-        // cloudflare.ts (credential fields of PUT config are capability-scoped)
+        // cloudflare.ts (credential fields of PUT config and creating DNS
+        // records are capability-scoped; deleting a record needs an intent)
         new("GET", "/api/cloudflare/config"),
         new("PUT", "/api/cloudflare/config"),
         new("GET", "/api/cloudflare/verify"),
         new("GET", "/api/cloudflare/zones"),
         new("GET", "/api/cloudflare/zones/{zoneId}/dns"),
-        new("POST", "/api/cloudflare/zones/{zoneId}/dns"),
         new("DELETE", "/api/cloudflare/zones/{zoneId}/dns/{recordId}"),
         new("GET", "/api/cloudflare/tunnels"),
         new("GET", "/api/cloudflare/suggest-subdomain"),
@@ -301,6 +302,14 @@ public static class McpCapabilities
             ],
             BodyFields: [new("PUT", "/api/cloudflare/config", CloudflareCredentialFields, "cloudflare_credentials", "config")],
             Tools: ["wdc_save_cloudflare_config"]),
+        new(CloudflareDns,
+            "Cloudflare DNS records",
+            "Create public DNS records (any type, name and content) in the Cloudflare zones of the saved account, " +
+            "for example a subdomain pointing elsewhere. Deleting a record needs an approved intent either way.",
+            DefaultEnabled: false,
+            Routes: [new("POST", "/api/cloudflare/zones/{zoneId}/dns")],
+            BodyFields: [],
+            Tools: ["wdc_create_cloudflare_dns"]),
         new(PluginInstall,
             "Plugin install and uninstall",
             "Install a plugin DLL from a URL or uninstall one. Each needs an approved intent (checked by the endpoint).",

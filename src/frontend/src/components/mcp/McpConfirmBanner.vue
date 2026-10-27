@@ -1,10 +1,11 @@
 <template>
   <!--
-    Stack of pending MCP destructive-operation confirmation banners.
-    WCAG: aria-live=assertive so screen readers announce each new banner;
-    role=alert on each entry; first banner gets initial focus on appear so
-    keyboard users land on the Approve/Dismiss buttons without tab-hunting.
-    Keyboard: Enter on Approve approves; Escape dismisses.
+    Stack of AI requests waiting for the operator.
+    WCAG: aria-live=assertive so screen readers announce each new request;
+    role=alert on each entry. Focus is never moved here: a request can
+    arrive while the operator types elsewhere, and Enter or Space must not
+    approve it. Approving opens a confirmation (typing the target for
+    anything that cannot be undone). Escape on Approve closes the banner.
   -->
   <div
     v-if="store.count > 0"
@@ -14,10 +15,10 @@
     :aria-label="t('mcp.banner.stackLabel')"
   >
     <div
-      v-for="(item, index) in store.list"
+      v-for="item in store.list"
       :key="item.intentId"
       class="mcp-confirm-banner"
-      :class="{ 'mcp-confirm-banner--destructive': item.kindDanger === 'destructive' }"
+      :class="{ 'mcp-confirm-banner--destructive': item.kindDanger !== 'reversible' }"
       role="alert"
     >
       <div class="mcp-confirm-icon" aria-hidden="true">
@@ -25,30 +26,25 @@
       </div>
       <div class="mcp-confirm-body">
         <div class="mcp-confirm-title">
-          <i18n-t v-if="item.kind" keypath="mcp.banner.kindRequest" tag="span">
-            <template #kind><strong>{{ humanKindLabel(item) }}</strong></template>
-          </i18n-t>
-          <span v-else>{{ t('mcp.banner.genericRequest') }}</span>
-          <i18n-t v-if="item.domain && item.host" keypath="mcp.banner.onTarget" tag="span" class="mcp-confirm-target">
-            <template #domain><code class="mono">{{ item.domain }}</code></template>
-            <template #host><code class="mono">{{ item.host }}</code></template>
-          </i18n-t>
+          {{ item.kind ? t('mcp.banner.kindRequest', { kind: mcpKindLabel(item) }) : t('mcp.banner.genericRequest') }}
         </div>
+        <div v-if="mcpTargetLabel(item)" class="mcp-confirm-target">
+          {{ t('mcp.banner.target') }} <code class="mono">{{ mcpTargetLabel(item) }}</code>
+        </div>
+        <!-- The description comes from the AI and may not match the action. -->
         <div class="mcp-confirm-prompt">
+          <span class="mcp-confirm-prompt-label">{{ t('mcp.banner.aiSays') }}</span>
           {{ item.prompt || t('mcp.banner.noDescription') }}
         </div>
         <!-- Phase 7.5+++ — explainer chip when the operator's always-confirm
              override is what caused this banner (the AI has trust grants
-             but they were skipped by the kind ring-fence). Helps the
-             operator understand WHY they're being asked despite earlier
-             "trust 30 min" / "always trust" choices. -->
+             but they were skipped by the kind ring-fence). -->
         <div v-if="item.alwaysConfirm" class="mcp-confirm-always-tag">
           <el-icon><Lock /></el-icon>
           {{ t('mcp.banner.alwaysConfirmExplain') }}
         </div>
         <div class="mcp-confirm-meta">
-          {{ t('mcp.banner.intent') }} <code>{{ shortId(item.intentId) }}</code>
-          · {{ ageLabel(item.receivedAt) }}
+          {{ ageLabel(item.receivedAt) }}
           <!-- Phase 6.14b — live expiry countdown. Renders only inside the
                last 60 s window (urgency signal); earlier the banner just
                shows age. Color escalates: warning under 60 s, danger
@@ -65,48 +61,50 @@
       </div>
       <div class="mcp-confirm-actions">
         <el-button
-          :ref="(el: unknown) => index === 0 && setFirstApproveRef(el)"
           type="primary"
           size="default"
           :loading="busy.has(item.intentId)"
-          @click="approve(item.intentId)"
+          :disabled="declining.has(item.intentId)"
+          @click="approve(item)"
           @keydown.esc.prevent="dismiss(item.intentId)"
         >
           {{ t('mcp.banner.approve') }}
         </el-button>
-        <!-- Phase 7.3 — persistent trust shortcuts. Both create an
-             mcp_session_grants row server-side BEFORE approving the
-             current intent so future identical requests skip the
-             banner entirely. "30 min" scopes by session id (per-agent),
-             "always" by api_key id (per-credential, survives session
-             rotation). Falls back to a plain approve if neither id is
-             known (no MCP middleware headers). -->
-        <el-button
-          size="default"
-          :loading="busy.has(item.intentId)"
-          :disabled="busy.has(item.intentId) || declining.has(item.intentId)"
-          @click="approveAndTrust(item, 30)"
-        >
-          {{ t('mcp.banner.trust30Min') }}
-        </el-button>
-        <el-button
-          size="default"
-          :loading="busy.has(item.intentId)"
-          :disabled="busy.has(item.intentId) || declining.has(item.intentId)"
-          @click="approveAndTrust(item, null)"
-        >
-          {{ t('mcp.banner.alwaysTrust') }}
-        </el-button>
+        <!-- Phase 7.3 — trust shortcuts: approve this request and create
+             a grant for the same action on the same target, scoped to the
+             asking AI run (30 min) or AI client (permanent) when the
+             daemon knows them. Hidden when the request lacks the action
+             or a real target (the grant would cover more than was shown)
+             and for always-confirm kinds (the grant would never apply). -->
+        <template v-if="canTrust(item)">
+          <el-button
+            size="default"
+            :disabled="busy.has(item.intentId) || declining.has(item.intentId)"
+            :title="trustScopeText(item, 30)"
+            @click="approveAndTrust(item, 30)"
+          >
+            {{ t('mcp.banner.trust30Min') }}
+          </el-button>
+          <el-button
+            size="default"
+            :disabled="busy.has(item.intentId) || declining.has(item.intentId)"
+            :title="trustScopeText(item, null)"
+            @click="approveAndTrust(item, null)"
+          >
+            {{ t('mcp.banner.alwaysTrust') }}
+          </el-button>
+        </template>
         <!-- Phase 6.17a — inline revoke. Dismiss only removes the banner
-             locally (intent expires naturally); Decline ALSO calls the
-             revoke endpoint server-side so any AI client that tries to
-             fire the token sees `already_used` immediately. -->
+             locally (the AI keeps waiting, the request stays in Requests);
+             Decline ALSO calls the revoke endpoint server-side so any AI
+             client that tries to fire the token sees `already_used`. -->
         <el-button
           type="danger"
           plain
           size="default"
           :loading="declining.has(item.intentId)"
           :disabled="busy.has(item.intentId) || declining.has(item.intentId)"
+          :title="t('mcp.banner.declineAria')"
           :aria-label="t('mcp.banner.declineAria')"
           @click="decline(item.intentId)"
         >
@@ -115,6 +113,8 @@
         <el-button
           size="default"
           :disabled="busy.has(item.intentId) || declining.has(item.intentId)"
+          :title="t('mcp.banner.dismissHint')"
+          :aria-label="t('mcp.banner.dismissHint')"
           @click="dismiss(item.intentId)"
         >
           {{ t('mcp.banner.dismiss') }}
@@ -125,23 +125,23 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Warning, Lock } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useMcpConfirmStore, type PendingConfirm } from '../../stores/mcpConfirm'
 import { createMcpGrant, revokeIntent, type McpGrantCreateBody } from '../../api/daemon'
+import { confirmMcpApproval, isMcpTargetMarker, mcpTargetLabel } from '../../utils/mcpApproval'
+import { mcpKindLabel } from '../../utils/mcpKindLabel'
 
-const { t, te } = useI18n()
+const { t } = useI18n()
 const store = useMcpConfirmStore()
 
 // In-flight approval calls — keeps the user from double-clicking before the
 // daemon responds. Cleared on completion (whether success or 4xx).
 const busy = ref<Set<string>>(new Set())
 // Phase 6.17a — separate "declining" set so Decline/Approve can each
-// disable the OTHER without sharing a single is-busy flag (which would
-// prevent users from clicking Decline while the Approve call is in
-// flight if both shared `busy`).
+// disable the OTHER without sharing a single is-busy flag.
 const declining = ref<Set<string>>(new Set())
 
 // Phase 6.14b — tick used for the expiry countdown reactivity. Updated
@@ -150,77 +150,79 @@ const declining = ref<Set<string>>(new Set())
 const tickNow = ref(Date.now())
 let tickTimer: ReturnType<typeof setInterval> | null = null
 
-const firstApproveRef = ref<unknown>(null)
-function setFirstApproveRef(el: unknown): void {
-  firstApproveRef.value = el
+function setBusy(intentId: string, on: boolean): void {
+  const next = new Set(busy.value)
+  if (on) next.add(intentId)
+  else next.delete(intentId)
+  busy.value = next
 }
 
-// Focus the first banner's Approve button whenever the queue grows from
-// 0 → N or a new banner becomes the topmost. Skipped when the operator
-// has already moved focus elsewhere intentionally.
-watch(
-  () => store.count,
-  async (now, before) => {
-    if (now > 0 && (before ?? 0) === 0) {
-      await nextTick()
-      const ref_ = firstApproveRef.value as { focus?: () => void } | null
-      ref_?.focus?.()
-    }
-  },
-)
-
-async function approve(intentId: string): Promise<void> {
-  if (busy.value.has(intentId)) return
-  const next = new Set(busy.value)
-  next.add(intentId)
-  busy.value = next
+async function approve(item: PendingConfirm): Promise<void> {
+  if (busy.value.has(item.intentId)) return
+  if (!(await confirmMcpApproval(item))) return
+  setBusy(item.intentId, true)
   try {
-    await store.approve(intentId)
+    if (await store.approve(item.intentId)) ElMessage.success(t('mcp.toast.approveSuccess'))
+    else ElMessage.info(t('mcp.banner.toastAlreadyConsumed'))
   } catch (err) {
     ElMessage.error(t('mcp.toast.approveFailed', { error: err instanceof Error ? err.message : String(err) }))
   } finally {
-    const cleared = new Set(busy.value)
-    cleared.delete(intentId)
-    busy.value = cleared
+    setBusy(item.intentId, false)
   }
 }
 
+function canTrust(item: PendingConfirm): boolean {
+  return !!item.kind && !isMcpTargetMarker(item.domain) && !item.alwaysConfirm
+}
+
 /**
- * Phase 7.3 — approve THIS intent AND create a persistent grant so future
- * identical requests skip the banner. `expiresMin === null` means the
- * grant never expires (always-trust); a number is added to "now" as
- * minutes until expiry.
+ * Who a trust grant from this banner covers: the 30-minute one the asking
+ * AI run (MCP session), the permanent one the asking AI client; every AI
+ * client only when the daemon could not tell who asked.
+ */
+function trustScope(item: PendingConfirm, minutes: number | null): Pick<McpGrantCreateBody, 'scopeType' | 'scopeValue'> {
+  if (minutes !== null && item.sessionId) return { scopeType: 'session', scopeValue: item.sessionId }
+  if (item.clientId) return { scopeType: 'api_key', scopeValue: item.clientId }
+  return { scopeType: 'always', scopeValue: null }
+}
+
+function trustScopeText(item: PendingConfirm, minutes: number | null): string {
+  const scope = trustScope(item, minutes)
+  const who = scope.scopeType === 'session'
+    ? t('mcp.banner.forSession')
+    : scope.scopeType === 'api_key'
+      ? t('mcp.banner.forClient', { client: (scope.scopeValue ?? '').replace(/^client:/, '') })
+      : t('mcp.banner.forAll')
+  const rule = { kind: mcpKindLabel(item), target: item.domain ?? '', who }
+  return minutes === null
+    ? t('mcp.banner.trustAlwaysRule', rule)
+    : t('mcp.banner.trustMinutesRule', { ...rule, minutes })
+}
+
+/**
+ * Phase 7.3 — approve THIS intent AND create a grant for the same kind on
+ * the same target (never a wildcard), so the next identical request is
+ * approved without asking. `expiresMin === null` means the grant never
+ * expires. The confirmation spells out the rule before anything is saved.
  *
- * Scope strategy: until the daemon's confirm-request SSE event carries
- * the calling caller's session/api-key id, we use scope_type='always'
- * (any caller) but narrow by kind+target so the grant only covers the
- * specific operation the user was shown. Approving "deploy on blog.loc"
- * doesn't auto-confirm "rollback on shop.loc". When the daemon starts
- * forwarding caller ids in the SSE payload we can flip to scope='session'
- * for the timed variant and 'api_key' for the permanent one.
- *
- * Errors are non-fatal — if grant creation fails (mcp.enabled flipped
- * mid-flight, network blip), we still proceed with the one-shot approve
- * so the user's primary action ("ship this deploy") completes.
+ * A failed grant does not block the approval the operator asked for.
  */
 async function approveAndTrust(item: PendingConfirm, expiresMin: number | null): Promise<void> {
-  if (busy.value.has(item.intentId)) return
-  const next = new Set(busy.value)
-  next.add(item.intentId)
-  busy.value = next
+  if (busy.value.has(item.intentId) || !canTrust(item)) return
+  if (!(await confirmMcpApproval(item, trustScopeText(item, expiresMin)))) return
+  setBusy(item.intentId, true)
   try {
     const body: McpGrantCreateBody = {
-      scopeType: 'always',
-      scopeValue: null,
-      kindPattern: item.kind ?? '*',
-      targetPattern: item.domain ?? '*',
+      ...trustScope(item, expiresMin),
+      kindPattern: item.kind!,
+      targetPattern: item.domain!,
       expiresAt: expiresMin === null
         ? null
         : new Date(Date.now() + expiresMin * 60_000).toISOString(),
       grantedBy: 'banner',
       note: expiresMin === null
-        ? `Always trust ${item.kind ?? 'any'} on ${item.domain ?? 'any'}`
-        : `Trust ${item.kind ?? 'any'} on ${item.domain ?? 'any'} for ${expiresMin} min`,
+        ? `Always trust ${item.kind} on ${item.domain}`
+        : `Trust ${item.kind} on ${item.domain} for ${expiresMin} min`,
     }
     try {
       await createMcpGrant(body)
@@ -236,9 +238,7 @@ async function approveAndTrust(item: PendingConfirm, expiresMin: number | null):
   } catch (err) {
     ElMessage.error(t('mcp.toast.approveFailed', { error: err instanceof Error ? err.message : String(err) }))
   } finally {
-    const cleared = new Set(busy.value)
-    cleared.delete(item.intentId)
-    busy.value = cleared
+    setBusy(item.intentId, false)
   }
 }
 
@@ -282,23 +282,6 @@ async function decline(intentId: string): Promise<void> {
   }
 }
 
-// Phase 7.5+++ — operator-locale label for the kind. Prefers the
-// per-locale frontend translation under `mcpKinds.labels.<id>` (added
-// for all 17 seeded kinds in cs/en) and falls back to the daemon-
-// supplied kindLabel, then the bare wire id. Keeps cross-surface
-// consistency with the McpKinds tab where the same lookup runs.
-function humanKindLabel(item: { kind?: string; kindLabel?: string }): string {
-  if (!item.kind) return ''
-  const key = `mcpKinds.labels.${item.kind}`
-  return te(key) ? t(key) : (item.kindLabel || item.kind)
-}
-
-function shortId(id: string): string {
-  // Show just the first 8 chars of the UUID — enough for cross-reference
-  // with daemon logs without overwhelming the banner layout.
-  return id.length > 12 ? id.slice(0, 8) : id
-}
-
 function ageLabel(receivedAt: number): string {
   const sec = Math.floor((tickNow.value - receivedAt) / 1000)
   if (sec < 5) return t('mcp.banner.ageJustNow')
@@ -333,16 +316,13 @@ onMounted(() => {
     tickNow.value = Date.now()
     // Auto-dismiss expired entries — approving an expired intent would
     // surface a 403 from the validator, so we drop the banner with a
-    // toast as soon as the wall-clock passes expiresAt. Operator can
-    // re-mint a fresh intent if they still want to act.
+    // toast as soon as the wall-clock passes expiresAt.
     for (const item of store.list) {
       if (!item.expiresAt) continue
       const expiryMs = new Date(item.expiresAt).getTime()
       if (!Number.isNaN(expiryMs) && expiryMs <= tickNow.value) {
         store.dismiss(item.intentId)
-        ElMessage.warning(
-          t('mcp.banner.toastExpired', { id: item.intentId.slice(0, 8) }),
-        )
+        ElMessage.warning(t('mcp.banner.toastExpired', { kind: mcpKindLabel(item) || item.intentId.slice(0, 8) }))
       }
     }
   }, 1000)
@@ -399,15 +379,25 @@ onBeforeUnmount(() => {
   color: var(--el-text-color-primary);
   margin-bottom: var(--wdc-space-1);
 }
-/* The kind and target are separate i18n-t spans; template whitespace
-   between them is condensed away, so space them explicitly. */
-.mcp-confirm-target { margin-left: 0.3em; }
+.mcp-confirm-target {
+  font-size: 13px;
+  color: var(--el-text-color-regular);
+  margin-bottom: var(--wdc-space-1);
+  word-break: break-word;
+}
 
 .mcp-confirm-prompt {
   font-size: 13px;
   color: var(--el-text-color-regular);
   word-break: break-word;
   margin-bottom: var(--wdc-space-1);
+  padding-left: var(--wdc-space-2);
+  border-left: 2px solid var(--wdc-border);
+}
+.mcp-confirm-prompt-label {
+  display: block;
+  font-size: 11px;
+  color: var(--el-text-color-secondary);
 }
 
 .mcp-confirm-meta {
@@ -428,13 +418,6 @@ onBeforeUnmount(() => {
   border-left: 3px solid var(--el-color-warning);
 }
 
-.mcp-confirm-meta code {
-  font-family: var(--el-font-family-monospace, monospace);
-  background: var(--wdc-surface-2);
-  border: 1px solid var(--wdc-border);
-  padding: 1px var(--wdc-space-1-5);
-  border-radius: var(--wdc-radius-sm);
-}
 .mcp-confirm-expiry {
   font-variant-numeric: tabular-nums;
   font-weight: 600;
@@ -449,6 +432,9 @@ onBeforeUnmount(() => {
   gap: var(--wdc-space-1-5);
   justify-self: end;
 }
+/* Element Plus spaces sibling buttons with a left margin; the column
+   layout stacks them, so drop it. */
+.mcp-confirm-actions :deep(.el-button + .el-button) { margin-left: 0; }
 
 @media (prefers-reduced-motion: reduce) {
   .mcp-confirm-banner {

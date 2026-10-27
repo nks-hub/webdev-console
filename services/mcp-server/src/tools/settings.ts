@@ -14,7 +14,7 @@ const SettingsValueSchema = z.union([z.string(), z.number(), z.boolean()])
 // confirm kinds, …): an agent must never change them, and the daemon refuses
 // them for the MCP token too. Other operator settings (daemon.*, deploy.*,
 // paths.*, …) are refused by the daemon unless the operator enabled the
-// "Operator settings" capability in WDC → Settings → MCP; its error carries
+// "Operator settings" capability in WDC → Settings → AI clients (MCP); its error carries
 // a hint the agent should relay to the user.
 const PROTECTED_SETTING_PREFIXES = ['mcp.']
 
@@ -54,7 +54,7 @@ export function registerSettingsTools(server: McpServer, opts: RegisterOptions):
         'Update one or more daemon settings atomically (single SQLite transaction). ' +
         'Pass a partial dict — keys not in the body are untouched. mcp.* keys are never ' +
         'writable by an AI client. deploy.*, daemon.*, plugins.*, sync.*, paths.*, telemetry.* ' +
-        'and backup.dir need the operator to enable "Operator settings" in WDC → Settings → MCP.\n\n' +
+        'and backup.dir need the operator to enable "Operator settings" in WDC → Settings → AI clients (MCP).\n\n' +
         'Args:\n  settings: Map of "category.key" → string/number/boolean.',
       inputSchema: {
         settings: z

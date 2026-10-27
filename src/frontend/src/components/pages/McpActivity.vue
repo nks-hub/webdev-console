@@ -99,17 +99,17 @@
       <div class="kpi">
         <span class="kpi-num">{{ stats.p50DurationMs }}</span>
         <span class="kpi-unit">ms</span>
-        <span class="kpi-label">p50 {{ t('mcpActivity.kpi.latency') }}</span>
+        <span class="kpi-label">{{ t('mcpActivity.kpi.latencyP50') }}</span>
       </div>
       <div class="kpi" :class="{ warn: stats.p95DurationMs > 1000 }">
         <span class="kpi-num">{{ stats.p95DurationMs }}</span>
         <span class="kpi-unit">ms</span>
-        <span class="kpi-label">p95 {{ t('mcpActivity.kpi.latency') }}</span>
+        <span class="kpi-label">{{ t('mcpActivity.kpi.latencyP95') }}</span>
       </div>
       <div class="kpi" :class="{ warn: stats.p99DurationMs > 5000 }">
         <span class="kpi-num">{{ stats.p99DurationMs }}</span>
         <span class="kpi-unit">ms</span>
-        <span class="kpi-label">p99 {{ t('mcpActivity.kpi.latency') }}</span>
+        <span class="kpi-label">{{ t('mcpActivity.kpi.latencyP99') }}</span>
       </div>
       <div class="kpi" :class="{ warn: stats.errorRatePercent > 1, danger: stats.errorRatePercent > 5 }">
         <span class="kpi-num">{{ stats.errorRatePercent.toFixed(1) }}</span>
@@ -255,7 +255,7 @@
                   <code v-if="row.entry.intentId" class="mono detail-value clickable" @click.stop="goToIntent(row.entry.intentId)">
                     {{ row.entry.intentId }} →
                   </code>
-                  <div v-if="row.entry.errorMessage" class="detail-label">error</div>
+                  <div v-if="row.entry.errorMessage" class="detail-label">{{ t('mcpActivity.detail.error') }}</div>
                   <code v-if="row.entry.errorMessage" class="mono detail-value detail-error">{{ row.entry.errorMessage }}</code>
                 </div>
                 <div v-if="row.entry.argsSummary" class="detail-args">
@@ -331,6 +331,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { ElMessage } from 'element-plus'
 import { Refresh, ArrowRight, Lock, Download } from '@element-plus/icons-vue'
 import McpActivityTimeline from '../mcp/McpActivityTimeline.vue'
 import McpTopToolsPanel from '../mcp/McpTopToolsPanel.vue'
@@ -580,7 +581,7 @@ async function exportCsv(): Promise<void> {
     document.body.removeChild(a)
     setTimeout(() => URL.revokeObjectURL(objUrl), 5_000)
   } catch (err) {
-    console.warn('[McpActivity] CSV export failed:', err)
+    ElMessage.error(t('mcpActivity.exportFailed', { error: err instanceof Error ? err.message : String(err) }))
   }
 }
 

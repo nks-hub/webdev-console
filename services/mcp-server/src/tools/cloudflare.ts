@@ -6,7 +6,7 @@ import { daemonClient } from '../daemonClient.js'
 import type { RegisterOptions } from '../index.js'
 import { IntentTokenSchema, intentHeaders } from './confirmation.js'
 import { safe } from '../formatting.js'
-import { ConfirmYesSchema, DomainSchema } from '../schemas.js'
+import { ConfirmYesSchema, DomainSchema, capabilityNote } from '../schemas.js'
 
 // Cloudflare zone + record ids are 32-char lowercase hex. Pinning the
 // shape blocks traversal-style payloads and trims the surface to what
@@ -160,7 +160,7 @@ export function registerCloudflareTools(server: McpServer, opts: RegisterOptions
         'Update Cloudflare plugin settings. Pass any subset of fields — omitted fields keep ' +
         'current value. Empty strings are rejected to prevent accidental credential wipes. ' +
         'cloudflaredPath, tunnelToken, apiToken and accountId need the operator to enable ' +
-        '"Cloudflare credentials" in WDC → Settings → MCP, plus an approved intent ' +
+        '"Cloudflare credentials" in WDC → Settings → AI clients (MCP), plus an approved intent ' +
         '(wdc_request_confirmation, operation cloudflare_credentials, target "config"). ' +
         'Returns the new redacted config.',
       inputSchema: {
@@ -196,7 +196,8 @@ export function registerCloudflareTools(server: McpServer, opts: RegisterOptions
     {
       title: 'Create DNS record',
       description:
-        'Create a DNS record in a Cloudflare zone. Defaults: type=CNAME, proxied=true, ttl=1.\n\n' +
+        'Create a DNS record in a Cloudflare zone. Defaults: type=CNAME, proxied=true, ttl=1. ' +
+        capabilityNote('Cloudflare DNS records') + '\n\n' +
         'Args:\n' +
         '  zoneId: Zone id (used in the URL path, NOT in the body).\n' +
         '  name: DNS record name (subdomain or @).\n' +

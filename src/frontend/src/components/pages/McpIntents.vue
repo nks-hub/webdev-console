@@ -35,7 +35,7 @@
     <!-- State summary chips -->
     <div class="state-summary" role="group" :aria-label="t('mcpIntents.stateSummaryAria')">
       <el-tag v-for="s in stateCounts" :key="s.state" :type="stateTagType(s.state)" effect="plain">
-        {{ s.state }}: {{ s.count }}
+        {{ stateLabel(s.state) }}: {{ s.count }}
       </el-tag>
     </div>
 
@@ -61,7 +61,7 @@
               effect="plain"
               class="domain-stats-chip"
             >
-              {{ state }}: {{ count }}
+              {{ stateLabel(String(state)) }}: {{ count }}
             </el-tag>
           </div>
         </div>
@@ -80,23 +80,18 @@
         style="width: 180px"
         :aria-label="t('mcpIntents.filter.stateAria')"
       >
-        <el-option label="ready" value="ready" />
-        <el-option label="pending_confirmation" value="pending_confirmation" />
-        <el-option label="consumed" value="consumed" />
-        <el-option label="expired" value="expired" />
+        <el-option v-for="s in STATE_ORDER" :key="s" :label="stateLabel(s)" :value="s" />
       </el-select>
       <el-select
         v-model="kindFilter"
         :placeholder="t('mcpIntents.filter.allKinds')"
         clearable
+        filterable
         size="small"
-        style="width: 140px"
+        style="width: 240px"
         :aria-label="t('mcpIntents.filter.kindAria')"
       >
-        <el-option label="deploy" value="deploy" />
-        <el-option label="rollback" value="rollback" />
-        <el-option label="cancel" value="cancel" />
-        <el-option label="restore" value="restore" />
+        <el-option v-for="k in kindOptions" :key="k.id" :label="k.label" :value="k.id" />
       </el-select>
       <el-input
         v-model="domainFilter"
@@ -160,8 +155,12 @@
         </template>
       </el-table-column>
 
-      <el-table-column prop="domain" :label="t('mcpIntents.col.domain')" min-width="140" />
-      <el-table-column prop="host" :label="t('mcpIntents.col.host')" width="120" />
+      <el-table-column :label="t('mcpIntents.col.target')" min-width="160">
+        <template #default="{ row }">
+          <span v-if="mcpTargetLabel(row)">{{ mcpTargetLabel(row) }}</span>
+          <span v-else class="muted">—</span>
+        </template>
+      </el-table-column>
       <el-table-column prop="kind" :label="t('mcpIntents.col.kind')" min-width="180">
         <template #default="{ row }">
           <!-- Phase 7.5+++ — operator-locale label via humanKindLabel
@@ -188,7 +187,7 @@
             <el-icon class="state-icon" aria-hidden="true">
               <component :is="stateIcon(row.state)" />
             </el-icon>
-            {{ row.state }}
+            {{ stateLabel(row.state) }}
           </el-tag>
         </template>
       </el-table-column>
@@ -308,15 +307,37 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 const { t, te } = useI18n()
 import {
   fetchIntentInventory,
+  listMcpKinds,
   revokeIntent,
   subscribeEventsMap,
   type IntentInventoryEntry,
+  type McpKindRow,
 } from '../../api/daemon'
 import { useMcpConfirmStore } from '../../stores/mcpConfirm'
+import { confirmMcpApproval, mcpTargetLabel } from '../../utils/mcpApproval'
 import { mcpKindLabel } from '../../utils/mcpKindLabel'
 
 const entries = ref<IntentInventoryEntry[]>([])
+const kinds = ref<McpKindRow[]>([])
 const loading = ref(false)
+
+// Lifecycle order: waiting for the operator, approved and waiting for the
+// AI, then the three ways a request ends.
+const STATE_ORDER = ['pending_confirmation', 'ready', 'consumed', 'revoked', 'expired'] as const
+
+function stateLabel(state: string): string {
+  const key = `mcpIntents.state.${state}`
+  return te(key) ? t(key) : state
+}
+
+// Every registered kind, plus kinds seen in the inventory that are no
+// longer registered (uninstalled plugin).
+const kindOptions = computed(() => {
+  const ids = new Set([...kinds.value.map((k) => k.id), ...entries.value.map((e) => e.kind)])
+  return [...ids]
+    .map((id) => ({ id, label: humanKindLabel({ kind: id, kindLabel: kinds.value.find((k) => k.id === id)?.label }) }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+})
 const revokingId = ref<string | null>(null)
 // Approve / Reject of a pending row. Both go through the banner store so a
 // banner for the same intent closes too.
@@ -356,7 +377,9 @@ async function onBulkRevoke(): Promise<void> {
   const targets = selectedRevokable.value
   if (targets.length === 0 || bulkRevoking.value) return
   try {
-    const targetsHead = targets.slice(0, 5).map((r) => `${r.kind} on ${r.domain}`).join(', ')
+    const targetsHead = targets.slice(0, 5)
+      .map((r) => [mcpKindLabel(r), mcpTargetLabel(r)].filter(Boolean).join(' – '))
+      .join(', ')
     const moreSuffix = targets.length > 5 ? t('mcpIntents.bulk.confirmMore', { n: targets.length - 5 }) : ''
     await ElMessageBox.confirm(
       t('mcpIntents.bulk.confirmMessage', { n: targets.length, targets: targetsHead + moreSuffix }),
@@ -451,8 +474,13 @@ async function refresh(): Promise<void> {
     // Phase 7.5+++ — pass current matchedGrant filter so the inventory
     // shows the full audit chain (not capped to recent 200 across all
     // grants when one grant might have hundreds of historical hits).
-    const result = await fetchIntentInventory(200, matchedGrantFilter.value)
+    const [result, kindList] = await Promise.all([
+      fetchIntentInventory(200, matchedGrantFilter.value),
+      // Only feeds the kind filter; the inventory still loads without it.
+      listMcpKinds().catch(() => ({ entries: kinds.value })),
+    ])
     entries.value = result.entries
+    kinds.value = kindList.entries
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     ElMessage.error(t('toast.loadIntentsFailed', { err: msg }))
@@ -466,9 +494,7 @@ const stateCounts = computed(() => {
   for (const e of entries.value) {
     counts.set(e.state, (counts.get(e.state) ?? 0) + 1)
   }
-  // Stable order: ready → pending_confirmation → consumed → expired
-  const order = ['ready', 'pending_confirmation', 'consumed', 'expired']
-  return order
+  return STATE_ORDER
     .filter((s) => counts.has(s))
     .map((state) => ({ state, count: counts.get(state) ?? 0 }))
 })
@@ -507,28 +533,26 @@ function formatDate(iso: string): string {
 }
 
 function formatRelative(iso: string): string {
-  const now = Date.now()
-  const t = new Date(iso).getTime()
-  const sec = Math.round((t - now) / 1000)
-  if (sec < -60) return `${Math.abs(Math.round(sec / 60))}m ago`
-  if (sec < 0) return `${Math.abs(sec)}s ago`
-  if (sec < 60) return `in ${sec}s`
-  if (sec < 3600) return `in ${Math.round(sec / 60)}m`
-  return `in ${Math.round(sec / 3600)}h`
+  const sec = Math.round((new Date(iso).getTime() - Date.now()) / 1000)
+  if (sec < -60) return t('mcpIntents.relative.minutesAgo', { n: Math.abs(Math.round(sec / 60)) })
+  if (sec < 0) return t('mcpIntents.relative.secondsAgo', { n: Math.abs(sec) })
+  if (sec < 60) return t('mcpIntents.relative.inSeconds', { n: sec })
+  if (sec < 3600) return t('mcpIntents.relative.inMinutes', { n: Math.round(sec / 60) })
+  return t('mcpIntents.relative.inHours', { n: Math.round(sec / 3600) })
 }
 
 function stateTagType(state: string): 'success' | 'warning' | 'info' | 'danger' {
   if (state === 'ready') return 'success'
   if (state === 'pending_confirmation') return 'warning'
-  if (state === 'consumed') return 'info'
-  return 'danger' // expired
+  if (state === 'revoked') return 'danger'
+  return 'info' // consumed, expired
 }
 
 function stateIcon(state: string) {
   if (state === 'ready') return CircleCheck
   if (state === 'pending_confirmation') return Warning
   if (state === 'consumed') return CircleCheck
-  return CircleClose
+  return CircleClose // revoked, expired
 }
 
 function kindTagType(kind: string): 'danger' | 'warning' | 'info' {
@@ -562,10 +586,8 @@ async function onRevoke(row: IntentInventoryEntry): Promise<void> {
   try {
     await ElMessageBox.confirm(
       t('mcpIntents.single.confirmMessage', {
-        id: row.intentId.slice(0, 8),
-        kind: row.kind,
-        domain: row.domain,
-        host: row.host,
+        kind: mcpKindLabel(row),
+        target: mcpTargetLabel(row) || '—',
       }),
       t('mcpIntents.single.confirmTitle'),
       {
@@ -589,27 +611,10 @@ async function onRevoke(row: IntentInventoryEntry): Promise<void> {
   }
 }
 
-function describeTarget(row: IntentInventoryEntry): string {
-  return row.domain === row.host ? row.domain : `${row.domain} → ${row.host}`
-}
-
 async function onApprove(row: IntentInventoryEntry): Promise<void> {
   if (decidingId.value !== null) return
-  try {
-    await ElMessageBox.confirm(
-      t('mcpIntents.approveDialog.message', {
-        kind: mcpKindLabel(row),
-        target: describeTarget(row),
-        prompt: row.prompt || t('mcp.banner.noDescription'),
-      }),
-      t('mcpIntents.approveDialog.title'),
-      {
-        type: row.kindDanger === 'destructive' ? 'warning' : 'info',
-        confirmButtonText: t('mcpIntents.approve'),
-        cancelButtonText: t('mcpIntents.single.cancel'),
-      },
-    )
-  } catch { return }
+  // Same confirmation as the banner: irreversible kinds need the target typed.
+  if (!(await confirmMcpApproval(row))) return
 
   decidingId.value = row.intentId
   decision.value = 'approve'

@@ -183,7 +183,8 @@ export const confirmIntent = (intentId: string): Promise<ConfirmIntentResponse> 
 /**
  * Phase 6.11b — admin inventory of all MCP-signed intents (read-only).
  * Returns newest-first up to `limit` (server caps at 500). Each entry
- * carries a derived `state` field: consumed | expired | pending_confirmation | ready.
+ * carries a derived `state` field: pending_confirmation | ready | consumed |
+ * revoked | expired.
  */
 export interface IntentInventoryEntry {
   intentId: string
@@ -206,6 +207,8 @@ export interface IntentInventoryEntry {
   kindPluginId: string | null
   expiresAt: string
   usedAt: string | null
+  /** Set when the operator rejected (revoked) the intent; usedAt is set too. */
+  revokedAt?: string | null
   confirmedAt: string | null
   createdAt: string
   // Phase 7.5+++ — id of the grant that auto-confirmed this intent,
@@ -221,7 +224,14 @@ export interface IntentInventoryEntry {
   prompt?: string | null
   /** Kind is listed in mcp.always_confirm_kinds, so grants were skipped. */
   alwaysConfirm?: boolean
-  state: 'consumed' | 'expired' | 'pending_confirmation' | 'ready'
+  /**
+   * MCP session (one AI client process) and AI client id
+   * (`client:<name>`) that asked for approval, as the MCP server reported
+   * them. Null for intents that never asked, or from daemons before migration 020.
+   */
+  sessionId?: string | null
+  clientId?: string | null
+  state: 'consumed' | 'revoked' | 'expired' | 'pending_confirmation' | 'ready'
 }
 
 export interface IntentInventoryResponse {
@@ -472,6 +482,8 @@ export interface McpKindRow {
   // i.e. the validator skips grant auto-approval for it. Optional for
   // backward compat with older daemons.
   alwaysConfirm?: boolean
+  /** Capability-group kind: a grant with kind '*' never approves it. */
+  ignoresWildcardGrants?: boolean
 }
 
 export const listMcpKinds = (): Promise<{ count: number; entries: McpKindRow[] }> =>

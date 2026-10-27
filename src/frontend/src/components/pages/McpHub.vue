@@ -1,37 +1,53 @@
 <template>
   <div class="page mcp-hub-page">
-    <!-- Connect an AI client — copy-paste registration for Claude Code,
-         Claude Desktop and Cursor, the MCP enable switch, and live status
-         (enabled, MCP token file, last call). Collapses itself once an AI
-         client has called WDC. -->
-    <McpConnectCard />
-
-    <!-- Onboarding panel — first-time setup with preset profiles. Stays
-         at the very top of the page so the four trust-tier cards are
-         the first thing the operator sees, before any header chrome.
-         Auto-hides after a profile is picked or after the user dismisses it. -->
-    <McpOnboardingPanel />
-
-    <!-- Suggested grants — nudges based on repeated manual approvals.
-         Cross-tab so it surfaces regardless of which subview the user
-         is currently looking at. -->
-    <SuggestedGrantsBanner />
-
     <div class="hub-header">
       <h2>{{ t('mcpHub.title') }}</h2>
-      <p class="muted">{{ t('mcpHub.description') }}</p>
+      <!-- The three words the rest of the page uses, in one sentence each. -->
+      <ul class="hub-glossary">
+        <li><strong>{{ t('mcpHub.tabs.requests') }}</strong>: {{ t('mcpHub.glossary.requests') }}</li>
+        <template v-if="advanced">
+          <li><strong>{{ t('mcpHub.tabs.rules') }}</strong>: {{ t('mcpHub.glossary.rules') }}</li>
+          <li><strong>{{ t('mcpHub.tabs.catalog') }}</strong>: {{ t('mcpHub.glossary.catalog') }}</li>
+        </template>
+      </ul>
+    </div>
+
+    <!-- Connect an AI client — copy-paste registration for Claude Code,
+         Claude Desktop and Cursor, the MCP enable switch, and live status
+         (enabled, daemon ready, Node.js, last call). Collapses itself once
+         an AI client has called WDC. -->
+    <McpConnectCard />
+
+    <!-- With MCP off the daemon refuses AI clients and every /api/mcp
+         list answers 404, so there is nothing to show but the switch
+         above. Turning MCP on mounts the panels below fresh. -->
+    <div v-if="!flags.mcpEnabled" class="hub-off" data-testid="mcp-hub-off">
+      <el-icon :size="28" aria-hidden="true"><Lock /></el-icon>
+      <div>
+        <strong>{{ t('mcpHub.off.title') }}</strong>
+        <p class="muted">{{ t('mcpHub.off.body') }}</p>
+      </div>
+    </div>
+
+    <template v-else>
+      <!-- Simple mode keeps the connect card, Activity and Requests; rules,
+           the action list and their tooling are advanced-mode only. -->
+      <!-- Onboarding panel — first-time setup with preset profiles.
+           Auto-hides after a profile is picked or after the user dismisses it. -->
+      <McpOnboardingPanel v-if="advanced" />
+
+      <!-- Suggested grants — nudges based on repeated manual approvals.
+           Cross-tab so it surfaces regardless of which subview the user
+           is currently looking at. -->
+      <SuggestedGrantsBanner v-if="advanced" />
 
       <!-- At-a-glance stats: actionable when something needs attention,
-           informational otherwise. Cleanup hint surfaces when grants are
-           dead-weight (granted but never matched). -->
-      <div v-if="grantsStats" class="hub-stats">
-        <!-- Trust tier indicator — derived from current grant set:
-             0 grants = Sandbox (everything asks)
-             1+ specific grants without wildcard = Balanced
-             single wildcard `*` `*` grant = Full Trust
-             other shapes = Custom -->
+           informational otherwise. -->
+      <div v-if="advanced && grantsStats" class="hub-stats">
+        <!-- Which onboarding profile the active rules match, if any. -->
         <span class="stat tier-chip" :class="`tier-${trustTier}`" :title="t(`mcpHub.tier.${trustTier}Hint`)">
-          <strong>{{ tierIcon }} {{ t(`mcpHub.tier.${trustTier}`) }}</strong>
+          <el-icon v-if="trustTier === 'permissive'" aria-hidden="true"><Warning /></el-icon>
+          <strong>{{ tierLabel }}</strong>
         </span>
         <span v-activate class="stat clickable-stat" @click="onActiveClick">
           <strong>{{ grantsStats.active }}</strong>
@@ -39,11 +55,13 @@
         </span>
         <span
           v-if="grantsStats.deadweight > 0"
+          v-activate
           class="stat warn clickable-stat"
           :title="t('mcpHub.stats.deadweightHint')"
           @click="onDeadweightClick"
         >
-          <strong>⚠️ {{ grantsStats.deadweight }}</strong>
+          <el-icon aria-hidden="true"><Warning /></el-icon>
+          <strong>{{ grantsStats.deadweight }}</strong>
           <span class="muted">{{ t('mcpHub.stats.deadweight') }}</span>
         </span>
         <span v-activate class="stat clickable-stat" @click="onTotalMatchesClick">
@@ -56,73 +74,78 @@
         </span>
         <span
           v-if="alwaysConfirmCount > 0"
+          v-activate
           class="stat warn clickable-stat"
           @click="onAlwaysConfirmClick"
         >
-          <strong>🔒 {{ alwaysConfirmCount }}</strong>
+          <el-icon aria-hidden="true"><Lock /></el-icon>
+          <strong>{{ alwaysConfirmCount }}</strong>
           <span class="muted">{{ t('mcpHub.stats.alwaysConfirm') }}</span>
         </span>
       </div>
-    </div>
 
-    <el-tabs v-model="activeTab" class="hub-tabs" @tab-change="onTabChange">
-      <!-- Activity — unified feed of every MCP tool call, including reads.
-           Default tab because it answers "what is AI doing right now". -->
-      <el-tab-pane name="activity">
-        <template #label>
-          <span class="tab-label">
-            <el-icon><DataLine /></el-icon>
-            {{ t('mcpHub.tabs.activity') }}
-          </span>
-        </template>
-        <McpActivity />
-      </el-tab-pane>
+      <!-- Panes are lazy: each loads its data when first opened. -->
+      <div ref="tabsWrap">
+        <el-tabs v-model="activeTab" class="hub-tabs" @tab-change="onTabChange">
+          <!-- Activity — unified feed of every MCP tool call, including reads.
+               Default tab because it answers "what is AI doing right now". -->
+          <el-tab-pane name="activity" lazy>
+            <template #label>
+              <span class="tab-label">
+                <el-icon><DataLine /></el-icon>
+                {{ t('mcpHub.tabs.activity') }}
+              </span>
+            </template>
+            <McpActivity />
+          </el-tab-pane>
 
-      <!-- Requests — formerly "Intents". Signed AI requests requiring
-           approval (destructive ops). -->
-      <el-tab-pane name="intents">
-        <template #label>
-          <span class="tab-label">
-            <el-icon><Lock /></el-icon>
-            {{ t('mcpHub.tabs.requests') }}
-            <el-badge v-if="counts.intents > 0" :value="counts.intents" type="warning" class="tab-badge" />
-          </span>
-        </template>
-        <McpIntents />
-      </el-tab-pane>
+          <!-- Requests (intents): AI requests that need the operator. The
+               badge counts the ones still waiting for a decision. -->
+          <el-tab-pane name="intents" lazy>
+            <template #label>
+              <span class="tab-label">
+                <el-icon><Lock /></el-icon>
+                {{ t('mcpHub.tabs.requests') }}
+                <el-badge v-if="counts.intents > 0" :value="counts.intents" type="warning" class="tab-badge" />
+              </span>
+            </template>
+            <McpIntents />
+          </el-tab-pane>
 
-      <!-- Rules — formerly "Grants". Auto-approve rules. -->
-      <el-tab-pane name="grants">
-        <template #label>
-          <span class="tab-label">
-            <el-icon><Key /></el-icon>
-            {{ t('mcpHub.tabs.rules') }}
-            <el-badge v-if="counts.grants > 0" :value="counts.grants" type="success" class="tab-badge" />
-          </span>
-        </template>
-        <McpGrants />
-      </el-tab-pane>
+          <!-- Rules (grants): requests approved without asking. -->
+          <el-tab-pane v-if="advanced" name="grants" lazy>
+            <template #label>
+              <span class="tab-label">
+                <el-icon><Key /></el-icon>
+                {{ t('mcpHub.tabs.rules') }}
+                <el-badge v-if="counts.grants > 0" :value="counts.grants" type="success" class="tab-badge" />
+              </span>
+            </template>
+            <McpGrants />
+          </el-tab-pane>
 
-      <!-- Catalog — formerly "Kinds". List of action types AI can request. -->
-      <el-tab-pane name="kinds">
-        <template #label>
-          <span class="tab-label">
-            <el-icon><Operation /></el-icon>
-            {{ t('mcpHub.tabs.catalog') }}
-            <el-badge v-if="counts.kinds > 0" :value="counts.kinds" type="info" class="tab-badge" />
-          </span>
-        </template>
-        <McpKinds />
-      </el-tab-pane>
-    </el-tabs>
+          <!-- Approved actions (kinds): what an AI has to ask about. -->
+          <el-tab-pane v-if="advanced" name="kinds" lazy>
+            <template #label>
+              <span class="tab-label">
+                <el-icon><Operation /></el-icon>
+                {{ t('mcpHub.tabs.catalog') }}
+                <el-badge v-if="counts.kinds > 0" :value="counts.kinds" type="info" class="tab-badge" />
+              </span>
+            </template>
+            <McpKinds />
+          </el-tab-pane>
+        </el-tabs>
+      </div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { Lock, Key, Operation, DataLine } from '@element-plus/icons-vue'
+import { Lock, Key, Operation, DataLine, Warning } from '@element-plus/icons-vue'
 import McpActivity from './McpActivity.vue'
 import McpIntents from './McpIntents.vue'
 import McpGrants from './McpGrants.vue'
@@ -130,6 +153,10 @@ import McpKinds from './McpKinds.vue'
 import SuggestedGrantsBanner from '../mcp/SuggestedGrantsBanner.vue'
 import McpOnboardingPanel from '../mcp/McpOnboardingPanel.vue'
 import McpConnectCard from '../mcp/McpConnectCard.vue'
+import { detectProfile } from '../mcp/mcpProfiles'
+import { useFeatureFlagsStore } from '../../stores/featureFlags'
+import { useMcpConfirmStore } from '../../stores/mcpConfirm'
+import { useUiModeStore } from '../../stores/uiMode'
 import {
   fetchIntentInventory,
   fetchMcpGrantsStats,
@@ -142,19 +169,38 @@ import {
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
+const flags = useFeatureFlagsStore()
+const confirmStore = useMcpConfirmStore()
+const uiMode = useUiModeStore()
+const advanced = computed(() => uiMode.isAdvanced)
 
 type TabName = 'activity' | 'intents' | 'grants' | 'kinds'
 
 const activeTab = ref<TabName>(parseTab())
+const tabsWrap = ref<HTMLElement | null>(null)
 
 function parseTab(): TabName {
+  if (route.path.endsWith('/intents')) return 'intents'
+  if (!uiMode.isAdvanced) return 'activity'
   if (route.path.endsWith('/kinds')) return 'kinds'
   if (route.path.endsWith('/grants')) return 'grants'
-  if (route.path.endsWith('/intents')) return 'intents'
   return 'activity'
 }
 
-watch(() => route.path, () => { activeTab.value = parseTab() })
+watch(advanced, () => { activeTab.value = parseTab() })
+
+// A toast or notification opens /mcp/intents for a waiting request; the
+// connect card and panels above would leave the table below the fold.
+async function revealPendingRequests(): Promise<void> {
+  if (activeTab.value !== 'intents' || confirmStore.count === 0) return
+  await nextTick()
+  tabsWrap.value?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+}
+
+watch(() => route.path, () => {
+  activeTab.value = parseTab()
+  void revealPendingRequests()
+})
 
 function onTabChange(name: string | number): void {
   const next = name === 'kinds' ? '/mcp/kinds'
@@ -167,33 +213,14 @@ function onTabChange(name: string | number): void {
 const counts = reactive({ intents: 0, grants: 0, kinds: 0 })
 const grantsStats = ref<McpGrantsStats | null>(null)
 const alwaysConfirmCount = ref<number>(0)
-const grantsRaw = ref<{ kindPattern: string; targetPattern: string; scopeType: string }[]>([])
+const grantsRaw = ref<{ kindPattern: string; targetPattern: string }[]>([])
 
-// Trust tier classification — purely derived from the current grant
-// set, no separate stored field. Matches the 4 onboarding profiles.
-const trustTier = computed<'sandbox' | 'balanced' | 'fullTrust' | 'custom'>(() => {
-  const grants = grantsRaw.value
-  if (grants.length === 0) return 'sandbox'
-  // Full Trust = single grant of `*` × `*`
-  const isFullTrust = grants.length === 1
-    && (grants[0].kindPattern === '*' || grants[0].kindPattern === '')
-    && (grants[0].targetPattern === '*' || grants[0].targetPattern === '')
-  if (isFullTrust) return 'fullTrust'
-  // Balanced = exactly the deploy + rollback wildcards (any order)
-  const hasDeploy = grants.some(g => g.kindPattern === 'deploy' && g.targetPattern === '*')
-  const hasRollback = grants.some(g => g.kindPattern === 'rollback' && g.targetPattern === '*')
-  if (grants.length === 2 && hasDeploy && hasRollback) return 'balanced'
-  return 'custom'
-})
+// The onboarding profile the active grants match ('custom' otherwise).
+const trustTier = computed(() => detectProfile(grantsRaw.value))
+const tierLabel = computed(() => trustTier.value === 'custom'
+  ? t('mcpHub.tier.custom')
+  : t(`mcpOnboarding.profiles.${trustTier.value}.name`))
 
-const tierIcon = computed(() => {
-  switch (trustTier.value) {
-    case 'sandbox': return '🛡️'
-    case 'balanced': return '⚖️'
-    case 'fullTrust': return '🚀'
-    default: return '🎯'
-  }
-})
 let unsubscribeHubSse: (() => void) | null = null
 
 function onActiveClick(): void {
@@ -213,6 +240,8 @@ function onAlwaysConfirmClick(): void {
 }
 
 async function refreshCounts(): Promise<void> {
+  // The /api/mcp lists answer 404 while MCP is off.
+  if (!flags.mcpEnabled) return
   try {
     const [intents, grants, kinds, stats] = await Promise.all([
       fetchIntentInventory(200).catch(() => ({ entries: [] })),
@@ -220,20 +249,21 @@ async function refreshCounts(): Promise<void> {
       listMcpKinds().catch(() => ({ entries: [] })),
       fetchMcpGrantsStats().catch(() => null),
     ])
-    counts.intents = intents.entries.filter((e) =>
-      e.state === 'ready' || e.state === 'pending_confirmation').length
+    // Only the requests still waiting for the operator, not the approved
+    // ones the AI has yet to use.
+    counts.intents = intents.entries.filter((e) => e.state === 'pending_confirmation').length
     counts.grants = grants.entries.length
     counts.kinds = kinds.entries.length
     alwaysConfirmCount.value = kinds.entries.filter((k) => k.alwaysConfirm === true).length
     grantsStats.value = stats
-    // Capture pattern shape for trust-tier derivation.
     grantsRaw.value = grants.entries.map(g => ({
       kindPattern: g.kindPattern ?? '',
       targetPattern: g.targetPattern ?? '',
-      scopeType: g.scopeType,
     }))
   } catch { /* badges stay stale rather than disrupt the page */ }
 }
+
+watch(() => flags.mcpEnabled, (on) => { if (on) void refreshCounts() })
 
 function formatRelative(iso: string): string {
   try {
@@ -249,7 +279,8 @@ function formatRelative(iso: string): string {
 
 onMounted(() => {
   activeTab.value = parseTab()
-  refreshCounts()
+  void refreshCounts()
+  void revealPendingRequests()
   unsubscribeHubSse = subscribeEventsMap({
     'mcp:intent-changed': () => { void refreshCounts() },
     'mcp:confirm-request': () => { void refreshCounts() },
@@ -266,8 +297,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .page { padding: 0; display: flex; flex-direction: column; gap: 0; }
 .hub-header {
-  padding: var(--wdc-space-4-5) var(--wdc-space-5);
-  border-bottom: 1px solid var(--wdc-border);
+  padding: 0 0 var(--wdc-space-4);
   background: transparent;
 }
 .hub-header h2 {
@@ -277,13 +307,29 @@ onBeforeUnmount(() => {
   letter-spacing: -0.02em;
   color: var(--wdc-text);
 }
-.hub-header .muted { color: var(--wdc-text-3); margin: 4px 0 0; font-size: 0.85rem; }
+.hub-glossary {
+  margin: var(--wdc-space-2) 0 0;
+  padding-left: var(--wdc-space-4);
+  color: var(--wdc-text-2);
+  font-size: 0.87rem;
+  line-height: 1.5;
+}
+.hub-off {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--wdc-space-3);
+  padding: var(--wdc-space-4) var(--wdc-space-5);
+  border: 1px dashed var(--wdc-border);
+  border-radius: var(--wdc-radius-lg);
+  color: var(--wdc-text-2);
+}
+.hub-off p { margin: var(--wdc-space-1) 0 0; }
+.muted { color: var(--wdc-text-3); }
 .hub-tabs { padding: 0 24px; }
-.hub-stats { margin: 16px 24px 4px !important; }
 .hub-tabs :deep(.el-tabs__content) { padding-top: 8px; }
 .tab-label { display: inline-flex; align-items: center; gap: 6px; }
 .hub-stats {
-  display: flex; flex-wrap: wrap; gap: 18px; margin: 12px 0 8px;
+  display: flex; flex-wrap: wrap; gap: 18px; margin: 4px 0 12px;
   padding: var(--wdc-space-3-5) var(--wdc-space-4-5); background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius); font-size: 13px;
@@ -291,7 +337,8 @@ onBeforeUnmount(() => {
 }
 .hub-stats .stat { display: inline-flex; align-items: center; gap: 6px; }
 .hub-stats .stat strong { font-weight: 600; }
-.hub-stats .stat.warn strong { color: var(--el-color-warning); }
+.hub-stats .stat.warn strong,
+.hub-stats .stat.warn .el-icon { color: var(--el-color-warning); }
 .tier-chip {
   padding: var(--wdc-space-1) var(--wdc-space-3);
   border-radius: var(--wdc-radius-full);
@@ -299,9 +346,10 @@ onBeforeUnmount(() => {
   font-weight: 600;
   border: 1px solid transparent;
 }
-.tier-chip.tier-sandbox { background: var(--el-color-info-light-9); color: var(--el-color-info); border-color: var(--el-color-info-light-7); }
-.tier-chip.tier-balanced { background: var(--el-color-success-light-9); color: var(--el-color-success); border-color: var(--el-color-success-light-7); }
-.tier-chip.tier-fullTrust { background: var(--el-color-warning-light-9); color: var(--el-color-warning); border-color: var(--el-color-warning-light-7); }
+.tier-chip.tier-minimal { background: var(--el-color-info-light-9); color: var(--el-color-info); border-color: var(--el-color-info-light-7); }
+.tier-chip.tier-balanced,
+.tier-chip.tier-localDev { background: var(--el-color-success-light-9); color: var(--el-color-success); border-color: var(--el-color-success-light-7); }
+.tier-chip.tier-permissive { background: var(--el-color-warning-light-9); color: var(--el-color-warning); border-color: var(--el-color-warning-light-7); }
 .tier-chip.tier-custom { background: var(--wdc-surface-2); color: var(--el-text-color-secondary); border-color: var(--wdc-border); }
 .clickable-stat { cursor: pointer; user-select: none; }
 .clickable-stat:hover strong { filter: brightness(1.2); }

@@ -9,8 +9,11 @@ MCP (Model Context Protocol) server exposing the **NKS WebDev Console** daemon a
 The WDC installer ships this server as one bundled file,
 `<WDC resources>/mcp-server/index.js`. In the app, **MCP → Connect an AI
 client** shows the exact path for your install with copy buttons, an MCP
-on/off switch and live status (MCP enabled, MCP token file present, last
-MCP call). The server runs with Node.js 18+ from `PATH`.
+on/off switch, live status (MCP enabled, daemon ready, Node.js found, last
+MCP call) and a **Test the connection** button that starts the server the
+way the AI client will and calls `wdc_get_status`. The server runs with
+Node.js 18+ from `PATH`, or without Node.js through the WDC binary itself
+(see [Without Node.js](#without-nodejs)).
 
 Default locations of the bundled server:
 
@@ -52,6 +55,34 @@ restart Claude Desktop:
 Merge the same `mcpServers` entry into `.cursor/mcp.json` in your project
 (or `~/.cursor/mcp.json` for every project).
 
+### Without Node.js
+
+The WDC binary runs the server in Node mode when `ELECTRON_RUN_AS_NODE=1`
+is set. On Windows the binary asks for administrator rights, which an AI
+client cannot grant, so `__COMPAT_LAYER=RunAsInvoker` starts it with the
+client's own rights:
+
+```bash
+claude mcp add -e ELECTRON_RUN_AS_NODE=1 -e __COMPAT_LAYER=RunAsInvoker --scope user nks-wdc -- "<WDC>/NKS WebDev Console.exe" "<WDC resources>/mcp-server/index.js"
+```
+
+```json
+{
+  "mcpServers": {
+    "nks-wdc": {
+      "command": "<WDC>/NKS WebDev Console.exe",
+      "args": ["<WDC resources>/mcp-server/index.js"],
+      "env": { "ELECTRON_RUN_AS_NODE": "1", "__COMPAT_LAYER": "RunAsInvoker" }
+    }
+  }
+}
+```
+
+`-e` takes several values, so it goes before another option, never right
+before the server name (it would read the name as one more variable).
+On macOS and Linux leave out `__COMPAT_LAYER`; for an AppImage the command
+is the `.AppImage` file.
+
 ### From a source checkout
 
 ```bash
@@ -63,9 +94,12 @@ claude mcp add --scope user nks-wdc -- node "$(pwd)/dist/index.js"
 
 ### Enabling MCP
 
-Approval requests (`wdc_request_confirmation`) need MCP enabled in WDC — the
-switch on the MCP card, or Settings → Advanced → MCP. While it is off the
-daemon answers `404 mcp_disabled` with a hint saying where to turn it on.
+Nothing works until MCP is enabled in WDC: the switch on the **AI clients
+(MCP)** page or in Settings → AI clients (MCP). While it is off the daemon
+refuses every request made with the MCP token (`403 mcp_disabled`, the
+`/api/mcp/*` routes answer `404 mcp_disabled`) with a hint saying where to
+turn it on. Turning MCP off also cuts an MCP server that is already
+running; it works again once MCP is back on.
 
 ### Read-only mode
 
@@ -178,7 +212,7 @@ Composer runs the project's and the packages' scripts, so install, require and r
 | Tool | Type |
 |---|---|
 | `wdc_get_cloudflare_config` / `wdc_verify_cloudflare_token` / `wdc_list_cloudflare_zones` / `wdc_list_cloudflare_dns` / `wdc_list_cloudflare_tunnels` / `wdc_get_cloudflare_subdomain_suggestion` | read |
-| `wdc_save_cloudflare_config` (credential fields: capability `cloudflare_credentials`, intent `cloudflare_credentials`) / `wdc_create_cloudflare_dns` | mutate |
+| `wdc_save_cloudflare_config` (credential fields: capability `cloudflare_credentials`, intent `cloudflare_credentials`) / `wdc_create_cloudflare_dns` (capability `cloudflare_dns`) | mutate |
 | `wdc_delete_cloudflare_dns` (intent `dns_record_delete`) | **destructive** |
 
 ### Approvals (2)
@@ -201,13 +235,12 @@ Registered per deploy scope from the port file's `scope:` line (`deploy:read`, `
 
 ## Daemon discovery
 
-The MCP server reads the WDC daemon's port + auth token from the first of:
+The MCP server reads the WDC daemon's port + MCP token from
+`$TMPDIR/nks-wdc-mcp.port`, which the daemon writes on start. It never
+reads the GUI token file (`nks-wdc-daemon.port`): that token can approve
+intents.
 
-1. `$TMPDIR/nks-wdc-mcp.port`: the MCP token, which the daemon issues for AI clients
-2. `$TMPDIR/nks-wdc-daemon.port`: the GUI token, only used with daemons that predate the MCP token
-3. `~/.wdc/daemon.port` (legacy fallback)
-
-On Unix a port file is only used when it belongs to the current user and has no group/other permissions.
+On Unix the port file is only used when it belongs to the current user and has no group/other permissions.
 
 If the daemon isn't running, every tool call returns:
 
@@ -222,7 +255,7 @@ The token rotates per daemon restart — the MCP server re-reads the port file a
 - **Local-only:** stdio transport means no network exposure; the MCP server is a parent-child process under your AI client
 - **Bearer token:** every daemon request is auth-gated by the per-session token from the port file
 - **Human approval for destructive operations:** with the MCP token, the daemon refuses destructive routes (drop database, SQL that can write, import a database, delete site, stop or restart a service, overwrite a service config file, revoke certificate, delete DNS record, install binary or plugin, uninstall plugin, restore or delete a backup, drop a MySQL account or reset its password, create or grant a MySQL account with the `admin` preset or a non-local host, reset or change the MySQL root password, reset the PostgreSQL root password, start a Node.js site process, deploy/rollback) unless the request carries an intent the user approved in the WDC app (or a trust grant the user created covers it). Call `wdc_request_confirmation`, let the user approve the banner, then call the tool again with `intentToken`. The MCP token cannot approve intents, create trust grants or change `mcp.*` settings, and `X-Allow-Unconfirmed` is ignored for it. Read-only SQL through `wdc_query` needs no approval; the daemon checks it independently. Changing the MySQL root password and creating admin or non-local MySQL accounts also need the `database_admin` capability. The table browser takes no filter from the MCP token. Values of argument keys containing `password`, `pwd`, `secret` or `token` are redacted in the audit log.
-- **Capabilities the operator enables:** with the MCP token, everyday routes (the ones most tools use, including every read) are always allowed. Riskier areas are capability groups the user enables in WDC → Settings → AI clients (MCP) (`mcp.capabilities.<id>`, all off by default): `settings_operator`, `service_config`, `hosts_file`, `node_process`, `site_advanced_fields`, `cloudflare_credentials`, `plugin_install`, `composer`, `database_admin`, `backup_restore`, `deploy_config`, `daemon_admin`, `unlisted_routes`. A disabled group answers 403 `mcp_capability_disabled` with a `hint` naming the setting; tools pass that text on, so tell the user what to enable. An enabled group still needs an approved intent for destructive calls (`wdc_request_confirmation`). `GET /api/mcp/capabilities` lists the groups and their state. `mcp.*` settings, approving intents and managing grants are never available to the MCP token. `daemon-routes.json` lists the daemon routes the server calls; `src/daemonRoutes.test.ts` and the daemon's `McpTokenPolicyTests` keep it, the sources and the daemon's tiers in sync.
+- **Capabilities the operator enables:** with the MCP token, everyday routes (the ones most tools use, including every read) are always allowed. Riskier areas are capability groups the user enables in WDC → Settings → AI clients (MCP) (`mcp.capabilities.<id>`, all off by default): `settings_operator`, `service_config`, `hosts_file`, `node_process`, `site_advanced_fields`, `cloudflare_credentials`, `cloudflare_dns`, `plugin_install`, `composer`, `database_admin`, `backup_restore`, `deploy_config`, `daemon_admin`, `unlisted_routes`. A disabled group answers 403 `mcp_capability_disabled` with a `hint` naming the setting; tools pass that text on, so tell the user what to enable. An enabled group still needs an approved intent for destructive calls (`wdc_request_confirmation`). `GET /api/mcp/capabilities` lists the groups and their state. `mcp.*` settings, approving intents and managing grants are never available to the MCP token. `daemon-routes.json` lists the daemon routes the server calls; `src/daemonRoutes.test.ts` and the daemon's `McpTokenPolicyTests` keep it, the sources and the daemon's tiers in sync.
 - **Destructive tools:** also require explicit `confirm: "YES"` in the input
 - **Read-only mode:** `--readonly` flag skips registering mutation tools (they don't appear in `tools/list`)
 - **Daemon validation:** all input flows through the daemon's existing validators (`ValidateDomain`, `IsValidDatabaseName`, etc.) — MCP is a thin transport, not the security boundary

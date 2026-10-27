@@ -65,6 +65,13 @@ export interface PendingConfirm {
    * than the more common "no matching grant" case).
    */
   alwaysConfirm?: boolean
+  /**
+   * MCP session (one AI client process) and AI client id
+   * (`client:<name>`) that asked. The banner scopes its trust shortcuts to
+   * them; absent from daemons before migration 020.
+   */
+  sessionId?: string
+  clientId?: string
 }
 
 /** `mcp:intent-changed` change values after which nobody needs to approve the intent. */
@@ -90,6 +97,8 @@ export const useMcpConfirmStore = defineStore('mcpConfirm', () => {
     domain?: string
     host?: string
     alwaysConfirm?: boolean
+    sessionId?: string | null
+    clientId?: string | null
   }): void {
     if (!payload?.intentId) return
     if (pending.value.has(payload.intentId)) return
@@ -106,6 +115,8 @@ export const useMcpConfirmStore = defineStore('mcpConfirm', () => {
       domain: payload.domain,
       host: payload.host,
       alwaysConfirm: payload.alwaysConfirm === true,
+      sessionId: payload.sessionId ?? undefined,
+      clientId: payload.clientId ?? undefined,
     })
     pending.value = next
   }
@@ -142,6 +153,8 @@ export const useMcpConfirmStore = defineStore('mcpConfirm', () => {
         domain: e.domain,
         host: e.host,
         alwaysConfirm: e.alwaysConfirm === true,
+        sessionId: e.sessionId ?? undefined,
+        clientId: e.clientId ?? undefined,
       })
     }
     // Keep banners whose SSE event arrived while the fetch was in flight.

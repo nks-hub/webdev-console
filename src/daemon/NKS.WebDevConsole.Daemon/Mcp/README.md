@@ -134,7 +134,7 @@ Settings → MCP section (gated on `mcp.enabled`):
 
 | Key                                  | Default | Range  | Effect                                                        |
 |--------------------------------------|---------|--------|---------------------------------------------------------------|
-| `mcp.enabled`                        | false   | bool   | Master switch — every `/api/mcp/*` returns 404 when off       |
+| `mcp.enabled`                        | false   | bool   | Master switch — off: the MCP token gets 403 `mcp_disabled` on every route, `/api/mcp/*` lists answer 404 |
 | `mcp.strict_kinds`                   | false   | bool   | Validator rejects intents for un-registered kinds             |
 | `mcp.always_confirm_kinds`           | (empty) | csv    | Kinds that ALWAYS prompt the GUI banner regardless of grants  |
 | `mcp.grant_expired_retention_days`   | 1       | 0–365  | Janitor delay before deleting expired grants                  |
