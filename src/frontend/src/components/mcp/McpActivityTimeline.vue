@@ -63,7 +63,7 @@
           :points="errorMarker(idx)"
           class="error-marker"
         >
-          <title>{{ b.errors }} error{{ b.errors === 1 ? '' : 's' }} in {{ b.hour }}h</title>
+          <title>{{ t('mcpActivity.timeline.errorsInHour', { n: b.errors, hour: b.hour }, b.errors) }}</title>
         </polygon>
         <!-- Hour label every 6th bar -->
         <text

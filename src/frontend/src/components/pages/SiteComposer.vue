@@ -70,7 +70,7 @@
           <div class="status-item">
             <span class="status-label">composer.json</span>
             <el-tag type="success" size="small">
-              <el-icon><Check /></el-icon> present
+              <el-icon><Check /></el-icon> {{ $t('sites.composer.present') }}
             </el-tag>
           </div>
 
@@ -79,7 +79,7 @@
             <el-tag :type="status.hasLock ? 'success' : 'warning'" size="small">
               <el-icon v-if="status.hasLock"><Check /></el-icon>
               <el-icon v-else><Warning /></el-icon>
-              {{ status.hasLock ? 'present' : 'missing' }}
+              {{ $t(status.hasLock ? 'sites.composer.present' : 'sites.composer.missing') }}
             </el-tag>
           </div>
 
@@ -377,7 +377,7 @@
             :placeholder="$t('sites.composer.versionSelectPlaceholder')"
             style="width: 200px"
           >
-            <el-option label="(auto)" value="" />
+            <el-option :label="$t('sites.composer.versionAuto')" value="" />
             <el-option
               v-for="v in availableVersions"
               :key="v"

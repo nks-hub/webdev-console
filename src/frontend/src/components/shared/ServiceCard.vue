@@ -46,7 +46,7 @@
       <!-- Uptime + PID -->
       <div class="svc-meta">
         <span class="meta-item">
-          <span class="meta-label">uptime</span>
+          <span class="meta-label">{{ t('servicesPage.facts.uptime') }}</span>
           <span class="meta-val">{{ formatUptime(service.uptimeSeconds ?? 0) }}</span>
         </span>
         <span class="meta-item" v-if="service.pid">

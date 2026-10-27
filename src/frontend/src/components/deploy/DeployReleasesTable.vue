@@ -165,7 +165,7 @@ async function onRollbackToRelease(entry: DeployHistoryEntryDto): Promise<void> 
       emit('refresh')
     }
   } catch (e) {
-    ElMessage.error((e as Error).message || 'Rollback failed')
+    ElMessage.error((e as Error).message || t('deploy.commandCenter.rollbackFailed'))
   }
 }
 

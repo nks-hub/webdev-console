@@ -103,7 +103,7 @@
               </strong>
             </div>
             <div v-if="deployBackendReadiness.blockers.length > 0" style="margin-top: var(--wdc-space-2)">
-              <div class="muted" style="margin-bottom: var(--wdc-space-1)">Blockers:</div>
+              <div class="muted" style="margin-bottom: var(--wdc-space-1)">{{ t('deploySettings.blockersLabel') }}</div>
               <!-- Iter 21: shared component renders blockerDetails phase tag
                    + remediation when ?explain=true payload available; falls
                    back to summary-only rows for older daemons. -->
@@ -1216,7 +1216,7 @@ const deployBackendBadge = computed<string>(() =>
     ? (deployBackendVersion.value
         ? `🔌 plugin v${deployBackendVersion.value}`
         : '🔌 plugin')
-    : '⚙ built-in')
+    : `⚙ ${t('deploySettings.backendBuiltIn')}`)
 const deployBackendTooltip = computed<string>(() =>
   deployBackendIsPlugin.value
     ? t('deploySettings.backendPluginTooltip', { v: deployBackendVersion.value ?? '?' })
@@ -1448,13 +1448,13 @@ const hostForm = reactive<HostForm>(emptyHostForm())
 
 const hostRules: FormRules = {
   name: [
-    { required: true, message: 'Name is required', trigger: 'blur' },
-    { pattern: /^[a-z0-9_-]+$/, message: 'Use lowercase letters, digits, hyphens, underscores', trigger: 'blur' },
+    { required: true, message: t('deploySettings.hostDialog.rules.nameRequired'), trigger: 'blur' },
+    { pattern: /^[a-z0-9_-]+$/, message: t('deploySettings.hostDialog.rules.nameFormat'), trigger: 'blur' },
   ],
-  sshHost: [{ required: true, message: 'SSH host is required', trigger: 'blur' }],
-  sshUser: [{ required: true, message: 'SSH user is required', trigger: 'blur' }],
-  remotePath: [{ required: true, message: 'Remote path is required', trigger: 'blur' }],
-  branch: [{ required: true, message: 'Branch is required', trigger: 'blur' }],
+  sshHost: [{ required: true, message: t('deploySettings.hostDialog.rules.sshHostRequired'), trigger: 'blur' }],
+  sshUser: [{ required: true, message: t('deploySettings.hostDialog.rules.sshUserRequired'), trigger: 'blur' }],
+  remotePath: [{ required: true, message: t('deploySettings.hostDialog.rules.remotePathRequired'), trigger: 'blur' }],
+  branch: [{ required: true, message: t('deploySettings.hostDialog.rules.branchRequired'), trigger: 'blur' }],
 }
 
 function openAddHostModal(): void {
@@ -1517,15 +1517,19 @@ async function submitHostForm(): Promise<void> {
     settings.hosts.push({ ...payload })
   }
   hostModalOpen.value = false
-  ElMessage.success(editingHost.value ? 'Host updated' : 'Host added')
+  ElMessage.success(t(editingHost.value ? 'deploySettings.hosts.hostUpdated' : 'deploySettings.hosts.hostAdded'))
 }
 
 async function removeHost(name: string): Promise<void> {
   try {
     await ElMessageBox.confirm(
-      `Remove host "${name}"?`,
-      'Confirm removal',
-      { type: 'warning', confirmButtonText: 'Remove', cancelButtonText: 'Cancel' },
+      t('deploySettings.hosts.removeConfirmMessage', { name }),
+      t('deploySettings.hosts.removeConfirmTitle'),
+      {
+        type: 'warning',
+        confirmButtonText: t('deploySettings.common.remove'),
+        cancelButtonText: t('deploySettings.common.cancel'),
+      },
     )
   } catch {
     return
@@ -1639,17 +1643,19 @@ async function onRestoreSnapshot(snapshot: DeploySnapshotEntry): Promise<void> {
   const shortId = snapshot.id.slice(0, 8)
   try {
     await ElMessageBox.prompt(
-      `Type "${shortId}" to confirm restore. This will OVERWRITE the live database for ${props.domain} ` +
-        `with the snapshot taken at ${formatDate(snapshot.createdAt)}. ` +
-        `SQLite restores create a .bak safety copy; SQL restores do NOT — make sure you have a separate backup.`,
-      'Restore database snapshot',
+      t('deploySettings.snapshot.restorePromptMessage', {
+        id: shortId,
+        domain: props.domain,
+        date: formatDate(snapshot.createdAt),
+      }),
+      t('deploySettings.snapshot.restorePromptTitle'),
       {
-        confirmButtonText: 'Restore',
+        confirmButtonText: t('deploySettings.snapshot.restore'),
         confirmButtonClass: 'el-button--danger',
-        cancelButtonText: 'Cancel',
+        cancelButtonText: t('deploySettings.common.cancel'),
         type: 'warning',
         inputPattern: new RegExp(`^${shortId}$`),
-        inputErrorMessage: `Type exactly "${shortId}" to enable Restore`,
+        inputErrorMessage: t('deploySettings.snapshot.restorePromptMismatch', { id: shortId }),
       },
     )
   } catch {

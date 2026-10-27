@@ -11,23 +11,23 @@
       <section class="edit-card">
         <header class="edit-card-header">
           <span class="edit-card-title">HTTPS</span>
-          <span class="edit-card-hint">Local certificates via mkcert</span>
+          <span class="edit-card-hint">{{ $t('sslSiteTab.hint') }}</span>
         </header>
         <div class="edit-card-body">
           <div class="ssl-toggle-row">
             <div class="ssl-toggle-meta">
-              <div class="ssl-toggle-title">Enable HTTPS</div>
+              <div class="ssl-toggle-title">{{ $t('sslSiteTab.enable') }}</div>
               <div class="ssl-toggle-desc">
-                Generates a locally-trusted certificate and binds an HTTPS vhost on port {{ site?.httpsPort || 443 }}.
+                {{ $t('sslSiteTab.enableDesc', { port: site?.httpsPort || 443 }) }}
               </div>
             </div>
             <el-switch :model-value="site?.sslEnabled ?? false" size="large" @update:model-value="onSslChange" />
           </div>
           <div v-if="site?.sslEnabled" class="ssl-toggle-row">
             <div class="ssl-toggle-meta">
-              <div class="ssl-toggle-title">HTTP → HTTPS redirect</div>
+              <div class="ssl-toggle-title">{{ $t('sslSiteTab.redirect') }}</div>
               <div class="ssl-toggle-desc">
-                Automatically redirect plain HTTP requests to the HTTPS version.
+                {{ $t('sslSiteTab.redirectDesc') }}
               </div>
             </div>
             <el-switch :model-value="redirectHttps" size="large" @update:model-value="onRedirectChange" />

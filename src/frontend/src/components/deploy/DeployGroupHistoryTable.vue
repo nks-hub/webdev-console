@@ -308,14 +308,16 @@ async function onReplayGroup(row: DeployGroupEntry): Promise<void> {
     let choice: string
     try {
       choice = await ElMessageBox.confirm(
-        `Original group had mixed outcomes:\n` +
-          `  Succeeded: ${allHosts.length - failed.length} (${allHosts.filter((h) => !failed.includes(h)).join(', ')})\n` +
-          `  Failed: ${failed.length} (${failed.join(', ')})\n\n` +
-          `Replay only the FAILED hosts (recommended) or ALL hosts?`,
-        'Replay subset?',
+        t('deploy.groupHistory.replaySubsetMessage', {
+          okCount: allHosts.length - failed.length,
+          okHosts: allHosts.filter((h) => !failed.includes(h)).join(', '),
+          failedCount: failed.length,
+          failedHosts: failed.join(', '),
+        }),
+        t('deploy.groupHistory.replaySubsetTitle'),
         {
-          confirmButtonText: `Failed only (${failed.length})`,
-          cancelButtonText: `All hosts (${allHosts.length})`,
+          confirmButtonText: t('deploy.groupHistory.replayFailedOnly', { n: failed.length }),
+          cancelButtonText: t('deploy.groupHistory.replayAllHosts', { n: allHosts.length }),
           distinguishCancelAndClose: true,
           type: 'warning',
         },
@@ -332,13 +334,17 @@ async function onReplayGroup(row: DeployGroupEntry): Promise<void> {
   } else {
     try {
       await ElMessageBox.confirm(
-        `Re-run this group with the same hosts (${allHosts.length})?\n\n` +
-          `Hosts: ${allHosts.join(', ')}\n` +
-          `Original group: ${row.id.slice(0, 8)}…\n\n` +
-          `A new groupId will be minted; the original row stays unchanged ` +
-          `as audit history.`,
-        'Confirm group replay',
-        { type: 'warning', confirmButtonText: 'Replay group', cancelButtonText: 'Cancel' },
+        t('deploy.groupHistory.replayConfirmMessage', {
+          n: allHosts.length,
+          hosts: allHosts.join(', '),
+          group: row.id.slice(0, 8),
+        }),
+        t('deploy.groupHistory.replayConfirmTitle'),
+        {
+          type: 'warning',
+          confirmButtonText: t('deploy.groupHistory.replayConfirmBtn'),
+          cancelButtonText: t('common.cancel'),
+        },
       )
     } catch { return }
     hostsToReplay = allHosts
@@ -348,7 +354,7 @@ async function onReplayGroup(row: DeployGroupEntry): Promise<void> {
   try {
     const result = await startDeployGroup(props.domain, hostsToReplay)
     ElMessage.success(
-      `Replay started (${hostsToReplay.length} hosts) — new group ${result.groupId.slice(0, 8)}…`,
+      t('deploy.groupHistory.replayStarted', { n: hostsToReplay.length, group: result.groupId.slice(0, 8) }),
     )
     await refresh()
   } catch (err) {
@@ -364,13 +370,13 @@ async function onRollbackGroup(row: DeployGroupEntry): Promise<void> {
   const hostCount = Object.keys(row.hostDeployIds ?? {}).length
   try {
     await ElMessageBox.confirm(
-      `Cascade-rollback every committed host in this group?\n\n` +
-        `Hosts to roll back: ${hostCount}\n` +
-        `Group: ${row.id.slice(0, 8)}…\n\n` +
-        `Rollback rewinds the release symlink only — pre-deploy DB ` +
-        `snapshots are NOT auto-restored (operator-driven via Settings tab).`,
-      'Confirm group rollback',
-      { type: 'warning', confirmButtonText: 'Roll back group', cancelButtonText: 'Cancel' },
+      t('deploy.groupHistory.rollbackConfirmMessage', { n: hostCount, group: row.id.slice(0, 8) }),
+      t('deploy.groupHistory.rollbackConfirmTitle'),
+      {
+        type: 'warning',
+        confirmButtonText: t('deploy.groupHistory.rollbackConfirmBtn'),
+        cancelButtonText: t('common.cancel'),
+      },
     )
   } catch { return }
 

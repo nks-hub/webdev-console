@@ -72,8 +72,8 @@
           </template>
           <div class="result-meta">
             <span class="meta-stmt mono">{{ r.statementText }}</span>
-            <span class="meta-stat">{{ r.rows.length }} rows</span>
-            <span class="meta-stat" v-if="r.rowsAffected > 0">{{ r.rowsAffected }} affected</span>
+            <span class="meta-stat">{{ t('databases.console.rowsCount', { n: r.rows.length }) }}</span>
+            <span class="meta-stat" v-if="r.rowsAffected > 0">{{ t('databases.console.affected', { count: r.rowsAffected }) }}</span>
             <span class="meta-stat">{{ r.executionTimeMs }} ms</span>
           </div>
           <el-table

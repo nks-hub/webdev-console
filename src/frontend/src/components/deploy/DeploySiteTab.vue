@@ -102,11 +102,11 @@ const hosts = ref<string[]>([])
 const history = ref<DeployHistoryEntryDto[]>([])
 const diff = ref<DeployDiff | null>(null)
 const checks = ref<PreflightCheck[]>([
-  { name: 'git_status', state: 'pending', message: 'Working tree status' },
-  { name: 'php_lint', state: 'pending', message: 'php -l on changed files' },
-  { name: 'di_container', state: 'pending', message: 'Nette DI validate' },
-  { name: 'schema_validate', state: 'pending', message: 'Doctrine schema check' },
-  { name: 'manifest_check', state: 'pending', message: 'Vite manifest present' },
+  { name: 'git_status', state: 'pending', message: t('deploy.preflight.checks.git_status') },
+  { name: 'php_lint', state: 'pending', message: t('deploy.preflight.checks.php_lint') },
+  { name: 'di_container', state: 'pending', message: t('deploy.preflight.checks.di_container') },
+  { name: 'schema_validate', state: 'pending', message: t('deploy.preflight.checks.schema_validate') },
+  { name: 'manifest_check', state: 'pending', message: t('deploy.preflight.checks.manifest_check') },
 ])
 const checksLoading = ref(false)
 

@@ -33,7 +33,7 @@
         <div v-for="b in byToolBreakdown" :key="b.tool" class="tool-line">
           <code class="mono">{{ b.tool }}</code>
           <span class="muted">×{{ b.count }}</span>
-          <span class="muted">avg {{ Math.round(b.avgMs) }}ms</span>
+          <span class="muted">{{ t('mcpActivity.sessionDetail.avgMs', { ms: Math.round(b.avgMs) }) }}</span>
         </div>
       </div>
 
