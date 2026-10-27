@@ -1573,7 +1573,7 @@
       "pasteTokenFirst": "Paste your Cloudflare API token first",
       "autoSetupComplete": "Auto-setup complete: tunnel \"{name}\"",
       "autoSetupFailed": "Auto-setup failed: {err}",
-      "synced": "Synced {n} sites",
+      "synced": "Synced {n} site | Synced {n} sites",
       "syncFailed": "Sync failed: {err}",
       "tokenValid": "Cloudflare API token is valid",
       "verifyFailed": "Verify failed: {err}",
@@ -1594,7 +1594,8 @@
       "dnsDeleteFailed": "Delete failed: {err}",
       "dnsDeleteConfirmMessage": "Delete {type} record \"{name}\"?",
       "dnsDeleteConfirmTitle": "Confirm delete",
-      "dnsDeleteBtn": "Delete"
+      "dnsDeleteBtn": "Delete",
+      "cloudflaredInstalled": "cloudflared {version} is installed"
     },
     "connecting": "Connecting to Cloudflare API…",
     "startTunnel": "Start tunnel",
@@ -1602,7 +1603,7 @@
     "status": {
       "tunnelRunning": "Tunnel running",
       "stopped": "Stopped",
-      "unknown": "Unknown",
+      "unknown": "Status unknown",
       "serviceInfoUnavailable": "Service info unavailable — check daemon connection",
       "tokenStored": "API token stored",
       "tokenMissing": "API token missing",
@@ -1611,23 +1612,26 @@
       "tokenInvalid": "Token invalid",
       "noTunnel": "No tunnel selected",
       "configureBelow": "Configure below",
-      "zoneCount": "{n} zones",
+      "zoneCount": "{n} zone | {n} zones",
       "defaultSelected": "Default selected",
-      "pickDefaultZone": "Pick default zone"
+      "pickDefaultZone": "Pick default zone",
+      "pidUptime": "PID {pid} · up {uptime}",
+      "tokenMissingHint": "Paste it in step 1"
     },
     "tabs": {
       "setup": "Setup",
       "sites": "Sites",
-      "dns": "DNS"
+      "dns": "DNS",
+      "exposedSites": "Published sites ({n})"
     },
     "steps": {
-      "step1Title": "Step 1 — API token",
+      "step1Title": "Step 1: API token",
       "step1Hint": "Paste a Cloudflare token, everything else is automatic",
-      "step2Title": "Step 2 — cloudflared binary",
-      "step2Hint": "Auto-detected from ~/.wdc/binaries/cloudflared/ and FlyEnv",
-      "step3Title": "Step 3 — start the tunnel",
+      "step2Title": "Step 2: cloudflared binary",
+      "step2Hint": "Found automatically in the managed binaries; otherwise install or pick it",
+      "step3Title": "Step 4: start the tunnel",
       "step3Hint": "Launches cloudflared as a managed service",
-      "subdomainTemplate": "Subdomain template",
+      "subdomainTemplate": "Step 3: subdomain template",
       "subdomainTemplateHint": "Default public hostname when enabling tunnel on a site"
     },
     "actions": {
@@ -1662,7 +1666,15 @@
     "noRecords": "No records in this zone.",
     "addDnsHint": "CNAME to {target} routes traffic through this tunnel",
     "create": "Create",
-    "docs": "Docs"
+    "docs": "Docs",
+    "pluginMissingTitle": "The Cloudflare plugin is not installed",
+    "pluginMissingDesc": "The tunnel and DNS records are managed by the Cloudflare plugin. Without it nothing on this page can be set up.",
+    "loadFailed": "Could not load the Cloudflare settings: {err}",
+    "autoSetupDone": "Account: {account} · Tunnel: {tunnel}",
+    "binaryPathPlaceholder": "Path to the cloudflared executable",
+    "installCloudflared": "Install cloudflared",
+    "syncExplain": "Sync creates or updates a proxied CNAME for each site pointing at {target} and rewrites the tunnel rules so Apache gets the right local hostname. You can run it again any time; the result is the same.",
+    "syncedSites": "Synced {n} site to Cloudflare | Synced {n} sites to Cloudflare"
   },
   "siteEdit": {
     "composeUp": "Up",

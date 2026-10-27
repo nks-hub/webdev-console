@@ -14,18 +14,26 @@
           <span>{{ $t('cloudflare.docs') }}</span>
         </el-button>
         <el-button
+          v-if="!pluginMissing"
           size="small"
           :type="serviceRunning ? 'danger' : 'success'"
           :loading="toggling"
           :disabled="!daemonStore.connected || !configReady"
           @click="toggleTunnel"
         >
-          {{ serviceRunning ? $t('common.stop') : $t('common.run') }} tunnel
+          {{ serviceRunning ? $t('cloudflare.stopTunnel') : $t('cloudflare.startTunnel') }}
         </el-button>
       </div>
     </div>
 
     <LoadingState v-if="initialLoading" :label="$t('cloudflare.connecting')" />
+
+    <PluginMissingState
+      v-else-if="pluginMissing"
+      plugin-id="nks.wdc.cloudflare"
+      :title="$t('cloudflare.pluginMissingTitle')"
+      :description="$t('cloudflare.pluginMissingDesc')"
+    />
 
     <template v-else>
     <el-alert
@@ -47,7 +55,7 @@
             {{ serviceRunning ? $t('cloudflare.status.tunnelRunning') : (serviceInfo ? $t('cloudflare.status.stopped') : $t('cloudflare.status.unknown')) }}
           </div>
           <div class="status-meta" v-if="serviceInfo">
-            PID {{ serviceInfo.pid ?? '—' }} · uptime {{ formatUptime(serviceInfo.uptime) }}
+            {{ $t('cloudflare.status.pidUptime', { pid: serviceInfo.pid ?? '—', uptime: formatUptime(serviceInfo.uptime) }) }}
           </div>
           <div class="status-meta" v-else-if="configReady">
             {{ $t('cloudflare.status.serviceInfoUnavailable') }}
@@ -58,7 +66,7 @@
         <el-icon class="status-icon"><Key /></el-icon>
         <div class="status-body">
           <div class="status-title">{{ tokenState }}</div>
-          <div class="status-meta">{{ config.apiToken ? $t('cloudflare.status.tokenStored') : $t('cloudflare.status.tokenMissing') }}</div>
+          <div class="status-meta">{{ config.apiToken ? $t('cloudflare.status.tokenStored') : $t('cloudflare.status.tokenMissingHint') }}</div>
         </div>
       </div>
       <div class="status-card">
@@ -109,14 +117,14 @@
                   type="primary"
                   size="default"
                   :loading="autoSettingUp"
-                  :disabled="!apiTokenInput && !config.apiToken"
+                  :disabled="!apiTokenInput"
                   @click="runAutoSetup"
                 >
                   <el-icon><Check /></el-icon>
                   <span>{{ $t('cloudflare.actions.autoSetup') }}</span>
                 </el-button>
                 <span v-if="autoSetupResult" class="save-status ok">
-                  <el-icon><CircleCheckFilled /></el-icon> Account: {{ autoSetupResult.account.name }} · Tunnel: {{ autoSetupResult.tunnel.name }}
+                  <el-icon><CircleCheckFilled /></el-icon> {{ $t('cloudflare.autoSetupDone', { account: autoSetupResult.account.name, tunnel: autoSetupResult.tunnel.name }) }}
                 </span>
                 <span v-if="saveStatus && saveStatus.kind === 'err'" class="save-status err">
                   {{ saveStatus.message }}
@@ -130,7 +138,7 @@
           <EditCard :title="$t('cloudflare.steps.step2Title')" :hint="$t('cloudflare.steps.step2Hint')">
               <el-input
                 v-model="config.cloudflaredPath"
-                placeholder="C:\Users\...\cloudflared.exe"
+                :placeholder="$t('cloudflare.binaryPathPlaceholder')"
                 class="mono"
               >
                 <template #append>
@@ -140,6 +148,15 @@
               <div class="card-actions">
                 <el-button size="small" :loading="savingConfig" @click="saveBinaryPath">
                   {{ $t('cloudflare.savePathBtn') }}
+                </el-button>
+                <el-button
+                  v-if="!config.cloudflaredPath"
+                  size="small"
+                  type="primary"
+                  :loading="installingCloudflared"
+                  @click="installCloudflared"
+                >
+                  {{ $t('cloudflare.installCloudflared') }}
                 </el-button>
               </div>
           </EditCard>
@@ -181,7 +198,7 @@
                   :disabled="!configReady"
                   @click="toggleTunnel"
                 >
-                  {{ serviceRunning ? $t('common.stop') : $t('common.run') }} cloudflared
+                  {{ serviceRunning ? $t('cloudflare.stopTunnel') : $t('cloudflare.startTunnel') }}
                 </el-button>
               </div>
           </EditCard>
@@ -191,7 +208,7 @@
       <!-- ═══ Sites — per-site exposure ═════════════ -->
       <el-tab-pane name="ingress">
         <template #label>
-          <span class="tab-label"><el-icon><Share /></el-icon> {{ $t('cloudflare.tabs.sites') }} ({{ exposedSites.length }})</span>
+          <span class="tab-label"><el-icon><Share /></el-icon> {{ $t('cloudflare.tabs.exposedSites', { n: exposedSites.length }) }}</span>
         </template>
         <div class="tab-content">
           <EditCard :title="$t('cloudflare.exposedSites')" :hint="$t('cloudflare.exposedSitesHint')">
@@ -212,7 +229,7 @@
                     type="success"
                     effect="dark"
                     class="expose-tag"
-                  >proxied</el-tag>
+                  >{{ $t('cloudflare.proxied') }}</el-tag>
                 </div>
               </div>
 
@@ -232,11 +249,7 @@
                 </span>
               </div>
               <div class="hint" style="margin-top: var(--wdc-space-2-5);">
-                Sync will: (1) upsert a proxied CNAME for each site pointing at
-                <code>{{ config.tunnelId ? config.tunnelId.slice(0,8)+'…' : 'tunnel' }}.cfargotunnel.com</code>,
-                (2) rebuild the tunnel ingress rules with an
-                <code>httpHostHeader</code> override per site so Apache matches
-                the correct local vhost. Safe to run repeatedly — it's idempotent.
+                {{ $t('cloudflare.syncExplain', { target: `${config.tunnelId ? config.tunnelId.slice(0, 8) + '…' : 'tunnel'}.cfargotunnel.com` }) }}
               </div>
           </EditCard>
         </div>
@@ -356,7 +369,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
-  Setting, Check, Share, Delete, Right, Postcard, Link,
+  Setting, Check, Share, Right, Postcard, Link,
   CircleCheckFilled, CircleClose, Key, Connection, Location,
 } from '@element-plus/icons-vue'
 
@@ -367,16 +380,17 @@ import { useSitesStore } from '../../stores/sites'
 import FolderBrowser from '../shared/FolderBrowser.vue'
 import LoadingState from '../shared/LoadingState.vue'
 import EditCard from '../shared/EditCard.vue'
+import PluginMissingState from '../shared/PluginMissingState.vue'
 import {
   fetchCloudflareConfig, saveCloudflareConfig,
   verifyCloudflareToken, fetchCloudflareZones,
   fetchCloudflareDns, createCloudflareDns, deleteCloudflareDns,
-  fetchCloudflareTunnels, fetchCloudflareTunnelConfig,
-  updateCloudflareTunnelIngress, cloudflareAutoSetup, cloudflareSync,
-  type CloudflareConfig, type CfIngressRule, type CloudflareAutoSetupResult,
+  cloudflareAutoSetup, cloudflareSync, fetchLatestBinary, installBinary,
+  DaemonError,
+  type CloudflareConfig, type CloudflareAutoSetupResult,
 } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
-import type { SiteInfo } from '../../api/types'
+import { installErrorMessage } from '../../utils/binaries'
 
 defineOptions({ name: 'CloudflareTunnel' })
 
@@ -390,10 +404,10 @@ const config = reactive<CloudflareConfig>({})
 const pageLoadError = ref('')
 const initialLoading = ref(true)
 const apiTokenInput = ref('')
-const tunnelTokenInput = ref('')
+// The daemon answers 404 on every /api/cloudflare route without the plugin.
+const pluginMissing = ref(false)
 
 const apiTokenMasked = computed(() => config.apiToken || '')
-const tunnelTokenMasked = computed(() => config.tunnelToken || '')
 
 const savingConfig = ref(false)
 const saveStatus = ref<{ kind: 'ok' | 'err'; message: string } | null>(null)
@@ -403,38 +417,10 @@ async function loadConfig() {
   try {
     const res = await fetchCloudflareConfig()
     Object.assign(config, res)
+    pluginMissing.value = false
   } catch (e) {
-    pageLoadError.value = `Failed to load Cloudflare config: ${errorMessage(e)}`
-    ElMessage.error(pageLoadError.value)
-  }
-}
-
-async function saveConfig() {
-  savingConfig.value = true
-  saveStatus.value = null
-  try {
-    const body: Partial<CloudflareConfig> = {
-      cloudflaredPath: config.cloudflaredPath || null,
-      tunnelName: config.tunnelName || null,
-      tunnelId: config.tunnelId || null,
-      accountId: config.accountId || null,
-      defaultZoneId: config.defaultZoneId || null,
-    }
-    // Only send secret fields when the user actually typed something new
-    if (apiTokenInput.value) body.apiToken = apiTokenInput.value
-    if (tunnelTokenInput.value) body.tunnelToken = tunnelTokenInput.value
-
-    const res = await saveCloudflareConfig(body)
-    Object.assign(config, res)
-    apiTokenInput.value = ''
-    tunnelTokenInput.value = ''
-    saveStatus.value = { kind: 'ok', message: 'Settings saved' }
-    ElMessage.success(t('cloudflare.toast.settingsSaved'))
-  } catch (e) {
-    saveStatus.value = { kind: 'err', message: errorMessage(e) }
-    ElMessage.error(t('cloudflare.toast.saveFailed', { err: errorMessage(e) }))
-  } finally {
-    savingConfig.value = false
+    if (e instanceof DaemonError && e.status === 404) pluginMissing.value = true
+    else pageLoadError.value = t('cloudflare.loadFailed', { err: errorMessage(e) })
   }
 }
 
@@ -483,9 +469,8 @@ async function runAutoSetup() {
   autoSettingUp.value = true
   saveStatus.value = null
   try {
-    // Use typed input if present, fall back to the already-stored masked token
-    // (empty string — only works if token was persisted earlier and user just
-    // wants to re-run setup without re-typing)
+    // The stored token is redacted, so setup always needs a freshly pasted one;
+    // the button stays disabled until the field has text.
     const token = apiTokenInput.value || ''
     if (!token) {
       ElMessage.warning(t('cloudflare.toast.pasteTokenFirst'))
@@ -524,10 +509,7 @@ async function syncAllSites() {
   syncStatus.value = null
   try {
     const res = await cloudflareSync()
-    syncStatus.value = {
-      kind: 'ok',
-      message: `Synced ${res.synced} site${res.synced === 1 ? '' : 's'} to Cloudflare`,
-    }
+    syncStatus.value = { kind: 'ok', message: t('cloudflare.syncedSites', { n: res.synced }, res.synced) }
     ElMessage.success(t('cloudflare.toast.synced', { n: res.synced }))
   } catch (e) {
     syncStatus.value = { kind: 'err', message: errorMessage(e) }
@@ -538,48 +520,12 @@ async function syncAllSites() {
 }
 
 // ── Token verify ─────────────────────────────────────────────────────
-const verifying = ref(false)
 const tokenVerdict = ref<'unknown' | 'ok' | 'fail'>('unknown')
-const tokenVerdictLabel = computed(() => {
-  if (tokenVerdict.value === 'ok') return 'Token valid'
-  if (tokenVerdict.value === 'fail') return 'Token invalid'
-  return ''
-})
 const tokenState = computed(() => {
   if (tokenVerdict.value === 'ok') return t('cloudflare.status.tokenVerified')
   if (tokenVerdict.value === 'fail') return t('cloudflare.status.tokenInvalid')
   return config.apiToken ? t('cloudflare.status.tokenStoredUnverified') : t('cloudflare.status.tokenMissing')
 })
-
-async function verifyToken() {
-  verifying.value = true
-  try {
-    // Save first if user typed a new token
-    if (apiTokenInput.value) {
-      await saveCloudflareConfig({ apiToken: apiTokenInput.value })
-      apiTokenInput.value = ''
-      await loadConfig()
-    }
-    const res = await verifyCloudflareToken()
-    tokenVerdict.value = res?.success ? 'ok' : 'fail'
-    if (res?.success) {
-      ElMessage.success(t('cloudflare.toast.tokenValid'))
-    } else {
-      // Cloudflare returns { success: false, errors: [{ code, message }, ...] }
-      // Surface the actual rejection reason instead of a generic toast so the
-      // user knows whether to regenerate the token, fix scopes, or check quota.
-      const errMsg = Array.isArray(res?.errors) && res.errors.length > 0
-        ? res.errors.map(e => e?.message || e?.code || String(e)).join('; ')
-        : 'Token rejected by Cloudflare'
-      ElMessage.error(errMsg)
-    }
-  } catch (e) {
-    tokenVerdict.value = 'fail'
-    ElMessage.error(t('cloudflare.toast.verifyFailed', { err: errorMessage(e) }))
-  } finally {
-    verifying.value = false
-  }
-}
 
 // ── Zones ────────────────────────────────────────────────────────────
 // Minimal Cloudflare zone shape — we only display id/name, upstream
@@ -607,32 +553,6 @@ const activeZone = computed(() =>
   zones.value.find(z => z.id === selectedDnsZoneId.value)
 )
 
-// ── Tunnels ──────────────────────────────────────────────────────────
-// Cloudflare tunnels list entry — only id/name are read from the UI.
-interface CfTunnel {
-  id: string
-  name: string
-}
-const tunnels = ref<CfTunnel[]>([])
-const loadingTunnels = ref(false)
-
-async function loadTunnels() {
-  loadingTunnels.value = true
-  try {
-    const res = await fetchCloudflareTunnels()
-    tunnels.value = res?.result ?? []
-  } catch (e) {
-    ElMessage.error(t('cloudflare.toast.listTunnelsFailed', { err: errorMessage(e) }))
-  } finally {
-    loadingTunnels.value = false
-  }
-}
-
-function selectTunnel(t: CfTunnel) {
-  config.tunnelId = t.id
-  config.tunnelName = t.name
-}
-
 // ── Service status (from daemon store) ───────────────────────────────
 const serviceInfo = computed(() =>
   daemonStore.services.find(s => s.id === 'cloudflare')
@@ -656,68 +576,6 @@ async function toggleTunnel() {
     ElMessage.error(t(serviceRunning.value ? 'cloudflare.toast.stopFailed' : 'cloudflare.toast.startFailed', { err: errorMessage(e) }))
   } finally {
     toggling.value = false
-  }
-}
-
-// ── Ingress rules ────────────────────────────────────────────────────
-const ingressRules = ref<CfIngressRule[]>([])
-const loadingTunnelConfig = ref(false)
-const applyingIngress = ref(false)
-
-async function loadIngress() {
-  if (!config.tunnelId) {
-    ElMessage.warning(t('cloudflare.toast.configureTunnelFirst'))
-    return
-  }
-  loadingTunnelConfig.value = true
-  try {
-    const res = await fetchCloudflareTunnelConfig(config.tunnelId)
-    const cfg = res?.result?.config?.ingress ?? []
-    ingressRules.value = cfg
-      .filter(r => typeof r.hostname === 'string' && r.hostname.length > 0) // strip catch-all 404 rule
-      .map(r => ({ hostname: r.hostname ?? '', service: r.service ?? '' }))
-  } catch (e) {
-    ElMessage.error(t('cloudflare.toast.loadIngressFailed', { err: errorMessage(e) }))
-  } finally {
-    loadingTunnelConfig.value = false
-  }
-}
-
-function addEmptyRule() {
-  ingressRules.value.push({ hostname: '', service: 'http://localhost:80' })
-}
-
-function removeRule(i: number) {
-  ingressRules.value.splice(i, 1)
-}
-
-function addRuleFromSite(site: SiteInfo) {
-  const zoneDomain = zones.value.find(z => z.id === config.defaultZoneId)?.name ?? ''
-  const localStem = site.domain.replace(/\.(loc|local|test)$/i, '')
-  const hostname = zoneDomain ? `${localStem}.${zoneDomain}` : site.domain
-  const port = site.httpPort || 80
-  const service = `http://localhost:${port}`
-  // Dedupe by hostname
-  const existing = ingressRules.value.findIndex(r => r.hostname === hostname)
-  if (existing >= 0) {
-    ingressRules.value[existing].service = service
-  } else {
-    ingressRules.value.push({ hostname, service })
-  }
-  ElMessage.success(t('cloudflare.toast.ruleAdded', { hostname, service }))
-}
-
-async function applyIngress() {
-  if (!config.tunnelId) return
-  applyingIngress.value = true
-  try {
-    const rules = ingressRules.value.filter(r => r.hostname && r.service)
-    await updateCloudflareTunnelIngress(config.tunnelId, rules)
-    ElMessage.success(t('cloudflare.toast.ingressApplied', { n: rules.length }))
-  } catch (e) {
-    ElMessage.error(t('cloudflare.toast.ingressApplyFailed', { err: errorMessage(e) }))
-  } finally {
-    applyingIngress.value = false
   }
 }
 
@@ -791,7 +649,7 @@ async function deleteDnsRecord(row: CfDnsRecord) {
     await ElMessageBox.confirm(
       t('cloudflare.toast.dnsDeleteConfirmMessage', { type: row.type, name: row.name }),
       t('cloudflare.toast.dnsDeleteConfirmTitle'),
-      { type: 'warning', confirmButtonText: t('cloudflare.toast.dnsDeleteBtn') }
+      { type: 'warning', confirmButtonText: t('cloudflare.toast.dnsDeleteBtn'), cancelButtonText: t('common.cancel') }
     )
   } catch {
     // ElMessageBox rejects with 'cancel'/'close' when dismissed — that's fine.
@@ -803,6 +661,27 @@ async function deleteDnsRecord(row: CfDnsRecord) {
     await loadDns()
   } catch (e) {
     ElMessage.error(t('cloudflare.toast.dnsDeleteFailed', { err: errorMessage(e) }))
+  }
+}
+
+// ── cloudflared binary ───────────────────────────────────────────────
+const installingCloudflared = ref(false)
+
+async function installCloudflared() {
+  installingCloudflared.value = true
+  let version = ''
+  try {
+    version = (await fetchLatestBinary('cloudflared')).version
+    const installed = await installBinary('cloudflared', version) as { executable?: string | null }
+    if (installed?.executable) {
+      config.cloudflaredPath = installed.executable
+      await saveCloudflareConfig({ cloudflaredPath: installed.executable })
+    }
+    ElMessage.success(t('cloudflare.toast.cloudflaredInstalled', { version }))
+  } catch (e) {
+    ElMessage.error({ message: installErrorMessage((k, n) => t(k, n ?? {}), e, 'cloudflared', version || '?'), duration: 8000, showClose: true })
+  } finally {
+    installingCloudflared.value = false
   }
 }
 
@@ -831,6 +710,7 @@ function formatUptime(secs: number | string | undefined): string {
 onMounted(async () => {
   await loadConfig()
   initialLoading.value = false
+  if (pluginMissing.value) return
   if (sitesStore.sites.length === 0) void sitesStore.load()
   if (config.apiToken) {
     void loadZones()
@@ -887,7 +767,7 @@ async function autoVerifyToken() {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: var(--wdc-space-3);
-  padding: var(--wdc-space-4-5) var(--wdc-space-5) var(--wdc-space-1);
+  padding: var(--wdc-space-4-5) 0 var(--wdc-space-1);
 }
 .status-card {
   display: flex;
@@ -897,16 +777,9 @@ async function autoVerifyToken() {
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
   border-radius: var(--wdc-radius-lg);
-  box-shadow: var(--wdc-shadow-sm);
-  transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s;
-}
-.status-card:hover {
-  box-shadow: var(--wdc-shadow-card);
-  transform: translateY(-1px);
 }
 .status-card.status-active {
   border-color: var(--wdc-status-running);
-  box-shadow: var(--wdc-shadow-card), 0 0 0 1px rgba(52, 211, 153, 0.20);
 }
 .status-icon {
   font-size: 1.4rem;
@@ -934,7 +807,7 @@ async function autoVerifyToken() {
 .mono { font-family: 'JetBrains Mono', monospace; }
 
 .cf-tabs {
-  padding: var(--wdc-space-4) var(--wdc-space-5);
+  padding: var(--wdc-space-4) 0;
 }
 
 .tab-content {
@@ -968,122 +841,15 @@ async function autoVerifyToken() {
   align-items: center;
   margin-top: var(--wdc-space-3);
 }
-.token-status {
-  font-size: 0.8rem;
-  font-weight: 600;
-  margin-left: var(--wdc-space-1-5);
-}
-.token-ok { color: var(--wdc-status-running); }
-.token-fail { color: var(--wdc-status-error); }
-
-.row-gap {
-  display: flex;
-  gap: var(--wdc-space-2);
-}
-
-.tunnel-picker {
-  margin-top: var(--wdc-space-2-5);
-  border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius-sm);
-  overflow: hidden;
-}
-.tunnel-row {
-  display: grid;
-  grid-template-columns: 180px 1fr auto;
-  align-items: center;
-  gap: var(--wdc-space-3);
-  padding: var(--wdc-space-2-5) var(--wdc-space-3-5);
-  cursor: pointer;
-  border-bottom: 1px solid var(--wdc-border);
-  transition: background 0.1s;
-}
-.tunnel-row:last-child { border-bottom: none; }
-.tunnel-row:hover { background: var(--wdc-hover); }
-.tunnel-row-active {
-  background: var(--wdc-accent-dim);
-  border-left: 3px solid var(--wdc-accent);
-}
-.tunnel-name {
-  font-size: 0.88rem;
-  font-weight: 600;
-  color: var(--wdc-text);
-}
-.tunnel-id {
-  font-size: 0.72rem;
-  color: var(--wdc-text-3);
-}
-
-.save-row {
-  display: flex;
-  align-items: center;
-  gap: var(--wdc-space-3-5);
-  padding-top: var(--wdc-space-1);
-}
 .save-status { font-size: 0.82rem; font-weight: 600; }
 .save-status.ok { color: var(--wdc-status-running); }
 .save-status.err { color: var(--wdc-status-error); }
 
-/* Ingress rules ─────────────────────────────────────────────────── */
-.ingress-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--wdc-space-2);
-}
-.ingress-row {
-  display: grid;
-  grid-template-columns: 1fr 24px 1fr auto;
-  align-items: center;
-  gap: var(--wdc-space-2-5);
-}
-.ingress-host :deep(.el-input__inner),
-.ingress-service :deep(.el-input__inner) {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.82rem;
-}
 .arrow {
   font-size: 1.1rem;
   color: var(--wdc-text-3);
   text-align: center;
 }
-.ingress-empty {
-  padding: var(--wdc-space-4) 0;
-  font-size: 0.85rem;
-  color: var(--wdc-text-3);
-  text-align: center;
-}
-
-.site-pick-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: var(--wdc-space-2-5);
-}
-.site-pick-card {
-  background: var(--wdc-surface-2);
-  border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius-sm);
-  padding: var(--wdc-space-3) var(--wdc-space-3-5);
-  text-align: left;
-  font-family: inherit;
-  cursor: pointer;
-  transition: all 0.12s;
-}
-.site-pick-card:hover {
-  border-color: var(--wdc-accent);
-  background: var(--wdc-elevated);
-  transform: translateY(-1px);
-}
-.site-pick-domain {
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: var(--wdc-text);
-  font-family: 'JetBrains Mono', monospace;
-}
-.site-pick-meta {
-  font-size: 0.72rem;
-  color: var(--wdc-text-3);
-  margin-top: var(--wdc-space-1);
-}
-
 .dns-table :deep(th) {
   background: var(--wdc-surface-2) !important;
 }

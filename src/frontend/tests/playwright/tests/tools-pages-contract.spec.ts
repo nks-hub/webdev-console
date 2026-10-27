@@ -69,4 +69,15 @@ test.describe('Tool pages — source contract', () => {
     expect(vue).toMatch(/if \(!composerPath\.value && body\.path\) composerPath\.value = body\.path/)
     expect(vue).not.toContain('label="composer.json"')
   })
+
+  test('cloudflare page shows one plugin-missing state on 404 and no dead code', () => {
+    const vue = page('CloudflareTunnel.vue')
+    expect(vue).toMatch(/e instanceof DaemonError && e\.status === 404\) pluginMissing\.value = true/)
+    expect(vue).toContain('plugin-id="nks.wdc.cloudflare"')
+    expect(vue).not.toMatch(/ElMessage\.error\(pageLoadError/)
+    for (const dead of ['function saveConfig', 'function verifyToken', 'function loadTunnels', 'function applyIngress', 'tunnelTokenInput']) {
+      expect(vue).not.toContain(dead)
+    }
+    expect(vue).toContain(':disabled="!apiTokenInput"')
+  })
 })
