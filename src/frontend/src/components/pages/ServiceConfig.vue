@@ -148,7 +148,6 @@ import { fetchServiceConfig, saveServiceConfig, validateServiceConfig, type Conf
 import { useDaemonStore } from '../../stores/daemon'
 import { shortServiceName as shortName } from '../../utils/serviceState'
 import { cleanError, installRouteOf, stateOf } from '../../utils/services'
-import { formatBytes } from '../../utils/format'
 import MonacoEditor from '../shared/MonacoEditor.vue'
 
 defineOptions({ name: 'ServiceConfig' })
@@ -195,7 +194,13 @@ const dirty = computed(() => {
   return p ? dirtyFiles.has(p) : false
 })
 
-const contentSize = computed(() => formatBytes(new Blob([editingContent.value]).size, locale.value))
+// Bytes below 1 kB and one decimal above: config files are small.
+const contentSize = computed(() => {
+  const bytes = new Blob([editingContent.value]).size
+  return new Intl.NumberFormat(locale.value, {
+    style: 'unit', unit: bytes < 1024 ? 'byte' : 'kilobyte', unitDisplay: 'short', maximumFractionDigits: 1,
+  }).format(bytes < 1024 ? bytes : bytes / 1024)
+})
 
 // WDC's header on files it writes. Only my.ini is written once ("on first
 // run"); httpd.conf, the vhosts and php.ini are regenerated.
