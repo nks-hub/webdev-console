@@ -41,7 +41,9 @@
       "services": "Services",
       "actions": "Actions"
     },
-    "mcpOff": "MCP is off"
+    "mcpOff": "MCP is off",
+    "restartService": "Restart {name}",
+    "manageService": "Manage {name}"
   },
   "common": {
     "save": "Save",

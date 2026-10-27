@@ -75,6 +75,7 @@ import { useFeatureFlagsStore } from '../../stores/featureFlags'
 import { isRunning, serviceViewState, shortServiceName } from '../../utils/serviceState'
 import { runServiceAction, runServiceBatch } from '../../utils/serviceActions'
 import { openMailpit } from '../../utils/mailpit'
+import { manageRouteOf } from '../../utils/services'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -197,34 +198,24 @@ const siteCommands = computed<Command[]>(() => sitesStore.sites.flatMap(site => 
 const serviceCommands = computed<Command[]>(() => daemonStore.visibleServices.flatMap(svc => {
   const name = shortServiceName(svc)
   const state = serviceViewState(svc)
+  const command = (id: string, label: string, icon: Component, action: () => void): Command =>
+    ({ id: `${id}:${svc.id}`, group: 'services', label, icon, action })
+
   if (state === 'notInstalled') {
-    return [{
-      id: `install:${svc.id}`,
-      group: 'services' as const,
-      label: t('commandPalette.installService', { name }),
-      icon: Download,
-      action: () => { void router.push({ path: '/binaries', query: { app: svc.binaryApp ?? svc.id } }) },
-    }]
+    return [command('install', t('commandPalette.installService', { name }), Download,
+      () => { void router.push({ path: '/binaries', query: { app: svc.binaryApp ?? svc.id } }) })]
   }
+  const out: Command[] = []
   if (state === 'stopped' || state === 'crashed') {
-    return [{
-      id: `start:${svc.id}`,
-      group: 'services' as const,
-      label: t('commandPalette.startService', { name }),
-      icon: VideoPlay,
-      action: () => { void runServiceAction(svc, 'start') },
-    }]
+    out.push(command('start', t('commandPalette.startService', { name }), VideoPlay, () => { void runServiceAction(svc, 'start') }))
+  } else if (isRunning(svc)) {
+    out.push(command('stop', t('commandPalette.stopService', { name }), VideoPause, () => { void runServiceAction(svc, 'stop') }))
+    out.push(command('restart', t('commandPalette.restartService', { name }), Refresh, () => { void runServiceAction(svc, 'restart') }))
   }
-  if (isRunning(svc)) {
-    return [{
-      id: `stop:${svc.id}`,
-      group: 'services' as const,
-      label: t('commandPalette.stopService', { name }),
-      icon: VideoPause,
-      action: () => { void runServiceAction(svc, 'stop') },
-    }]
-  }
-  return []
+  // The page that holds the service's settings, logs and versions.
+  const manage = manageRouteOf(svc.id)
+  if (manage) out.push(command('manage', t('commandPalette.manageService', { name }), Setting, () => { void router.push(manage) }))
+  return out
 }))
 
 const actionCommands = computed<Command[]>(() => {

@@ -41,7 +41,9 @@
       "services": "Služby",
       "actions": "Akce"
     },
-    "mcpOff": "MCP je vypnuté"
+    "mcpOff": "MCP je vypnuté",
+    "restartService": "Restartovat {name}",
+    "manageService": "Spravovat {name}"
   },
   "common": {
     "save": "Uložit",

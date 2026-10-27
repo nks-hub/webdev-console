@@ -60,6 +60,13 @@ test.describe('Shell services contract', () => {
     expect(tokens).toMatch(/\.el-button--primary\.is-disabled:not\(\.is-text\):not\(\.is-link\)[\s\S]*?--el-button-bg-color: var\(--wdc-surface-2\)/)
   })
 
+  test('palette offers restart and manage next to start and stop', () => {
+    const palette = read('components', 'shared', 'CommandPalette.vue')
+    expect(palette).toMatch(/commandPalette\.restartService/)
+    expect(palette).toMatch(/commandPalette\.manageService/)
+    expect(palette).toMatch(/manageRouteOf\(svc\.id\)/)
+  })
+
   test('browser sign-in can be cancelled and times out', () => {
     const auth = read('stores', 'auth.ts')
     expect(auth).toMatch(/function cancelLogin/)

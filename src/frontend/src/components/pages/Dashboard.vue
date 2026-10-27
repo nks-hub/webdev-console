@@ -233,6 +233,7 @@ const lastBackupAge = computed(() => {
   if (at === null) return ''
   const minutes = Math.max(0, Math.floor((now.value.getTime() - at) / 60000))
   const rtf = new Intl.RelativeTimeFormat(localeName.value, { numeric: 'auto' })
+  if (minutes < 1) return t('common.justNow')
   if (minutes < 60) return rtf.format(-minutes, 'minute')
   return minutes < 1440 ? rtf.format(-Math.floor(minutes / 60), 'hour') : rtf.format(-Math.floor(minutes / 1440), 'day')
 })
