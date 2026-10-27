@@ -202,11 +202,13 @@ interface UpdaterState {
   transferred: number | null
   total: number | null
   error: string | null
+  /** electron-updater's error code, e.g. ERR_UPDATER_INVALID_SIGNATURE. */
+  errorCode: string | null
   /** When the feed last answered; the newest version it knows is `version`. */
   checkedAt: string | null
 }
 let updaterState: UpdaterState = {
-  status: 'idle', disabledReason: null, version: null, percent: null, transferred: null, total: null, error: null, checkedAt: null,
+  status: 'idle', disabledReason: null, version: null, percent: null, transferred: null, total: null, error: null, errorCode: null, checkedAt: null,
 }
 function setUpdaterState(patch: Partial<UpdaterState>) {
   updaterState = { ...updaterState, ...patch }
@@ -1460,7 +1462,7 @@ async function checkForAppUpdates(showNoUpdateDialog = false) {
     setUpdaterStatus('checkFailed')
     const message = error instanceof Error ? error.message : String(error)
     console.error('[updater] check failed:', message)
-    setUpdaterState({ status: 'error', error: message })
+    setUpdaterState({ status: 'error', error: message, errorCode: (error as { code?: string } | null)?.code ?? null })
     if (showNoUpdateDialog) {
       await dialog.showMessageBox({
         type: 'error',
@@ -1578,7 +1580,7 @@ async function setupAutoUpdater() {
       setUpdaterStatus('error')
       // Shown in Settings → Update; before, a broken latest.yml or a missing
       // installer only reached the log and updates failed silently.
-      setUpdaterState({ status: 'error', error: error?.message ?? String(error) })
+      setUpdaterState({ status: 'error', error: error?.message ?? String(error), errorCode: (error as { code?: string } | null)?.code ?? null })
       updateTray()
       console.error('[updater] error:', error?.message ?? error)
     })

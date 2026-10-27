@@ -1081,6 +1081,7 @@ import {
   type SystemInfo,
 } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
+import { formatBytes } from '../../utils/format'
 import HealthStatusDot from '../shared/HealthStatusDot.vue'
 import SettingsPanel from '../shared/SettingsPanel.vue'
 import SettingsCard from '../settings/shared/SettingsCard.vue'
@@ -1499,7 +1500,7 @@ async function manualBackup() {
   backupCreating.value = true
   try {
     const result = await createBackup()
-    ElMessage.success(t('settingsToast.backupCreated', { files: result.files, size: formatSize(result.size) }))
+    ElMessage.success(t('settingsToast.backupCreated', { files: result.files, size: formatBytes(result.size, locale.value) }))
   } catch (e) {
     ElMessage.error(t('settingsToast.backupFailed', { err: errorMessage(e) }))
   } finally {
@@ -1514,11 +1515,6 @@ const createBackupFromSimple = manualBackup
 const httpPort = computed(() => ports.http)
 const httpsPort = computed(() => ports.https)
 const mysqlPort = computed(() => ports.mysql)
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
-}
 
 // ── Danger-zone reset operations ──────────────────────────────────────
 const resettingSettings = ref(false)
@@ -2670,11 +2666,12 @@ const updaterState = ref<AppUpdaterState | null>(null)
 let unsubscribeUpdater: (() => void) | null = null
 
 // electron-updater checks on its own at startup. Until the GitHub check
-// runs, the version its feed reported is the newest one known.
+// runs, the version its feed reported is the newest one known, also after
+// a failed download (an error keeps the last version the feed reported).
 const latestVersion = computed<string | null>(() => {
   if (updateCheck.latest) return updateCheck.latest
   const u = updaterState.value
-  return u && (u.status === 'up-to-date' || u.status === 'downloading' || u.status === 'downloaded') ? u.version : null
+  return u && (u.status === 'up-to-date' || u.status === 'downloading' || u.status === 'downloaded' || u.status === 'error') ? u.version : null
 })
 const lastCheckedIso = computed<string | null>(() =>
   [updateCheck.lastCheckedIso, updaterState.value?.checkedAt].filter((x): x is string => !!x).sort().pop() ?? null)

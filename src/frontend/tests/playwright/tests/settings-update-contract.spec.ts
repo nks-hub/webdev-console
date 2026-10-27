@@ -37,4 +37,23 @@ test.describe('Settings update contract', () => {
     expect(card).toMatch(/updater\?\.status === 'downloaded'[\s\S]*?emit\('install'\)/)
     expect(card).not.toContain('downloadUrl')
   })
+
+  // 0.5.0 and 0.5.1 shipped a publisherName their installers did not match,
+  // so every download failed the signature check and the tab showed only
+  // the raw error with no way forward.
+  test('a failed updater offers the release page and says why', () => {
+    const main = read('electron', 'main.ts')
+    expect(main).toMatch(/autoUpdater\.on\('error'[\s\S]*?errorCode: \(error as \{ code\?: string \} \| null\)\?\.code \?\? null/)
+    const card = read('src', 'components', 'settings', 'easy', 'EasyUpdateSettings.vue')
+    expect(card).toMatch(/v-else-if="manualOnly && \(hasUpdate \|\| updater\?\.status === 'error'\)"[\s\S]*?emit\('openRelease'\)/)
+    expect(card).toContain("updater.errorCode === 'ERR_UPDATER_INVALID_SIGNATURE'")
+    const settings = read('src', 'components', 'pages', 'Settings.vue')
+    expect(settings).toMatch(/u\.status === 'downloaded' \|\| u\.status === 'error'\) \? u\.version/)
+    for (const lang of ['cs', 'en']) {
+      const update = JSON.parse(read('src', 'locales', `${lang}.json`)).settings.update
+      expect(update.errorHint.signature).toBeTruthy()
+      expect(update.errorHint.generic).toBeTruthy()
+      expect(update.errorDetail).toBeTruthy()
+    }
+  })
 })

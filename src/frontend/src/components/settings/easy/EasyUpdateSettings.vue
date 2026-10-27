@@ -31,7 +31,7 @@
       <el-progress :percentage="updater.percent ?? 0" :stroke-width="10" />
       <div class="update-progress-meta">
         <span>{{ t('settings.update.downloadingVersion', { v: updater.version ?? '' }) }}</span>
-        <span v-if="updater.total" class="mono">{{ formatBytes(updater.transferred ?? 0) }} / {{ formatBytes(updater.total) }}</span>
+        <span v-if="updater.total" class="mono">{{ formatSize(updater.transferred ?? 0) }} / {{ formatSize(updater.total) }}</span>
       </div>
     </div>
 
@@ -47,8 +47,14 @@
         {{ t('settings.update.restartInstall') }}
       </el-button>
       <!-- Portable and dev builds have no updater, and a failed updater
-           leaves only the manual route: the release page, not a bare .exe. -->
-      <el-button v-else-if="hasUpdate && manualOnly" type="primary" size="small" @click="emit('openRelease')">
+           leaves only the manual route: the release page, not a bare .exe.
+           A failed updater gets the link even before the GitHub check ran. -->
+      <el-button
+        v-else-if="manualOnly && (hasUpdate || updater?.status === 'error')"
+        type="primary"
+        size="small"
+        @click="emit('openRelease')"
+      >
         {{ t('settings.update.openReleasePage') }}
       </el-button>
     </div>
@@ -58,10 +64,16 @@
       type="error"
       :closable="false"
       :title="t('settings.update.updaterError')"
-      :description="updater.error ?? ''"
+      :description="t(updater.errorCode === 'ERR_UPDATER_INVALID_SIGNATURE' ? 'settings.update.errorHint.signature' : 'settings.update.errorHint.generic')"
       show-icon
       style="margin-top: var(--wdc-space-3)"
     />
+    <!-- The raw electron-updater text (a signature failure dumps the whole
+         certificate as JSON) stays available without filling the tab. -->
+    <details v-if="updater?.status === 'error' && updater.error" class="updater-error-detail">
+      <summary>{{ t('settings.update.errorDetail') }}</summary>
+      <pre>{{ updater.error }}</pre>
+    </details>
 
     <el-alert
       v-if="updateCheck.error"
@@ -96,6 +108,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { formatBytes } from '../../../utils/format'
 import SettingsCard from '../shared/SettingsCard.vue'
 
 /** GitHub release data: the version on offer and its notes. */
@@ -144,9 +158,9 @@ const updaterLabel = computed(() => {
   }
 })
 
-function formatBytes(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+const { locale } = useI18n()
+function formatSize(bytes: number): string {
+  return formatBytes(bytes, locale.value)
 }
 </script>
 
@@ -163,6 +177,11 @@ function formatBytes(bytes: number): string {
   margin-top: var(--wdc-space-3);
 }
 
+/* The gap spaces the buttons; Element's margin would indent a wrapped one. */
+.update-actions .el-button + .el-button {
+  margin-left: 0;
+}
+
 .update-progress {
   margin-top: var(--wdc-space-3);
 }
@@ -176,6 +195,25 @@ function formatBytes(bytes: number): string {
 }
 
 .mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.updater-error-detail {
+  margin-top: var(--wdc-space-2);
+  font-size: 0.78rem;
+  color: var(--wdc-text-3);
+}
+
+.updater-error-detail summary {
+  cursor: pointer;
+}
+
+.updater-error-detail pre {
+  max-height: 12rem;
+  overflow: auto;
+  margin: var(--wdc-space-1) 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   font-family: 'JetBrains Mono', monospace;
 }
 </style>

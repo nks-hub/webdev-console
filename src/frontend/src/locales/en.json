@@ -3017,7 +3017,12 @@
       "restartInstall": "Restart and install",
       "openReleasePage": "Open the release page",
       "downloadingVersion": "Downloading version {v}",
-      "tabDesc": "The installed app looks for updates on its own at start and downloads them in the background. They install when the app restarts."
+      "tabDesc": "The installed app looks for updates on its own at start and downloads them in the background. They install when the app restarts.",
+      "errorHint": {
+        "signature": "Download the installer from the release page and run it. The automatic update rejected the downloaded version because it is not signed the way this installation expects.",
+        "generic": "You can also download the new version from the release page."
+      },
+      "errorDetail": "Technical details"
     },
     "danger": {
       "title": "Danger zone",
