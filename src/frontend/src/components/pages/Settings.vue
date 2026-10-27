@@ -521,13 +521,7 @@
                     </el-button>
                   </template>
                 </el-input>
-                <div class="hint">
-                  URL of the NKS WDC catalog-api service (see
-                  <code>services/catalog-api/</code>). Electron auto-spawns
-                  a local sidecar on <code>127.0.0.1:8765</code> in dev mode.
-                  Point at your self-hosted deployment for team-wide binary
-                  versions or leave blank for the default.
-                </div>
+                <div class="hint">{{ $t('settings.advanced.catalogUrlHint') }}</div>
                 <div class="hint" v-if="catalogStatus">
                   <HealthStatusDot :level="catalogStatus.ok ? 'ok' : 'err'" />
                   {{ catalogStatus.message }}
@@ -543,7 +537,7 @@
                   @click="openCatalogAdmin"
                   :disabled="!catalogUrl"
                 >
-                  {{ $t('common.open') }} admin UI
+                  {{ $t('settings.advanced.openCatalogAdmin') }}
                 </el-button>
               </el-form-item>
               <el-form-item :label="$t('settings.advanced.mysqlRoot')">
@@ -563,10 +557,8 @@
                   >{{ $t('settings.advanced.save') }}</el-button>
                 </div>
                 <div class="hint">
-                  {{ mysqlRootExists ? 'A password is currently stored (encrypted via DPAPI).' : 'No password stored — WDC cannot authenticate to mysqld.' }}
-                  Use this field when your mysqld root password was set outside WDC (external MySQL install, MAMP import, or manual change) — WDC only syncs its stored copy, you still need to run
-                  <code>ALTER USER 'root'@'localhost' IDENTIFIED BY '…'</code>
-                  on the server itself.
+                  {{ mysqlRootExists ? $t('settings.advanced.mysqlRootStored') : $t('settings.advanced.mysqlRootMissing') }}
+                  {{ $t('settings.advanced.mysqlRootHint') }}
                 </div>
               </el-form-item>
               <el-form-item :label="$t('settings.advanced.pluginAutoSync')">
@@ -577,23 +569,17 @@
                   :loading="syncingPlugins"
                   @click="syncPluginsNow"
                 >{{ $t('settings.advanced.syncNow') }}</el-button>
-                <div class="hint">
-                  When enabled the daemon pulls the plugin catalog from the
-                  URL above on startup + every 6 hours and downloads any
-                  missing plugin releases into
-                  <code>~/.wdc/plugins/&lt;id&gt;/&lt;version&gt;/</code>.
-                  Leave off for dev builds that use the bundled
-                  <code>build/plugins/</code>. Env var
-                  <code>NKS_WDC_PLUGIN_AUTOSYNC=1</code> still wins when set.
-                </div>
+                <div class="hint">{{ $t('settings.advanced.pluginAutoSyncHint') }}</div>
                 <div v-if="pluginSyncStatus" class="hint">
                   <HealthStatusDot :level="pluginSyncStatus.ok ? 'ok' : 'err'" />
                   {{ pluginSyncStatus.message }}
                 </div>
                 <div v-if="pluginCatalogStatus" class="hint">
-                  Catalog: {{ pluginCatalogStatus.catalogCount }} plugin{{ pluginCatalogStatus.catalogCount === 1 ? '' : 's' }} ·
-                  cached: {{ pluginCatalogStatus.cachedCount }} ·
-                  last sync: {{ pluginCatalogStatus.lastFetch ? formatRelativeTime(pluginCatalogStatus.lastFetch) : 'never' }}
+                  {{ $t('settings.advanced.pluginCatalogLine', {
+                    count: pluginCatalogStatus.catalogCount,
+                    cached: pluginCatalogStatus.cachedCount,
+                    ago: pluginCatalogStatus.lastFetch ? formatRelativeTime(pluginCatalogStatus.lastFetch) : $t('settings.advanced.neverSynced'),
+                  }) }}
                 </div>
               </el-form-item>
             </el-form>
@@ -655,31 +641,15 @@
               <p class="hint">
                 {{ $t('settings.deploySubsystem.description') }}
               </p>
-              <!-- Iter 13: backend mode status banner. Shows operator at a
-                   glance which deploy backend is currently authoritative,
-                   sourced from /api/admin/plugin-readiness. Today always
-                   built-in (Program.cs handlers), but the banner already
-                   reflects the live mode so a future flip is visible
-                   without leaving Settings. -->
-              <div
-                v-if="deployBackendMode"
-                class="hint"
-                style="margin-bottom: var(--wdc-space-3); padding: var(--wdc-space-2-5) var(--wdc-space-3-5); border-radius: var(--wdc-radius-sm); background: var(--wdc-surface-2); border: 1px solid var(--wdc-border); display: inline-block"
-              >
-                <span v-if="deployBackendMode === 'plugin'" style="color: var(--el-color-success)">
-                  🔌 {{ $t('settings.deploySubsystem.modePlugin', { v: deployPluginVersion ?? '?' }) }}
-                </span>
-                <span v-else style="color: var(--el-color-info)">
-                  ⚙ {{ $t('settings.deploySubsystem.modeBuiltIn') }}
-                </span>
-                <span v-if="deployPluginLoaded && deployBackendMode === 'built-in'" class="muted" style="margin-left: var(--wdc-space-2)">
-                  ({{ $t('settings.deploySubsystem.pluginLoadedNotActive', { v: deployPluginVersion ?? '?' }) }})
-                </span>
-              </div>
               <el-form label-position="left" label-width="240px" size="small">
                 <el-form-item :label="$t('settings.deploySubsystem.enableLabel')">
                   <el-switch v-model="deployEnabled" />
                 </el-form-item>
+                <!-- The built-in/plugin backend switch stays out of sight until
+                     there is something to do with it: readiness unlocked the
+                     flip, a flip waits for a restart, or the plugin already
+                     serves deploys. Locked, it only showed migration internals. -->
+                <template v-if="deployFlipUnlocked || deployRestartPending || deployBackendMode === 'plugin'">
                 <!-- Phase 7.4 #109-D1 — backend selector. Today the toggle
                      is INFORMATIONAL only: useLegacyHostHandlers=true means
                      Program.cs deploy handlers serve everything (current
@@ -726,7 +696,8 @@
                         effect="plain"
                         style="margin-left: var(--wdc-space-3); cursor: pointer"
                       >
-                        🔒 {{ $t('settings.deploySubsystem.legacyHandlersLocked', { n: deployFlipBlockers.length }) }}
+                        <el-icon><Lock /></el-icon>
+                        {{ $t('settings.deploySubsystem.legacyHandlersLocked', { n: deployFlipBlockers.length }) }}
                       </el-tag>
                     </template>
                     <!-- Iter 21: shared component renders blockerDetails
@@ -764,12 +735,15 @@
                           </li>
                         </ul>
                       </div>
-                      <div class="muted" style="margin-top: var(--wdc-space-2); font-size: 11px">
-                        <code class="mono">GET /api/admin/plugin-readiness?explain=true</code>
-                      </div>
                     </div>
                   </el-popover>
                 </el-form-item>
+                <div class="hint">
+                  {{ deployBackendMode === 'plugin'
+                    ? $t('settings.deploySubsystem.modePlugin', { v: deployPluginVersion ?? '?' })
+                    : $t('settings.deploySubsystem.modeBuiltIn') }}
+                </div>
+                </template>
               </el-form>
             </div>
           </div>
@@ -1348,15 +1322,13 @@ const deployUseLegacyHostHandlers = ref(true)
 // #109-D1+ iter 10: store full readiness so the locked toggle can
 // surface blockers count inline — operator sees WHY at a glance without
 // having to open DeploySettings panel popover.
-// Iter 13: also store mode + pluginVersion + pluginLoaded so the section
-// header can render a status banner ("⚙ built-in" / "🔌 plugin v0.1.0").
+// Iter 13: also store mode + pluginVersion for the backend status line.
 const deployFlipUnlocked = ref<boolean>(false)
 const deployFlipBlockers = ref<string[]>([])
 interface DeployBlockerDetail { summary: string; phase: string; remediation: string }
 const deployFlipBlockerDetails = ref<DeployBlockerDetail[]>([])
 const deployBackendMode = ref<'built-in' | 'plugin' | null>(null)
 const deployPluginVersion = ref<string | null>(null)
-const deployPluginLoaded = ref<boolean>(false)
 // Iter 56-58 (#258) — restartPending becomes true when the operator has
 // flipped useLegacyHostHandlers but the daemon still serves under the
 // boot-time value. The global toggle is the place where the operator
@@ -1383,7 +1355,6 @@ async function loadDeployFlipReadiness(): Promise<void> {
       deployFlipBlockerDetails.value = Array.isArray(j.blockerDetails) ? j.blockerDetails : []
       deployBackendMode.value = j.mode === 'plugin' || j.mode === 'built-in' ? j.mode : null
       deployPluginVersion.value = typeof j.pluginVersion === 'string' ? j.pluginVersion : null
-      deployPluginLoaded.value = j.pluginLoaded === true
       deployRestartPending.value = j.restartPending === true
       deployFlipGatedEndpoints.value = Array.isArray(j.gatedEndpoints) ? j.gatedEndpoints : []
     }
@@ -1460,17 +1431,14 @@ const dangerZoneExpanded = ref<string[]>([])
 // sites list still shows cached rows, toast flashes briefly, "vůbec nic
 // neudělalo" impression. 3.5 s is the upper bound of our observed
 // exit-99 → port-file → `/healthz` bounce window.
-async function doReset(scope: 'settings' | 'factory', label: string): Promise<boolean> {
+async function doReset(scope: 'settings' | 'factory'): Promise<boolean> {
   const url = `${daemonBaseUrl()}/api/admin/reset?scope=${scope}`
   const r = await fetch(url, { method: 'POST', headers: authHeaders() })
   if (!r.ok) {
     const body = await r.text().catch(() => '')
-    throw new Error(`HTTP ${r.status} — ${body || 'daemon returned no body'}`)
+    throw new Error(body || `HTTP ${r.status}`)
   }
-  ElMessage.success({
-    message: `${label} hotov. Daemon se restartuje a aplikace se znovu načte…`,
-    duration: 3500,
-  })
+  ElMessage.success({ message: t('settings.danger.restarting'), duration: 3500 })
   // Give the daemon time to exit-99 → Electron respawn → port file → /healthz,
   // then ask the main process to force-reload the renderer. Main-side
   // reloadIgnoringCache bypasses cases where `window.location.reload()` in
@@ -1487,16 +1455,15 @@ async function doReset(scope: 'settings' | 'factory', label: string): Promise<bo
 
 async function confirmResetSettings() {
   try {
-    await ElMessageBox.confirm(
-      'Opravdu smazat tabulku `settings`? Weby, databáze a binárky zůstanou. ' +
-      'WDC se po operaci restartuje a uvítací průvodce proběhne znovu.',
-      'Reset nastavení',
-      { type: 'warning', confirmButtonText: 'Smazat a restartovat', cancelButtonText: 'Zrušit' },
-    )
+    await ElMessageBox.confirm(t('settings.danger.resetConfirm'), t('settings.danger.resetSettings'), {
+      type: 'warning',
+      confirmButtonText: t('settings.danger.resetConfirmButton'),
+      cancelButtonText: t('common.cancel'),
+    })
   } catch { return }
   resettingSettings.value = true
   try {
-    await doReset('settings', 'Reset nastavení')
+    await doReset('settings')
   } catch (e) {
     ElMessage.error(t('settingsToast.resetFailed', { err: errorMessage(e) }))
   } finally {
@@ -1506,17 +1473,16 @@ async function confirmResetSettings() {
 
 async function confirmFactoryReset() {
   try {
-    await ElMessageBox.confirm(
-      'SMAZAT VŠECHNO? To zahrnuje všechny weby, databáze i vazby pluginů. ' +
-      'Binárky (~/.wdc/binaries/) zůstanou, aby se znovu nestahovalo Apache/PHP/MySQL. ' +
-      'Tato operace je NEVRATNÁ.',
-      'Tovární reset',
-      { type: 'error', confirmButtonText: 'Ano, smazat všechno', cancelButtonText: 'Zrušit', distinguishCancelAndClose: true },
-    )
+    await ElMessageBox.confirm(t('settings.danger.factoryConfirm'), t('settings.danger.factoryReset'), {
+      type: 'error',
+      confirmButtonText: t('settings.danger.factoryConfirmButton'),
+      cancelButtonText: t('common.cancel'),
+      distinguishCancelAndClose: true,
+    })
   } catch { return }
   resettingFactory.value = true
   try {
-    await doReset('factory', 'Tovární reset')
+    await doReset('factory')
   } catch (e) {
     ElMessage.error(t('settingsToast.resetFailed', { err: errorMessage(e) }))
   } finally {
@@ -1939,7 +1905,7 @@ async function syncPluginsNow() {
     })
     if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
     const result = await r.json()
-    const msg = `Catalog: ${result.catalogCount ?? 0} plugins · installed this run: ${result.installedThisCall ?? 0}`
+    const msg = t('settings.advanced.pluginSyncResult', { count: result.catalogCount ?? 0, installed: result.installedThisCall ?? 0 })
     pluginSyncStatus.value = { ok: true, message: msg }
     ElMessage.success(msg)
     // Re-poll the status endpoint so the "last sync" label reflects the
@@ -1969,14 +1935,11 @@ async function refreshCatalog() {
     })
     if (!r.ok) throw new Error((await r.text().catch(() => '')) || `HTTP ${r.status}`)
     const result = await r.json()
-    catalogStatus.value = {
-      ok: true,
-      message: `Refreshed: ${result.count ?? 0} releases · ${result.lastFetch ?? 'now'}`,
-    }
+    catalogStatus.value = { ok: true, message: t('settingsToast.catalogRefreshed', { count: result.count ?? 0 }) }
     ElMessage.success(t('settingsToast.catalogRefreshed', { count: result.count ?? 0 }))
   } catch (e) {
     const msg = errorMessage(e)
-    catalogStatus.value = { ok: false, message: `Refresh failed: ${msg}` }
+    catalogStatus.value = { ok: false, message: t('settingsToast.refreshFailed', { err: msg }) }
     ElMessage.error(t('settingsToast.refreshFailed', { err: msg }))
   } finally {
     refreshingCatalog.value = false
@@ -2006,13 +1969,10 @@ async function testCatalogReachable() {
     const body = await r.json()
     catalogStatus.value = {
       ok: true,
-      message: `Reachable: ${body.service ?? 'catalog-api'} v${body.version ?? '?'}`,
+      message: t('settings.advanced.catalogReachable', { service: body.service ?? 'catalog-api', version: body.version ?? '?' }),
     }
   } catch (e) {
-    catalogStatus.value = {
-      ok: false,
-      message: `Unreachable: ${errorMessage(e)}. Is the sidecar running?`,
-    }
+    catalogStatus.value = { ok: false, message: t('settings.advanced.catalogUnreachable', { err: errorMessage(e) }) }
   } finally {
     testingCatalog.value = false
   }
