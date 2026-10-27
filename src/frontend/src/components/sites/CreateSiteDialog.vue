@@ -53,9 +53,7 @@
         <div v-else-if="folderState === 'exists'" class="field-note note-ok">
           <el-icon aria-hidden="true"><Check /></el-icon> {{ $t('sites.new.folderExists') }}
         </div>
-        <div v-else-if="folderState === 'missing'" class="field-note note-warn">
-          <el-icon aria-hidden="true"><WarningFilled /></el-icon> {{ $t('sites.new.folderMissing') }}
-        </div>
+        <div v-else-if="folderState === 'missing'" class="field-note">{{ $t('sites.new.folderMissing') }}</div>
         <div v-else class="field-note">{{ $t('sites.new.folderHint') }}</div>
       </el-form-item>
 

@@ -190,6 +190,18 @@ public sealed class SiteManager : ISiteRegistry
                 throw new ArgumentException($"DocumentRoot contains forbidden character: '{c}'");
     }
 
+    /// <summary>
+    /// Creates a missing document root so a new site opens without a manual mkdir. Only an absolute
+    /// path is touched (a relative one would resolve against the daemon's working directory) and only
+    /// the folder itself, never files. Returns true when this call created the folder.
+    /// </summary>
+    public static bool EnsureDocumentRoot(string documentRoot)
+    {
+        if (!Path.IsPathFullyQualified(documentRoot) || Directory.Exists(documentRoot)) return false;
+        Directory.CreateDirectory(documentRoot);
+        return true;
+    }
+
     public static void ValidateBindAddress(string? bindAddress)
     {
         if (string.IsNullOrWhiteSpace(bindAddress) || bindAddress.Trim() == "*")
