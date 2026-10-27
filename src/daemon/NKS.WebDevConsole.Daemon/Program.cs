@@ -87,6 +87,7 @@ builder.Services.AddSingleton<WindowsFirewallManager>();
 builder.Services.AddSingleton<SseService>();
 builder.Services.AddSingleton<WebSocketLogStreamer>();
 builder.Services.AddSingleton<ProcessManager>();
+builder.Services.AddSingleton<ServiceRunTracker>();
 builder.Services.AddSingleton<ShutdownCoordinator>();
 builder.Services.AddHostedService<HealthMonitor>();
 builder.Services.AddSingleton<ServiceLogTailer>();
