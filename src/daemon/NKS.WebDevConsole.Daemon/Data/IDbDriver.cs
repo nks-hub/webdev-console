@@ -129,3 +129,6 @@ public sealed class QueryResultSet
 }
 
 public sealed record QueryWarning(string Level, int Code, string Message);
+
+/// <summary>Result of <c>MySqlDriver.ExecuteReadOnlyQueryAsync</c>; <see cref="Truncated"/> when the row cap cut the result.</summary>
+public sealed record ReadOnlyQueryResult(QueryResultSet Set, bool Truncated);

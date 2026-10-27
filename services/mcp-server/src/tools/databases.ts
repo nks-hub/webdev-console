@@ -107,9 +107,12 @@ function stripLiteralsAndComments(sql: string): string {
 // (`SHOW CREATE TABLE` is a read).
 const VERBS_NEEDING_BODY_CHECK = /^(SELECT|WITH|EXPLAIN|DESC(RIBE)?)\b/i
 // INSERT() and REPLACE() are also string functions, so they only count when
-// no "(" follows.
+// no "(" follows. The second group are reads with side effects: SELECT … INTO,
+// LOAD_FILE (`\bLOAD\b` misses it because '_' is a word character),
+// SLEEP/BENCHMARK, named and row locks, sequence advances. The daemon also
+// runs the statement in a read-only transaction with a time limit and row cap.
 const WRITE_KEYWORDS =
-  /\b(?:(?:INSERT|REPLACE)\b(?!\s*\()|(?:UPDATE|DELETE|MERGE|CREATE|DROP|ALTER|TRUNCATE|RENAME|GRANT|REVOKE|CALL|LOAD|HANDLER|OUTFILE|DUMPFILE)\b)/i
+  /\b(?:(?:INSERT|REPLACE)\b(?!\s*\()|(?:UPDATE|DELETE|MERGE|CREATE|DROP|ALTER|TRUNCATE|RENAME|GRANT|REVOKE|CALL|LOAD|HANDLER|OUTFILE|DUMPFILE|INTO|LOAD_FILE|SLEEP|BENCHMARK|GET_LOCK|RELEASE_LOCK|RELEASE_ALL_LOCKS|LOCK|NEXTVAL|SETVAL|SYS_EXEC|SYS_EVAL)\b)/i
 
 export function isReadOnlySql(sql: string): boolean {
   // MySQL executes the body of /*! … */ and MariaDB of /*M! … */, so a
