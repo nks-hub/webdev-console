@@ -10,23 +10,24 @@
           <span v-if="marketplace.reachable">· {{ $t('plugins.marketplaceCount', { count: marketplace.plugins.length }) }}</span>
         </p>
       </div>
-      <el-input
-        v-if="activeTab === 'installed'"
-        v-model="search"
-        :placeholder="$t('plugins.searchPlaceholder')"
-        clearable
-        size="small"
-        style="width: 220px"
-        prefix-icon="Search"
-      />
-      <el-button
-        v-else
-        size="small"
-        :loading="loadingMarketplace"
-        @click="reloadMarketplace"
-      >
-        {{ $t('common.refresh') }}
-      </el-button>
+      <div class="header-actions">
+        <el-input
+          v-model="search"
+          :placeholder="$t('plugins.searchPlaceholder')"
+          clearable
+          size="small"
+          style="width: 220px"
+          prefix-icon="Search"
+        />
+        <el-button
+          v-if="activeTab === 'marketplace'"
+          size="small"
+          :loading="loadingMarketplace"
+          @click="reloadMarketplace"
+        >
+          {{ $t('plugins.reload') }}
+        </el-button>
+      </div>
     </div>
 
     <el-tabs v-model="activeTab" class="pm-tabs">
@@ -49,23 +50,23 @@
     <!-- Marketplace tab -->
     <div v-else-if="activeTab === 'marketplace'" class="page-body-pad">
       <el-alert
-        v-if="!marketplace.reachable && marketplace.error"
+        v-if="marketplace.error"
         type="warning"
         :closable="false"
         show-icon
-        :title="`Marketplace unreachable: ${marketplace.error}`"
-        :description="`Source: ${marketplace.source}`"
+        :title="$t('plugins.marketplaceUnreachable', { error: marketplace.error })"
+        :description="$t('plugins.marketplaceSource', { source: marketplace.source })"
         style="margin-bottom: var(--wdc-space-4)"
       />
       <div v-if="loadingMarketplace" class="page-body-pad">
         <el-skeleton :rows="3" animated />
       </div>
-      <div v-else-if="marketplace.plugins.length === 0" class="pm-empty">
-        <el-empty :description="$t('plugins.noMarketplaceItems')" :image-size="60" />
+      <div v-else-if="filteredMarketplace.length === 0" class="pm-empty">
+        <el-empty :description="search ? $t('plugins.noMatching', { q: search }) : $t('plugins.noMarketplaceItems')" :image-size="60" />
       </div>
       <div v-else class="pm-grid">
         <div
-          v-for="mp in marketplace.plugins"
+          v-for="mp in filteredMarketplace"
           :key="mp.id"
           class="pm-card"
           :class="{ 'pm-card--enabled': mp.installed }"
@@ -74,14 +75,14 @@
             <div class="pm-card-title">
               <ServiceIcon :service="mp.id" :active="true" />
               <span class="pm-name">{{ mp.name }}</span>
-              <el-tag v-if="mp.installed" size="small" type="success" effect="plain">installed</el-tag>
+              <el-tag v-if="mp.installed" size="small" type="success" effect="plain">{{ $t('plugins.installedTag') }}</el-tag>
             </div>
           </div>
-          <div class="pm-card-desc">{{ mp.description || 'No description.' }}</div>
+          <div class="pm-card-desc">{{ mp.description || $t('plugins.page.noDescription') }}</div>
           <div class="pm-card-footer">
             <div class="pm-meta">
               <span class="pm-version">v{{ mp.version }}</span>
-              <span v-if="mp.author" class="pm-author">by {{ mp.author }}</span>
+              <span v-if="mp.author" class="pm-author">{{ $t('plugins.byAuthor', { author: mp.author }) }}</span>
               <span v-if="mp.license" class="pm-author">· {{ mp.license }}</span>
             </div>
             <!-- F91.7: surface why there's no install action.
@@ -93,8 +94,8 @@
                  showed no button at all and users thought marketplace was
                  broken. -->
             <!-- F91.12: built-in + installed → Vestavěný; built-in + uninstalled
-                 → Obnovit (reset blacklist + restart daemon, or prompt rebuild
-                 when DLL is already gone). -->
+                 → Vrátit plugin (reset blacklist + restart daemon, or prompt
+                 rebuild when DLL is already gone). -->
             <div v-if="mp.builtIn && mp.installed" class="pm-mp-actions">
               <el-tag size="small" type="info" effect="plain">{{ $t('plugins.builtIn') }}</el-tag>
             </div>
@@ -155,37 +156,43 @@
           <div class="pm-card-title">
             <ServiceIcon :service="plugin.id" :active="plugin.enabled" />
             <span class="pm-name">{{ plugin.name }}</span>
-            <el-tag size="small" type="info" effect="plain" class="pm-type-tag">{{ plugin.type }}</el-tag>
+            <el-tag size="small" type="info" effect="plain" class="pm-type-tag">
+              {{ plugin.type === 'service' ? $t('plugins.type.service') : $t('plugins.type.tool') }}
+            </el-tag>
           </div>
           <el-switch
             :model-value="plugin.enabled"
             :loading="toggling.has(plugin.id)"
+            :aria-label="$t('plugins.enableAria', { name: plugin.name })"
             @change="toggle(plugin.id)"
             size="small"
           />
         </div>
 
         <div class="pm-card-desc">
-          {{ plugin.description || 'No description available.' }}
+          {{ plugin.description || $t('plugins.page.noDescription') }}
         </div>
 
         <div class="pm-card-footer">
           <div class="pm-meta">
             <span class="pm-version">v{{ plugin.version }}</span>
-            <span v-if="plugin.author" class="pm-author">by {{ plugin.author }}</span>
-          </div>
-          <div class="pm-perms">
-            <el-tag v-if="plugin.permissions?.network" size="small" type="warning" effect="plain">network</el-tag>
-            <el-tag v-if="plugin.permissions?.process" size="small" type="danger" effect="plain">process</el-tag>
-            <el-tag v-if="plugin.permissions?.gui" size="small" type="info" effect="plain">gui</el-tag>
+            <span v-if="plugin.author" class="pm-author">{{ $t('plugins.byAuthor', { author: plugin.author }) }}</span>
           </div>
         </div>
 
+        <!-- A service plugin cannot start without its binary; say so and
+             link to the module instead of offering auto-start. -->
+        <div v-if="plugin.enabled && missingBinary(plugin)" class="pm-binary-missing">
+          <span>{{ $t('plugins.binaryMissing') }}</span>
+          <el-button size="small" link type="primary" @click="openBinary(plugin)">
+            {{ $t('plugins.installBinary') }}
+          </el-button>
+        </div>
         <!-- Per-plugin autostart toggle. The <PluginAutostartSwitch> guard
              (type==='service' && serviceId) handles the non-service cases
              so we don't need to double-gate here. Compact variant keeps
              the card's vertical rhythm consistent with the other rows. -->
-        <PluginAutostartSwitch :plugin="plugin" compact />
+        <PluginAutostartSwitch v-else :plugin="plugin" compact />
 
         <!-- Open plugin page button if has UI. Must be a full-width solid
              button for readable contrast — the old text-primary variant
@@ -198,17 +205,19 @@
             class="pm-open-btn"
             @click="router.push(`/plugin/${plugin.id}`)"
           >
-            {{ $t('common.open') }} panel <el-icon><ArrowRight /></el-icon>
+            {{ $t('plugins.openPanel') }} <el-icon><ArrowRight /></el-icon>
           </el-button>
         </div>
         <!-- F91.4: uninstall option — only exposed when the plugin is
-             disabled (backend enforces the same rule). Danger styling so
-             it reads as a destructive action, not a safe toggle. -->
-        <div class="pm-card-actions" v-if="!plugin.enabled">
+             disabled (backend enforces the same rule). A quiet text button:
+             for a switched-off built-in plugin the usual next step is the
+             switch above, not removal. -->
+        <div class="pm-card-actions pm-card-actions--disabled" v-if="!plugin.enabled">
+          <span class="pm-disabled-hint">{{ $t('plugins.disabledHint') }}</span>
           <el-button
             size="small"
             type="danger"
-            plain
+            text
             :loading="uninstalling.has(plugin.id)"
             @click="confirmUninstall(plugin.id, plugin.name)"
           >
@@ -219,7 +228,7 @@
 
       <!-- Empty state -->
       <div v-if="filteredPlugins.length === 0 && !pluginsStore.loading" class="pm-empty">
-        <el-empty :description="search ? `No plugins matching '${search}'` : 'No plugins loaded'" :image-size="60" />
+        <el-empty :description="search ? $t('plugins.noMatching', { q: search }) : $t('plugins.noneLoaded')" :image-size="60" />
       </div>
     </div>
   </div>
@@ -227,7 +236,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import { ArrowRight } from '@element-plus/icons-vue'
@@ -242,12 +251,15 @@ import {
   restorePlugin,
   waitForDaemon,
   daemonToken,
+  fetchBinaryCatalog,
+  fetchInstalledBinaries,
   type MarketplaceResponse,
   type MarketplacePlugin,
 } from '../../api/daemon'
 import PluginAutostartSwitch from '../shared/PluginAutostartSwitch.vue'
 
 const { t } = useI18n()
+const route = useRoute()
 const router = useRouter()
 const pluginsStore = usePluginsStore()
 const search = ref('')
@@ -257,7 +269,9 @@ const toggling = ref<Set<string>>(new Set())
 const uninstalling = ref<Set<string>>(new Set())
 // F91.12: tracks in-flight restore calls for the marketplace "Obnovit" button.
 const restoring = ref<Set<string>>(new Set())
-const activeTab = ref<'installed' | 'marketplace'>('installed')
+// ?tab=marketplace&q=<id> lets a page whose plugin is missing link here.
+const activeTab = ref<'installed' | 'marketplace'>(route.query.tab === 'marketplace' ? 'marketplace' : 'installed')
+if (typeof route.query.q === 'string') search.value = route.query.q
 const loadingMarketplace = ref(false)
 const marketplace = reactive<MarketplaceResponse>({
   source: '',
@@ -336,14 +350,41 @@ watch(activeTab, (tab) => {
   }
 })
 
-const filteredPlugins = computed(() =>
-  pluginsStore.manifests.filter(p =>
-    search.value === '' ||
-    p.name.toLowerCase().includes(search.value.toLowerCase()) ||
-    p.id.toLowerCase().includes(search.value.toLowerCase()) ||
-    (p.description ?? '').toLowerCase().includes(search.value.toLowerCase())
-  )
-)
+function matchesSearch(p: { id: string; name: string; description?: string | null }): boolean {
+  const q = search.value.trim().toLowerCase()
+  return q === ''
+    || p.name.toLowerCase().includes(q)
+    || p.id.toLowerCase().includes(q)
+    || (p.description ?? '').toLowerCase().includes(q)
+}
+
+const filteredPlugins = computed(() => pluginsStore.manifests.filter(matchesSearch))
+const filteredMarketplace = computed(() => marketplace.plugins.filter(matchesSearch))
+
+// Catalog apps and installed binaries, to tell when a service plugin has
+// nothing to run. Only apps the catalog knows are checked.
+const catalogApps = ref<Set<string>>(new Set())
+const installedApps = ref<Set<string>>(new Set())
+const BINARY_FOR_SERVICE: Record<string, string> = { cloudflare: 'cloudflared' }
+
+function missingBinary(plugin: { type?: string; serviceId?: string | null }): string | null {
+  if (plugin.type !== 'service' || !plugin.serviceId) return null
+  const app = BINARY_FOR_SERVICE[plugin.serviceId] ?? plugin.serviceId
+  return catalogApps.value.has(app) && !installedApps.value.has(app) ? app : null
+}
+
+function openBinary(plugin: { type?: string; serviceId?: string | null }) {
+  const app = missingBinary(plugin)
+  if (app) void router.push({ path: '/binaries', query: { app } })
+}
+
+async function loadBinaryState() {
+  try {
+    const [catalog, installed] = await Promise.all([fetchBinaryCatalog(), fetchInstalledBinaries()])
+    catalogApps.value = new Set(Object.keys(catalog))
+    installedApps.value = new Set(installed.map(b => b.app))
+  } catch { /* no binary hints then */ }
+}
 
 async function toggle(id: string) {
   toggling.value.add(id)
@@ -440,6 +481,8 @@ async function confirmUninstall(id: string, name: string) {
 
 onMounted(() => {
   void pluginsStore.loadAll()
+  void loadBinaryState()
+  if (activeTab.value === 'marketplace') void reloadMarketplace()
 })
 </script>
 
@@ -497,7 +540,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--wdc-space-3);
-  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s, transform 0.15s;
+  transition: border-color 0.15s, background 0.15s;
   border-left-width: 3px;
   border-left-style: solid;
   border-left-color: var(--wdc-border);
@@ -512,10 +555,8 @@ onMounted(() => {
 .pm-card--disabled:hover { opacity: 0.75; }
 
 .pm-card:hover {
-  border-color: var(--wdc-accent-glow);
+  border-color: var(--wdc-border-strong);
   background: var(--wdc-surface-2);
-  box-shadow: var(--wdc-shadow-card);
-  transform: translateY(-2px);
 }
 .pm-card--enabled:hover { border-left-color: var(--wdc-accent); }
 
@@ -543,8 +584,6 @@ onMounted(() => {
 
 .pm-type-tag {
   flex-shrink: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   font-size: 0.7rem;
   padding: 0 var(--wdc-space-1-5);
   height: 18px;
@@ -598,10 +637,29 @@ onMounted(() => {
   color: var(--wdc-text-muted);
 }
 
-.pm-perms {
+.header-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--wdc-space-1);
+  align-items: center;
+  gap: var(--wdc-space-2);
+}
+
+.pm-binary-missing {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--wdc-space-2);
+  font-size: 0.8rem;
+  color: var(--wdc-warning);
+}
+
+.pm-card-actions--disabled {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pm-disabled-hint {
+  font-size: 0.78rem;
+  color: var(--wdc-text-3);
 }
 
 .pm-card-actions {

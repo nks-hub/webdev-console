@@ -10,26 +10,46 @@
       </div>
       <div class="header-actions">
         <el-button size="small" @click="loadDatabases" :loading="loading" :icon="Refresh">{{ $t('common.refresh') }}</el-button>
-        <el-button size="small" type="primary" @click="showCreateDialog = true">
-          <el-icon><Plus /></el-icon>
-          <span style="margin-left: var(--wdc-space-1)">{{ $t('databases.create') }}</span>
-        </el-button>
+        <el-tooltip :disabled="reason !== 'mysql_not_installed'" :content="$t('databases.diag.createNeedsMysql')" placement="bottom">
+          <span>
+            <el-button size="small" type="primary" :disabled="reason === 'mysql_not_installed'" @click="showCreateDialog = true">
+              <el-icon><Plus /></el-icon>
+              <span style="margin-left: var(--wdc-space-1)">{{ $t('databases.create') }}</span>
+            </el-button>
+          </span>
+        </el-tooltip>
       </div>
     </div>
 
-    <!-- Diagnostic banner (auth/port issues) -->
+    <!-- No MySQL yet: explain and point at the module instead of a red error -->
+    <div v-if="reason === 'mysql_not_installed'" class="db-missing">
+      <el-empty :image-size="80">
+        <template #description>
+          <p class="empty-title">{{ $t('databases.diag.notInstalledTitle') }}</p>
+          <p class="empty-hint">{{ $t('databases.diag.notInstalledHint') }}</p>
+        </template>
+        <el-button type="primary" @click="router.push({ path: '/binaries', query: { app: 'mysql' } })">
+          {{ $t('databases.diag.installMysql') }}
+        </el-button>
+      </el-empty>
+    </div>
+
+    <!-- Diagnostic banner (not running / auth / port issues) -->
     <el-alert
-      v-if="error"
+      v-else-if="error"
       type="error"
-      :title="error"
-      :description="errorHint"
+      :title="errorTitle"
       :closable="true"
-      @close="error = ''; errorHint = ''"
+      @close="error = ''; errorHint = ''; reason = ''"
       show-icon
       class="page-alert"
     >
       <template #default>
+        <p v-if="errorHintText" class="alert-hint">{{ errorHintText }}</p>
         <div class="alert-body">
+          <el-button v-if="reason === 'mysql_not_running'" type="primary" size="small" :loading="startingMysql" @click="startMysql">
+            {{ $t('databases.diag.startMysql') }}
+          </el-button>
           <el-button v-if="suggestedPort" type="primary" size="small" :loading="fixing" @click="useAltPort">
             {{ $t('databases.useAltPort', { port: suggestedPort }) }}
           </el-button>
@@ -230,7 +250,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh, Plus, Key, Upload, Download, Delete, Grid, DataLine, List, Operation } from '@element-plus/icons-vue'
-import { daemonBaseUrl, daemonAuthHeaders as authHeaders } from '../../api/daemon'
+import { daemonBaseUrl, daemonAuthHeaders as authHeaders, startService } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import DatabaseTreePane from './databases/DatabaseTreePane.vue'
 import TableBrowser from './databases/TableBrowser.vue'
@@ -259,8 +279,34 @@ const databases = ref<DatabaseSummary[]>([])
 const loading = ref(false)
 const error = ref('')
 const errorHint = ref('')
+/** Daemon `reason` for a failed list: mysql_not_installed | mysql_not_running | port_conflict | query_failed. */
+const reason = ref('')
+const errorPort = ref<number | null>(null)
 const suggestedPort = ref<number | null>(null)
 const fixing = ref(false)
+const startingMysql = ref(false)
+
+const errorTitle = computed(() => {
+  if (reason.value === 'mysql_not_running') return t('databases.diag.notRunning')
+  if (reason.value === 'port_conflict') return t('databases.diag.portConflictTitle', { port: errorPort.value ?? '?' })
+  return error.value
+})
+// The daemon's hint is English; port_conflict gets its own sentence.
+const errorHintText = computed(() =>
+  reason.value === 'port_conflict' ? t('databases.diag.portConflictHint') : '')
+
+async function startMysql() {
+  startingMysql.value = true
+  try {
+    await startService('mysql')
+    await loadDatabases()
+  } catch (e) {
+    error.value = t('databases.diag.startFailed', { err: errorMessage(e) })
+    reason.value = ''
+  } finally {
+    startingMysql.value = false
+  }
+}
 
 // ── Selection state
 const selectedDb = ref('')
@@ -338,17 +384,22 @@ async function loadDatabases() {
   loading.value = true
   error.value = ''
   errorHint.value = ''
+  reason.value = ''
   suggestedPort.value = null
   try {
     const r = await fetch(`${daemonBaseUrl()}/api/databases/v2`, { headers: authHeaders() })
     if (!r.ok) throw await httpError(r)
     const data = await r.json() as {
-      error?: string; hint?: string; suggestedPort?: number;
+      error?: string; hint?: string; suggestedPort?: number; reason?: string; port?: number;
       databases?: DatabaseSummary[];
     }
     if (data.error) {
-      error.value = data.error
+      error.value = data.reason === 'query_failed' || !data.reason
+        ? `${t('databases.loadFailed')}: ${data.error}`
+        : data.error
       errorHint.value = data.hint ?? ''
+      reason.value = data.reason ?? ''
+      errorPort.value = data.port ?? null
       suggestedPort.value = data.suggestedPort ?? null
       databases.value = []
       return
@@ -670,11 +721,7 @@ onMounted(() => { void loadDatabases() })
 </script>
 
 <style scoped>
-/*
-  Databases page — colorful redesign. Hero header with big title,
-  accent-tinted page-header strip, content area in card with
-  generous padding.
-*/
+/* Databases page: header, then a tree | detail split on the page background. */
 .databases-page {
   display: flex;
   flex-direction: column;
@@ -702,8 +749,10 @@ onMounted(() => { void loadDatabases() })
 }
 .header-actions { display: flex; align-items: center; gap: 8px; }
 
-.page-alert { margin: 12px 20px 0; }
-.alert-body { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+.page-alert { margin: var(--wdc-space-3) 0 0; }
+.alert-hint { margin: 0 0 var(--wdc-space-1-5); }
+.alert-body { display: flex; gap: var(--wdc-space-2); flex-wrap: wrap; align-items: center; margin-top: var(--wdc-space-1-5); }
+.db-missing { padding: var(--wdc-space-6) 0; }
 
 /*
   3-pane layout: tree (surface) | right pane (bg). The two-step bg
@@ -744,7 +793,7 @@ onMounted(() => { void loadDatabases() })
   align-items: center;
   justify-content: space-between;
   background: var(--wdc-surface-2);
-  border-bottom: 2px solid var(--wdc-accent-glow);
+  border-bottom: 1px solid var(--wdc-border);
   flex-shrink: 0;
   padding: 0 var(--wdc-space-4) 0 var(--wdc-space-3);
   height: 52px;
@@ -767,11 +816,11 @@ onMounted(() => { void loadDatabases() })
   color: var(--wdc-text-2);
   font-size: 0.86rem;
   font-weight: 600;
-  border-bottom: 3px solid transparent;
-  transition: all 0.12s;
+  border-bottom: 2px solid transparent;
+  transition: color 0.12s, border-color 0.12s;
   font-family: inherit;
   position: relative;
-  margin-bottom: -2px;
+  margin-bottom: -1px;
 }
 .tab-btn:hover:not(:disabled) {
   color: var(--wdc-accent);
@@ -779,9 +828,7 @@ onMounted(() => { void loadDatabases() })
 .tab-btn.active {
   color: var(--wdc-accent);
   border-bottom-color: var(--wdc-accent);
-  background: var(--wdc-accent-dim);
   font-weight: 700;
-  box-shadow: inset 0 -1px 0 var(--wdc-accent), 0 -2px 12px var(--wdc-accent-glow);
 }
 .tab-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 

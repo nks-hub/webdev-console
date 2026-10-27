@@ -189,7 +189,7 @@ function clearSql() { sql.value = '' }
 function onEditorReady(ed: MonacoEditorTypes.IStandaloneCodeEditor) {
   ed.addAction({
     id: 'wdc-run-query',
-    label: 'Run query',
+    label: t('databases.console.run'),
     keybindings: [2048 | 3], // CtrlCmd + Enter
     run: () => { run() },
   })

@@ -6,10 +6,18 @@
         <div class="header-title-block">
           <h1 class="page-title">{{ $t('binaries.title') }}</h1>
           <p class="page-subtitle">
-            {{ moduleCards.length }} {{ $t('binaries.modules') }} ·
-            {{ installed.length }} {{ $t('binaries.installed') }} ·
-            {{ totalAvailable }} {{ $t('binaries.available') }}
-            <template v-if="outdatedCount > 0"> · <span style="color: var(--el-color-warning)">{{ outdatedCount }} {{ $t('binaries.outdated') }}</span></template>
+            {{ $t('binaries.modulesCount', { n: moduleCards.length }, moduleCards.length) }} ·
+            {{ $t('binaries.installedCount', { n: installed.length }, installed.length) }} ·
+            {{ $t('binaries.availableCount', { n: totalAvailable }, totalAvailable) }}
+            <template v-if="outdatedCount > 0"> ·
+              <el-button
+                link
+                type="warning"
+                class="outdated-link"
+                :aria-pressed="outdatedOnly"
+                @click="outdatedOnly = !outdatedOnly"
+              >{{ outdatedOnly ? $t('binaries.showAll') : $t('binaries.outdatedCount', { n: outdatedCount }, outdatedCount) }}</el-button>
+            </template>
           </p>
           <!-- Catalog health pill — reactive to /api/system polled on mount.
                When unreachable the background flips red + hint points users
@@ -24,7 +32,7 @@
             <span class="catalog-health-label">
               {{ $t('binaries.catalog') }}:
               {{ catalogStatus.reachable
-                ? $t('binaries.catalogReleases', { n: catalogStatus.cachedCount })
+                ? $t('binaries.catalogReleases', { n: catalogStatus.cachedCount }, catalogStatus.cachedCount)
                 : $t('binaries.catalogUnreachable') }}
             </span>
             <span class="catalog-health-url mono">{{ catalogUrlShort }}</span>
@@ -55,7 +63,7 @@
         <div class="bin-grid page-body-pad">
           <!-- Composer built-in card — first item in grid, same structure as catalog cards -->
           <div
-            v-if="!gridSearch"
+            v-if="!gridSearch && !outdatedOnly"
             class="bin-card bin-card--builtin"
             :class="{ 'bin-card--has-installed': composerInstalled }"
           >
@@ -63,10 +71,10 @@
               <ServiceIcon service="composer" :active="composerInstalled" />
               <div class="bin-card-title">
                 <span class="bin-card-name">
-                  composer
+                  Composer
                   <el-tag size="small" type="info" effect="plain" class="builtin-tag">{{ $t('binaries.builtIn') }}</el-tag>
                 </span>
-                <span class="bin-card-latest mono" :title="composerVersion ? 'v' + composerVersion : 'latest'">{{ composerVersionDisplay }}</span>
+                <span class="bin-card-latest mono" :title="composerPath ?? ''">{{ composerVersionDisplay }}</span>
               </div>
             </div>
             <div class="bin-card-metrics">
@@ -74,14 +82,9 @@
                 <span class="metric-num mono">{{ composerInstalled ? 1 : 0 }}</span>
                 <span class="metric-label">{{ $t('binaries.metricInstalled') }}</span>
               </div>
-              <div class="metric">
-                <span class="metric-num mono">1</span>
-                <span class="metric-label">{{ $t('binaries.metricAvailable') }}</span>
-              </div>
             </div>
             <div class="bin-card-actions">
               <el-button
-                v-if="!composerInstalled"
                 size="small"
                 type="primary"
                 plain
@@ -89,17 +92,9 @@
                 class="bin-open-btn"
                 @click.stop="installComposer"
               >
-                {{ composerInstalling ? $t('binaries.composer.installing') : $t('binaries.composer.install') }}
-              </el-button>
-              <el-button
-                v-else
-                size="small"
-                type="success"
-                plain
-                disabled
-                class="bin-open-btn"
-              >
-                {{ $t('binaries.composer.installedShort') }}
+                {{ composerInstalling
+                  ? $t('binaries.composer.installing')
+                  : composerInstalled ? $t('binaries.composer.update') : $t('binaries.composer.install') }}
               </el-button>
             </div>
           </div>
@@ -107,6 +102,7 @@
           <div
             v-for="card in filteredModules"
             :key="card.app"
+            v-activate
             class="bin-card"
             :class="{ 'bin-card--has-installed': card.installedCount > 0 }"
             @click="selectedApp = card.app"
@@ -114,8 +110,8 @@
             <div class="bin-card-header">
               <ServiceIcon :service="card.app" :active="card.installedCount > 0" />
               <div class="bin-card-title">
-                <span class="bin-card-name">{{ card.app }}</span>
-                <span class="bin-card-latest mono">latest v{{ card.latest }}</span>
+                <span class="bin-card-name">{{ appDisplayName(card.app) }}</span>
+                <span v-if="card.latest" class="bin-card-latest mono">{{ $t('binaries.latest', { v: card.latest }) }}</span>
               </div>
             </div>
             <div class="bin-card-metrics">
@@ -132,8 +128,11 @@
                 <span class="metric-label">{{ $t('binaries.metricDefault') }}</span>
               </div>
             </div>
+            <p v-if="card.outdated" class="bin-card-outdated">
+              {{ $t('binaries.newerAvailable', { installed: card.newestInstalled, latest: card.latest }) }}
+            </p>
             <div class="bin-card-actions">
-              <el-button size="small" type="primary" plain class="bin-open-btn">
+              <el-button size="small" type="primary" plain class="bin-open-btn" tabindex="-1">
                 {{ $t('binaries.manageVersions') }} <el-icon><ArrowRight /></el-icon>
               </el-button>
             </div>
@@ -151,10 +150,10 @@
           </el-button>
           <h1 class="page-title page-title-detail">
             <ServiceIcon :service="selectedApp" :active="true" />
-            <span>{{ selectedApp }}</span>
+            <span>{{ appDisplayName(selectedApp) }}</span>
           </h1>
           <p class="page-subtitle">
-            {{ detailRows.filter(r => r.installed).length }} of {{ detailRows.length }} versions installed
+            {{ $t('binaries.versionsInstalled', { installed: detailRows.filter(r => r.installed).length, total: detailRows.length }) }}
           </p>
         </div>
         <div class="header-actions">
@@ -163,17 +162,35 @@
       </div>
 
       <div class="page-body-pad">
+        <el-alert
+          v-if="failedInstall && failedInstall.app === selectedApp"
+          type="error"
+          show-icon
+          :closable="true"
+          class="install-failed-alert"
+          :title="failedInstall.message"
+          @close="failedInstall = null"
+        >
+          <template v-if="suggestedVersion">
+            {{ $t('binaries.progress.suggestion', { version: suggestedVersion }) }}
+          </template>
+        </el-alert>
+
         <el-table
           v-if="detailRows.length > 0"
           :data="detailRows"
           class="bin-detail-table"
           stripe
           row-key="version"
+          :row-class-name="rowClass"
         >
           <el-table-column :label="$t('binaries.col.version')" prop="version" min-width="140">
             <template #default="{ row }">
               <span class="mono col-version">{{ row.version }}</span>
-              <el-tag v-if="row.isDefault" size="small" type="success" effect="plain" class="col-tag">{{ $t('binaries.default') }}</el-tag>
+              <el-tag v-if="row.isDefault" size="small" type="success" effect="plain" class="col-tag">{{ selectedApp === 'php' ? $t('php.default') : $t('binaries.default') }}</el-tag>
+              <el-tag v-if="failedInstall?.app === selectedApp && failedInstall?.version === row.version" size="small" type="danger" effect="plain" class="col-tag">{{ $t('binaries.failedTag') }}</el-tag>
+              <el-tag v-else-if="failedInstall?.app === selectedApp && row.version === suggestedVersion" size="small" type="primary" effect="plain" class="col-tag">{{ $t('binaries.suggestedTag') }}</el-tag>
+              <el-tag v-else-if="row.version === recommendedVersion" size="small" type="primary" effect="plain" class="col-tag">{{ $t('binaries.recommendedTag') }}</el-tag>
             </template>
           </el-table-column>
           <el-table-column :label="$t('binaries.col.platforms')" min-width="200">
@@ -195,26 +212,26 @@
               <span class="mono col-muted">{{ row.source || '—' }}</span>
             </template>
           </el-table-column>
-          <el-table-column :label="$t('binaries.col.status')" width="120">
+          <el-table-column :label="$t('binaries.col.status')" width="140">
             <template #default="{ row }">
               <el-tag
                 v-if="row.installed"
                 size="small"
                 type="success"
                 effect="plain"
-              >{{ $t('binaries.installed') }}</el-tag>
+              >{{ $t('binaries.statusInstalled') }}</el-tag>
               <el-tag
                 v-else
                 size="small"
                 type="info"
                 effect="plain"
-              >{{ $t('binaries.available') }}</el-tag>
+              >{{ $t('binaries.statusAvailable') }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column :label="$t('common.actions')" width="220" align="right">
+          <el-table-column :label="$t('common.actions')" width="320" align="right">
             <template #default="{ row }">
               <el-tooltip
-                v-if="!row.installed && nativePlatform && row.platforms.length && !row.platforms.includes(nativePlatform)"
+                v-if="!row.installed && !row.native"
                 :content="$t('binaries.noBuildInRelease', { platform: nativePlatform })"
                 placement="left"
               >
@@ -226,22 +243,32 @@
                 v-else-if="!row.installed"
                 size="small"
                 type="primary"
-                plain
+                :plain="row.version !== suggestedVersion && row.version !== recommendedVersion"
                 :loading="installing.has(`${selectedApp}-${row.version}`)"
+                :disabled="progress.phase === 'running'"
                 @click="install(selectedApp!, row.version)"
               >
                 {{ $t('binaries.install') }}
               </el-button>
-              <el-button
-                v-else
-                size="small"
-                type="danger"
-                plain
-                :loading="uninstalling.has(`${selectedApp}-${row.version}`)"
-                @click="uninstall(selectedApp!, row.version)"
-              >
-                {{ $t('binaries.remove') }}
-              </el-button>
+              <template v-else>
+                <el-button
+                  v-if="selectedApp === 'php' && !row.isDefault"
+                  size="small"
+                  text
+                  @click="setPhpDefault(row.version)"
+                >
+                  {{ $t('php.setDefault') }}
+                </el-button>
+                <el-button
+                  size="small"
+                  type="danger"
+                  plain
+                  :loading="uninstalling.has(`${selectedApp}-${row.version}`)"
+                  @click="uninstall(selectedApp!, row.version)"
+                >
+                  {{ $t('binaries.remove') }}
+                </el-button>
+              </template>
             </template>
           </el-table-column>
         </el-table>
@@ -251,39 +278,79 @@
     </template>
 
     <!-- Install progress dialog -->
-    <el-dialog v-model="progressVisible" :title="$t('binaries.progressTitle')" width="420px" :close-on-click-modal="false">
-      <div class="progress-content">
+    <el-dialog
+      v-model="progress.visible"
+      :title="$t('binaries.progress.title', { name: appDisplayName(progress.app), version: progress.version })"
+      width="460px"
+      :close-on-click-modal="false"
+      :close-on-press-escape="progress.phase !== 'running'"
+      :show-close="progress.phase !== 'running'"
+    >
+      <div class="progress-content" aria-live="polite">
         <p class="progress-msg">{{ progressMessage }}</p>
-        <el-progress :percentage="progressPercent" :status="progressError ? 'exception' : (progressDone ? 'success' : undefined)" />
+        <el-progress
+          v-if="progress.phase !== 'error'"
+          :percentage="progressPercent ?? 100"
+          :indeterminate="progressPercent === null && progress.phase === 'running'"
+          :duration="2"
+          :show-text="progressPercent !== null"
+          :status="progress.phase === 'done' ? 'success' : undefined"
+        />
+        <details v-if="progress.phase === 'error' && progress.detail" class="progress-detail">
+          <summary>{{ $t('binaries.progress.technicalDetail') }}</summary>
+          <pre class="mono">{{ progress.detail }}</pre>
+        </details>
       </div>
       <template #footer>
-        <el-button @click="progressVisible = false" :disabled="!progressDone && !progressError">
-          {{ progressDone ? 'Done' : progressError ? 'Close' : 'Installing…' }}
-        </el-button>
+        <el-button v-if="progress.phase === 'running'" @click="cancelInstall">{{ $t('common.cancel') }}</el-button>
+        <template v-else-if="progress.phase === 'error'">
+          <el-button @click="progress.visible = false">{{ $t('common.close') }}</el-button>
+          <el-button v-if="suggestedVersion" type="primary" @click="tryAnotherVersion">
+            {{ $t('binaries.progress.tryVersion', { version: suggestedVersion }) }}
+          </el-button>
+        </template>
+        <template v-else>
+          <el-button @click="progress.visible = false">{{ $t('common.close') }}</el-button>
+          <el-button v-if="progress.app === 'php'" type="primary" @click="setPhpDefault(progress.version); progress.visible = false">
+            {{ $t('php.setDefault') }}
+          </el-button>
+          <el-button v-if="progress.serviceId" type="primary" :loading="progress.starting" @click="startInstalledService">
+            {{ $t('binaries.progress.startService', { name: appDisplayName(progress.app) }) }}
+          </el-button>
+        </template>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowRight } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import {
   fetchBinaryCatalog,
   fetchInstalledBinaries,
+  fetchPhpVersions,
+  fetchServices,
   fetchSystem,
   installBinary,
+  startService,
+  subscribeEventsMap,
   uninstallBinary,
   daemonBaseUrl,
   daemonAuthHeaders as authHeaders,
+  type BinaryProgressEvent,
 } from '../../api/daemon'
 import type { BinaryRelease, InstalledBinary } from '../../api/types'
 import { errorMessage } from '../../utils/errors'
+import { appDisplayName, installErrorDetail, installErrorMessage } from '../../utils/binaries'
 import ServiceIcon from '../shared/ServiceIcon.vue'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
+const route = useRoute()
+const router = useRouter()
 
 const loading = ref(false)
 const catalog = ref<Record<string, BinaryRelease[]>>({})
@@ -311,27 +378,74 @@ const catalogUrlShort = computed(() => {
 const catalogStatusTitle = computed(() => {
   if (!catalogStatus.value) return ''
   const { url, cachedCount, lastFetch, reachable } = catalogStatus.value
-  const when = lastFetch ? new Date(lastFetch).toLocaleString() : 'never'
+  const when = lastFetch ? new Date(lastFetch).toLocaleString(locale.value) : t('binaries.catalogNever')
   return reachable
-    ? `Catalog at ${url}\n${cachedCount} releases cached\nLast fetch: ${when}`
-    : `Catalog unreachable\nConfigured URL: ${url}\nLast fetch: ${when}\nConfigure a different URL in Settings > Advanced.`
+    ? t('binaries.catalogTooltipOk', { url, n: cachedCount, when })
+    : t('binaries.catalogTooltipErr', { url, when })
 })
 
 const gridSearch = ref('')
-const selectedApp = ref<string | null>(null)
+const outdatedOnly = ref(false)
 
-// Progress dialog
-const progressVisible = ref(false)
-const progressMessage = ref('')
-const progressPercent = ref(0)
-const progressDone = ref(false)
-const progressError = ref(false)
+// The open module lives in the URL (?app=mysql) so the wizard, Databases
+// and PHP pages can link straight to its versions and a reload keeps it.
+const selectedApp = computed<string | null>({
+  get: () => (typeof route.query.app === 'string' && route.query.app ? route.query.app : null),
+  set: (app) => { void router.push({ path: '/binaries', query: app ? { app } : {} }) },
+})
+
+type InstallPhase = 'idle' | 'running' | 'done' | 'error'
+const progress = reactive({
+  visible: false,
+  phase: 'idle' as InstallPhase,
+  app: '',
+  version: '',
+  downloaded: 0,
+  total: -1,
+  received: false,
+  message: '',
+  detail: '',
+  serviceId: '' as string,
+  starting: false,
+})
+let installAbort: AbortController | null = null
+
+/** Last failed install, kept after the dialog closes so the table can point at it. */
+const failedInstall = ref<{ app: string; version: string; message: string } | null>(null)
+
+/** major.minor of the PHP version new sites get (PHP is the only app with a default today). */
+const activePhp = ref<string | null>(null)
+const majorMinorOf = (v: string) => v.split('.').slice(0, 2).join('.')
+
+async function loadActivePhp() {
+  try {
+    activePhp.value = (await fetchPhpVersions()).find(v => v.isActive)?.majorMinor ?? null
+  } catch { activePhp.value = null /* PHP plugin missing */ }
+}
+
+async function setPhpDefault(version: string) {
+  try {
+    const r = await fetch(`${daemonBaseUrl()}/api/php/default`, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify({ version }),
+    })
+    const body = await r.json().catch(() => ({})) as { error?: string }
+    if (!r.ok) throw new Error(body.error || `HTTP ${r.status}`)
+    ElMessage.success(t('toast.phpDefaultSet', { version: majorMinorOf(version) }))
+    await loadActivePhp()
+  } catch (e) {
+    ElMessage.error(t('toast.setDefaultFailed', { err: errorMessage(e) }))
+  }
+}
 
 type ModuleCard = {
   app: string
-  latest: string
+  latest: string | null
   available: number
   installedCount: number
+  newestInstalled: string | null
+  outdated: boolean
   defaultVersion: string | null
 }
 
@@ -343,6 +457,8 @@ type DetailRow = {
   source?: string
   installed: boolean
   isDefault: boolean
+  /** A build for this machine exists (always true while the platform is unknown). */
+  native: boolean
 }
 
 // Semver descending sort so "latest" always wins and the detail table
@@ -382,46 +498,48 @@ function versionGreater(a: string, b: string): number {
   return bPre.localeCompare(aPre)
 }
 
+/** Versions installable on this machine, newest first. */
+function nativeVersions(app: string): string[] {
+  const native = nativePlatform.value
+  const versions = new Set((catalog.value[app] ?? [])
+    .filter(r => !native || `${r.os}/${r.arch}` === native)
+    .map(r => r.version))
+  return [...versions].sort(versionGreater)
+}
+
 const moduleCards = computed<ModuleCard[]>(() => {
   const apps = new Set<string>([
     ...Object.keys(catalog.value).filter(a => a.toLowerCase() !== 'composer'),
     ...installed.value.map(b => b.app).filter(a => a.toLowerCase() !== 'composer'),
   ])
   return Array.from(apps).map(app => {
-    const releases = catalog.value[app] ?? []
-    const sortedReleases = [...releases].sort((a, b) => versionGreater(a.version, b.version))
+    const versions = nativeVersions(app)
     const installedForApp = installed.value.filter(b => b.app === app)
-    const def = installedForApp.find(b => b.isDefault)
+    const newestInstalled = installedForApp.map(b => b.version).sort(versionGreater)[0] ?? null
+    const latest = versions[0] ?? newestInstalled
     return {
       app,
-      latest: sortedReleases[0]?.version ?? installedForApp[0]?.version ?? '—',
-      available: releases.length,
+      latest,
+      available: versions.length,
       installedCount: installedForApp.length,
-      defaultVersion: def?.version ?? null,
+      newestInstalled,
+      outdated: !!newestInstalled && !!latest && versionGreater(latest, newestInstalled) < 0,
+      defaultVersion: app === 'php'
+        ? installedForApp.find(b => majorMinorOf(b.version) === activePhp.value)?.version ?? null
+        : installedForApp.find(b => b.isDefault)?.version ?? null,
     }
   }).sort((a, b) => a.app.localeCompare(b.app))
 })
 
-const totalAvailable = computed(() =>
-  Object.values(catalog.value).reduce((s, arr) => s + arr.length, 0)
-)
+const totalAvailable = computed(() => moduleCards.value.reduce((s, c) => s + c.available, 0))
 
-const outdatedCount = computed(() => {
-  const seen = new Set<string>()
-  let count = 0
-  for (const bin of installed.value) {
-    if (seen.has(bin.app)) continue
-    seen.add(bin.app)
-    const releases = catalog.value[bin.app]
-    if (releases?.length && releases[0].version !== bin.version) count++
-  }
-  return count
-})
+const outdatedCount = computed(() => moduleCards.value.filter(c => c.outdated).length)
 
 const filteredModules = computed(() => {
   const q = gridSearch.value.toLowerCase().trim()
-  if (!q) return moduleCards.value
-  return moduleCards.value.filter(c => c.app.toLowerCase().includes(q))
+  return moduleCards.value.filter(c =>
+    (!outdatedOnly.value || c.outdated)
+    && (!q || c.app.toLowerCase().includes(q) || appDisplayName(c.app).toLowerCase().includes(q)))
 })
 
 // Build the merged table rows for the selected module: one row per unique
@@ -450,6 +568,7 @@ const detailRows = computed<DetailRow[]>(() => {
         source: r.source,
         installed: false,
         isDefault: false,
+        native: false,
       })
     }
   }
@@ -460,6 +579,7 @@ const detailRows = computed<DetailRow[]>(() => {
       source: undefined,
       installed: true,
       isDefault: !!i.isDefault,
+      native: true,
     }
     row.installed = true
     row.isDefault = !!i.isDefault
@@ -472,6 +592,8 @@ const detailRows = computed<DetailRow[]>(() => {
   // native are kept in stable alphabetical order for determinism.
   const native = nativePlatform.value
   for (const row of byVersion.values()) {
+    if (app === 'php') row.isDefault = row.installed && majorMinorOf(row.version) === activePhp.value
+    row.native = !native || row.platforms.length === 0 || row.platforms.includes(native)
     row.platforms.sort((a, b) => {
       if (a === native && b !== native) return -1
       if (b === native && a !== native) return 1
@@ -480,6 +602,58 @@ const detailRows = computed<DetailRow[]>(() => {
   }
 
   return Array.from(byVersion.values()).sort((a, b) => versionGreater(a.version, b.version))
+})
+
+/**
+ * After a failed install: the next installable version below the failed one
+ * (older builds tend to sit on stable mirrors), else the newest other one.
+ */
+const suggestedVersion = computed<string | null>(() => {
+  const failed = failedInstall.value
+  if (!failed) return null
+  const candidates = nativeVersions(failed.app)
+    .filter(v => v !== failed.version && !installed.value.some(b => b.app === failed.app && b.version === v))
+  return candidates.find(v => versionGreater(v, failed.version) > 0) ?? candidates[0] ?? null
+})
+
+/**
+ * What to install when nothing of the open module is installed yet (e.g. a
+ * link from Services): the newest stable build for this machine, for MySQL
+ * the newest 8.4 LTS rather than an Innovation release.
+ */
+const recommendedVersion = computed<string | null>(() => {
+  const app = selectedApp.value
+  if (!app || failedInstall.value?.app === app || installed.value.some(b => b.app === app)) return null
+  const stable = nativeVersions(app).filter(v => !v.includes('-'))
+  return (app === 'mysql' ? stable.find(v => v.startsWith('8.4.')) : undefined) ?? stable[0] ?? null
+})
+
+function rowClass({ row }: { row: DetailRow }): string {
+  const failedHere = failedInstall.value?.app === selectedApp.value
+  return (failedHere && row.version === suggestedVersion.value) || row.version === recommendedVersion.value
+    ? 'row-suggested'
+    : ''
+}
+
+const progressPercent = computed<number | null>(() => {
+  if (progress.phase === 'done') return 100
+  if (!progress.received || progress.total <= 0 || progress.downloaded >= progress.total) return null
+  return Math.min(99, Math.floor(progress.downloaded / progress.total * 100))
+})
+
+function formatMb(bytes: number): string {
+  return (bytes / 1024 / 1024).toLocaleString(locale.value, { maximumFractionDigits: 1, minimumFractionDigits: 1 })
+}
+
+const progressMessage = computed(() => {
+  const name = appDisplayName(progress.app)
+  if (progress.phase === 'done') return t('binaries.progress.done', { name, version: progress.version })
+  if (progress.phase === 'error') return progress.message
+  if (!progress.received) return t('binaries.progress.connecting')
+  if (progress.total > 0 && progress.downloaded >= progress.total) return t('binaries.progress.extracting')
+  return progress.total > 0
+    ? t('binaries.progress.downloadedOf', { done: formatMb(progress.downloaded), total: formatMb(progress.total) })
+    : t('binaries.progress.downloaded', { done: formatMb(progress.downloaded) })
 })
 
 async function refresh() {
@@ -491,6 +665,7 @@ async function refresh() {
     ])
     catalog.value = cat
     installed.value = inst
+    void loadActivePhp()
     // Re-fetch catalog health after the data refresh so the pill shows
     // the latest snapshot. Runs in parallel with the other two calls
     // above via fire-and-forget — no need to block the UI on it.
@@ -505,42 +680,70 @@ async function refresh() {
 async function install(app: string, version: string) {
   const key = `${app}-${version}`
   installing.value.add(key)
-  progressVisible.value = true
-  progressMessage.value = `Installing ${app} ${version}…`
-  progressPercent.value = 10
-  progressDone.value = false
-  progressError.value = false
+  installAbort = new AbortController()
+  Object.assign(progress, {
+    visible: true, phase: 'running', app, version,
+    downloaded: 0, total: -1, received: false, message: '', detail: '', serviceId: '', starting: false,
+  })
+  const unsubscribe = subscribeEventsMap({
+    'binary:progress': (data) => {
+      const e = data as BinaryProgressEvent
+      if (e.app !== app || e.version !== version || progress.phase !== 'running') return
+      // SSE writes may arrive out of order; never move the bar backwards.
+      progress.downloaded = Math.max(progress.downloaded, e.downloaded)
+      progress.total = e.total
+      progress.received = true
+    },
+  })
 
   try {
-    progressPercent.value = 30
-    const result = await installBinary(app, version)
-    progressPercent.value = 90
-
-    // Daemon returns 2xx with the InstalledBinary DTO on success — there
-    // is no `ok` field. Failures come back as 4xx/5xx and are already
-    // thrown by the shared `json` helper with the daemon's `detail`
-    // message attached. The previous `if (result.ok)` check treated
-    // every successful response as a failure because ok is undefined,
-    // masking the real error with "Installation failed".
-    progressPercent.value = 100
-    progressDone.value = true
-    progressMessage.value = `${app} ${version} installed successfully`
-    ElMessage.success(t('toast.installedVersion', { app, version }))
+    await installBinary(app, version, installAbort.signal)
+    progress.phase = 'done'
+    if (failedInstall.value?.app === app) failedInstall.value = null
     await refresh()
+    try {
+      const services = await fetchServices()
+      progress.serviceId = services.some(s => s.id === app) ? app : ''
+    } catch { /* no start shortcut then */ }
   } catch (e) {
-    const msg = errorMessage(e)
-    progressError.value = true
-    progressMessage.value = `Error: ${msg}`
-    ElMessage.error(t('toast.installFailed', { err: msg }))
+    const message = installErrorMessage((k, n) => t(k, n ?? {}), e, app, version)
+    progress.phase = 'error'
+    progress.message = message
+    progress.detail = e instanceof DOMException && e.name === 'AbortError' ? '' : installErrorDetail(e)
+    failedInstall.value = { app, version, message }
   } finally {
+    unsubscribe()
+    installAbort = null
     installing.value.delete(key)
+  }
+}
+
+function cancelInstall() {
+  installAbort?.abort()
+}
+
+function tryAnotherVersion() {
+  progress.visible = false
+  if (failedInstall.value) selectedApp.value = failedInstall.value.app
+}
+
+async function startInstalledService() {
+  progress.starting = true
+  try {
+    await startService(progress.serviceId)
+    ElMessage.success(t('binaries.progress.serviceStarted', { name: appDisplayName(progress.app) }))
+    progress.visible = false
+  } catch (e) {
+    ElMessage.error(t('binaries.progress.serviceStartFailed', { name: appDisplayName(progress.app), err: errorMessage(e) }))
+  } finally {
+    progress.starting = false
   }
 }
 
 async function uninstall(app: string, version: string) {
   try {
     await ElMessageBox.confirm(
-      t('binaries.removeConfirmMessage', { app, version }),
+      t('binaries.removeConfirmMessage', { app: appDisplayName(app), version }),
       t('binaries.removeConfirmTitle'),
       { type: 'warning', confirmButtonText: t('binaries.remove'), cancelButtonText: t('common.cancel') },
     )
@@ -551,7 +754,7 @@ async function uninstall(app: string, version: string) {
   uninstalling.value.add(key)
   try {
     await uninstallBinary(app, version)
-    ElMessage.success(t('toast.removedVersion', { app, version }))
+    ElMessage.success(t('toast.removedVersion', { app: appDisplayName(app), version }))
     await refresh()
   } catch (e) {
     ElMessage.error(t('toast.removeFailed', { err: errorMessage(e) }))
@@ -579,9 +782,9 @@ async function loadSystemInfo() {
 // Composer built-in
 const composerVersionDisplay = computed(() => {
   const v = composerVersion.value
-  if (!v) return 'latest (getcomposer.org)'
-  if (v.length > 24) return `v${v.slice(0, 10)}…${v.slice(-4)}`
-  return `v${v}`
+  if (!v) return composerPath.value ? t('binaries.composer.versionUnknown') : t('binaries.composer.source')
+  if (v.length > 24) return `${v.slice(0, 10)}…${v.slice(-4)}`
+  return v
 })
 
 const composerVersion = ref<string | null>(null)
@@ -605,25 +808,37 @@ async function installComposer() {
   try {
     const r = await fetch(`${daemonBaseUrl()}/api/composer/self-install`, { method: 'POST', headers: authHeaders() })
     if (!r.ok) {
-      const body: { detail?: string } = await r.json().catch(() => ({}))
-      ElMessage.error(body.detail || `HTTP ${r.status}`)
+      const body: { detail?: string; error?: string } = await r.json().catch(() => ({}))
+      ElMessage.error(t('binaries.composer.installFailed', { err: body.error || body.detail || `HTTP ${r.status}` }))
       return
     }
     const body = await r.json().catch(() => ({})) as { path?: string }
-    if (body.path) composerPath.value = body.path
     await loadComposerVersion()
-    ElMessage.success(t('binaries.composer.installed', { version: composerVersion.value || 'latest' }))
+    // The phar is on disk even when the version probe has no PHP to run it with.
+    if (!composerPath.value && body.path) composerPath.value = body.path
+    ElMessage.success(t('binaries.composer.installed', { version: composerVersion.value || t('binaries.composer.versionUnknown') }))
   } catch (e) {
-    ElMessage.error(errorMessage(e))
+    ElMessage.error(t('binaries.composer.installFailed', { err: errorMessage(e) }))
   } finally {
     composerInstalling.value = false
   }
 }
 
+let unsubscribeInstalled: (() => void) | null = null
+
 onMounted(() => {
   void refresh()
   void loadSystemInfo()
   void loadComposerVersion()
+  // Installs started elsewhere (wizard, MCP, CLI) show up without a reload.
+  unsubscribeInstalled = subscribeEventsMap({
+    'binary:installed': () => { if (progress.phase !== 'running') void refresh() },
+  })
+})
+
+onBeforeUnmount(() => {
+  unsubscribeInstalled?.()
+  installAbort?.abort()
 })
 </script>
 
@@ -670,6 +885,13 @@ onMounted(() => {
   margin: 0;
 }
 
+.outdated-link {
+  font-size: inherit;
+  padding: 0;
+  height: auto;
+  vertical-align: baseline;
+}
+
 /* Catalog health pill below the page subtitle — green when the daemon
    has a populated cache, red when the fetch returned zero. Title
    attribute carries the full multi-line explanation. */
@@ -683,16 +905,13 @@ onMounted(() => {
   font-size: 0.72rem;
   font-weight: 600;
   cursor: help;
+  border: 1px solid currentColor;
 }
 .catalog-health-ok {
-  background: rgba(34, 197, 94, 0.12);
   color: var(--wdc-status-running);
-  border: 1px solid rgba(34, 197, 94, 0.35);
 }
 .catalog-health-err {
-  background: rgba(255, 107, 107, 0.12);
   color: var(--wdc-status-error);
-  border: 1px solid rgba(255, 107, 107, 0.35);
 }
 .catalog-health-dot {
   width: 6px;
@@ -721,6 +940,10 @@ onMounted(() => {
 
 .page-body-pad {
   padding: 0 0 var(--wdc-space-5);
+}
+
+.install-failed-alert {
+  margin: var(--wdc-space-3) 0;
 }
 
 /* Grid of module cards */
@@ -772,20 +995,23 @@ onMounted(() => {
   font-size: 1rem;
   font-weight: 700;
   color: var(--wdc-text);
-  text-transform: capitalize;
   letter-spacing: 0.005em;
 }
 
 .bin-card-latest {
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   color: var(--wdc-text-3);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 100%;
   display: inline-block;
+}
+
+.bin-card-outdated {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--wdc-warning);
 }
 
 .bin-card-metrics {
@@ -828,6 +1054,10 @@ onMounted(() => {
   background: transparent;
 }
 
+.bin-detail-table :deep(.row-suggested td) {
+  background: var(--wdc-accent-dim) !important;
+}
+
 .col-version {
   font-weight: 600;
   color: var(--wdc-text);
@@ -857,6 +1087,20 @@ onMounted(() => {
   font-size: 0.86rem;
   margin-bottom: var(--wdc-space-3);
   color: var(--wdc-text);
+}
+
+.progress-detail summary {
+  cursor: pointer;
+  font-size: 0.78rem;
+  color: var(--wdc-text-3);
+}
+
+.progress-detail pre {
+  margin: var(--wdc-space-2) 0 0;
+  font-size: 0.72rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--wdc-text-2);
 }
 
 .bin-card--builtin {

@@ -167,7 +167,8 @@ export interface PluginManifest {
   capabilities?: string[]
   /** OS names the plugin author claims support for, e.g. ["windows","macos","linux"] */
   supportedPlatforms?: string[]
-  permissions: {
+  /** Not sent by the daemon today; never fill it in on the client. */
+  permissions?: {
     network?: boolean
     filesystem?: string[]
     process?: boolean

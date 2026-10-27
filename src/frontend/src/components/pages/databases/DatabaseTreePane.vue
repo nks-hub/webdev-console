@@ -57,8 +57,10 @@
             <li
               v-for="t in (tables[db.name] ?? [])"
               :key="t.name"
+              v-activate
               class="tree-table"
               :class="{ selected: selectedDb === db.name && selectedTable === t.name }"
+              :aria-current="selectedDb === db.name && selectedTable === t.name ? 'true' : undefined"
               @click.stop="$emit('select', { db: db.name, table: t.name })"
             >
               <el-icon class="kind-icon"><Grid /></el-icon>

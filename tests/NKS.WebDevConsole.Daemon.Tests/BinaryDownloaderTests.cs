@@ -90,9 +90,10 @@ public sealed class BinaryDownloaderTests : IDisposable
         var html = System.Text.Encoding.UTF8.GetBytes("<html><body>Oops... the requested URL was not found</body></html>");
         var cacheDir = Path.Combine(_tempDir, "cache");
 
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var ex = await Assert.ThrowsAsync<BinaryInstallException>(() =>
             DownloaderServing(new FixedResponseHandler(html)).DownloadAsync(UnhashedZip(), cacheDir));
 
+        Assert.Equal("not_an_archive", ex.Code);
         Assert.Contains("returned a web page", ex.Message);
         Assert.Empty(Directory.GetFiles(cacheDir));
     }
@@ -364,6 +365,63 @@ public sealed class BinaryDownloaderTests : IDisposable
         var a = new DownloadProgress("php", "8.3.10", 500, 1000);
         var b = new DownloadProgress("php", "8.3.10", 500, 1000);
         Assert.Equal(a, b);
+    }
+
+    private static List<(string Event, System.Text.Json.JsonElement Data)> CaptureBroadcasts(out Func<string, object, Task> broadcast)
+    {
+        var sent = new List<(string, System.Text.Json.JsonElement)>();
+        broadcast = (evt, data) =>
+        {
+            lock (sent) sent.Add((evt, System.Text.Json.JsonSerializer.SerializeToElement(data)));
+            return Task.CompletedTask;
+        };
+        return sent;
+    }
+
+    [Fact]
+    public async Task DownloadAsync_StreamsRealProgressAsSseEvents()
+    {
+        var body = new byte[300_000];
+        body[0] = 0x50; body[1] = 0x4B; // zip signature
+        var sent = CaptureBroadcasts(out var broadcast);
+
+        await DownloaderServing(new FixedResponseHandler(body))
+            .DownloadAsync(UnhashedZip(), Path.Combine(_tempDir, "cache"), new BinaryInstallProgress(broadcast, minIntervalMs: 0));
+
+        Assert.True(sent.Count > 1, "an 80 KiB read buffer over 300 KB must report several chunks");
+        Assert.All(sent, s => Assert.Equal("binary:progress", s.Event));
+        var last = sent[^1].Data;
+        Assert.Equal("apache", last.GetProperty("app").GetString());
+        Assert.Equal("2.4.66", last.GetProperty("version").GetString());
+        Assert.Equal(body.Length, last.GetProperty("downloaded").GetInt64());
+        Assert.Equal(body.Length, last.GetProperty("total").GetInt64());
+    }
+
+    [Fact]
+    public void BinaryInstallProgress_ThrottlesButAlwaysSendsTheFinalChunk()
+    {
+        var sent = CaptureBroadcasts(out var broadcast);
+        var progress = new BinaryInstallProgress(broadcast, minIntervalMs: 60_000);
+
+        foreach (var downloaded in new long[] { 10, 20, 50, 90, 100 })
+            progress.Report(new DownloadProgress("mysql", "8.4.8", downloaded, 100));
+
+        Assert.Equal(new long[] { 10, 100 }, sent.Select(s => s.Data.GetProperty("downloaded").GetInt64()));
+    }
+
+    [Fact]
+    public void ClassifyInstallError_GivesTheUiAStableCode()
+    {
+        Assert.Equal((502, "download_failed", 403),
+            BinaryEndpoints.ClassifyInstallError(new HttpRequestException("x", null, System.Net.HttpStatusCode.Forbidden)));
+        Assert.Equal((502, "not_an_archive", (int?)null),
+            BinaryEndpoints.ClassifyInstallError(new BinaryInstallException("not_an_archive", "x")));
+        Assert.Equal((404, "no_build_for_platform", (int?)null),
+            BinaryEndpoints.ClassifyInstallError(new BinaryInstallException("no_build_for_platform", "x")));
+        Assert.Equal((502, "download_unreachable", (int?)null),
+            BinaryEndpoints.ClassifyInstallError(new HttpRequestException("dns")));
+        Assert.Equal((500, "install_failed", (int?)null),
+            BinaryEndpoints.ClassifyInstallError(new IOException("disk full")));
     }
 
     private static void AddTextEntry(ZipArchive zip, string path, string content)

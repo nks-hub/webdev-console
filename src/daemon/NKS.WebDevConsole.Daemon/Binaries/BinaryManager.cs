@@ -163,7 +163,7 @@ public sealed class BinaryManager
             _ => "x64",
         };
         var release = _catalog.Find(app, version, os, arch)
-            ?? throw new InvalidOperationException(
+            ?? throw new BinaryInstallException("no_build_for_platform",
                 $"No catalog entry for {app} {version} ({os}/{arch}). Available: {string.Join(", ", _catalog.ForApp(app).Select(r => r.Version + " " + r.Os + "/" + r.Arch))}");
 
         var cacheDir = Path.Combine(_root, ".cache");

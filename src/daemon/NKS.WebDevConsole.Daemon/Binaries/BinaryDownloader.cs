@@ -99,7 +99,7 @@ public sealed class BinaryDownloader
         {
             var webPage = File.ReadAllText(tempPath).TrimStart().StartsWith('<');
             try { File.Delete(tempPath); } catch { /* best-effort cleanup */ }
-            throw new InvalidOperationException(
+            throw new BinaryInstallException("not_an_archive",
                 $"{release.App} {release.Version}: {release.Url} returned " +
                 (webPage ? "a web page" : "a file that is not a " + release.ArchiveType + " archive") +
                 " instead of the download. The mirror for this version is broken; try another version.");
@@ -120,7 +120,7 @@ public sealed class BinaryDownloader
             if (!actual.Equals(release.Sha256, StringComparison.OrdinalIgnoreCase))
             {
                 try { File.Delete(tempPath); } catch { /* best-effort cleanup */ }
-                throw new InvalidOperationException(
+                throw new BinaryInstallException("sha_mismatch",
                     $"SHA256 mismatch for {release.App} {release.Version}: " +
                     $"expected {release.Sha256}, got {actual}. Refusing to install.");
             }
@@ -415,4 +415,14 @@ public sealed class BinaryDownloader
 public sealed record DownloadProgress(string App, string Version, long Downloaded, long Total)
 {
     public double PercentComplete => Total > 0 ? (double)Downloaded / Total * 100 : 0;
+}
+
+/// <summary>
+/// An install failure the UI can explain without parsing the message.
+/// <see cref="Code"/> is one of <c>not_an_archive</c>, <c>sha_mismatch</c>,
+/// <c>no_build_for_platform</c>.
+/// </summary>
+public sealed class BinaryInstallException(string code, string message) : Exception(message)
+{
+    public string Code { get; } = code;
 }

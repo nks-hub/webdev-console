@@ -257,4 +257,34 @@ public class PluginLoaderTests
         Assert.Null(manifest.PageBundleUrl);
         Assert.Null(manifest.Ports);
     }
+
+    [Fact]
+    public void ParseManifest_EmptyDependenciesArray_KeepsTheRestOfTheManifest()
+    {
+        // Shape of the first-party plugin.json files (e.g. Apache 1.0.13).
+        const string json = """
+            {
+              "id": "nks.wdc.apache",
+              "description": "Apache 2.4 service module",
+              "dependencies": [],
+              "capabilities": ["start", "stop"]
+            }
+            """;
+
+        var manifest = PluginLoader.ParseManifest(json);
+
+        Assert.NotNull(manifest);
+        Assert.Equal("nks.wdc.apache", manifest.Id);
+        Assert.Equal("Apache 2.4 service module", manifest.Description);
+        Assert.Null(manifest.Dependencies);
+        Assert.Equal(new[] { "start", "stop" }, manifest.Capabilities);
+    }
+
+    [Fact]
+    public void ParseManifest_DependencyObject_IsStillRead()
+    {
+        var manifest = PluginLoader.ParseManifest("""{ "id": "nks.wdc.php", "dependencies": { "hard": ["nks.wdc.apache"] } }""");
+
+        Assert.Equal(new[] { "nks.wdc.apache" }, manifest!.Dependencies!.Hard);
+    }
 }

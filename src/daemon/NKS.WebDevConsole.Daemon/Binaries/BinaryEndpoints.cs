@@ -151,6 +151,7 @@ internal static class BinaryEndpoints
         app.MapPost("/api/binaries/install", async (
             HttpContext ctx,
             BinaryManager bm,
+            SseService sse,
             NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator) =>
         {
             InstallBinaryRequest? req;
@@ -183,12 +184,21 @@ internal static class BinaryEndpoints
             try
             {
                 BinaryManager.ValidateAppVersion(req.App, req.Version);
-                var installed = await bm.EnsureInstalledAsync(req.App, req.Version, progress: null, ct: ctx.RequestAborted);
+                var installed = await bm.EnsureInstalledAsync(req.App, req.Version,
+                    new BinaryInstallProgress(sse.BroadcastAsync), ctx.RequestAborted);
+                try { await sse.BroadcastAsync("binary:installed", new { app = installed.App, version = installed.Version }); }
+                catch { /* SSE fan-out is best-effort */ }
                 return Results.Ok(installed);
             }
             catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
             catch (UnauthorizedAccessException ex) { return Results.BadRequest(new { error = ex.Message }); }
-            catch (Exception ex) { return Results.Problem($"Install failed: {ex.Message}"); }
+            catch (Exception ex)
+            {
+                var (status, code, upstreamStatus) = ClassifyInstallError(ex);
+                return Results.Json(
+                    new { error = ex.Message, code, app = req.App, version = req.Version, upstreamStatus },
+                    statusCode: status);
+            }
         });
 
         app.MapDelete("/api/binaries/{app}/{version}", (string app, string version, BinaryManager bm) =>
@@ -202,5 +212,45 @@ internal static class BinaryEndpoints
             catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
             catch (UnauthorizedAccessException ex) { return Results.BadRequest(new { error = ex.Message }); }
         });
+    }
+
+    /// <summary>
+    /// Maps an install failure to an HTTP status and a stable code the UI
+    /// translates. Upstream problems (mirror refused, served a web page,
+    /// hash mismatch) are 502, not 500: the daemon itself is fine.
+    /// </summary>
+    internal static (int Status, string Code, int? UpstreamStatus) ClassifyInstallError(Exception ex) => ex switch
+    {
+        BinaryInstallException { Code: "no_build_for_platform" } => (404, "no_build_for_platform", null),
+        BinaryInstallException bie => (502, bie.Code, null),
+        HttpRequestException hre when hre.StatusCode is not null => (502, "download_failed", (int)hre.StatusCode),
+        HttpRequestException or TaskCanceledException { InnerException: TimeoutException } => (502, "download_unreachable", null),
+        OperationCanceledException => (499, "cancelled", null),
+        _ => (500, "install_failed", null),
+    };
+}
+
+/// <summary>
+/// Forwards download progress to SSE as <c>binary:progress</c> events,
+/// at most one per <paramref name="minIntervalMs"/> plus the final chunk.
+/// </summary>
+internal sealed class BinaryInstallProgress(Func<string, object, Task> broadcast, int minIntervalMs = 250)
+    : IProgress<DownloadProgress>
+{
+    private long _lastSent = -1;
+
+    public void Report(DownloadProgress p)
+    {
+        var now = Environment.TickCount64;
+        var finished = p.Total > 0 && p.Downloaded >= p.Total;
+        if (!finished && _lastSent >= 0 && now - _lastSent < minIntervalMs) return;
+        _lastSent = now;
+        _ = SendAsync(new { app = p.App, version = p.Version, downloaded = p.Downloaded, total = p.Total });
+    }
+
+    private async Task SendAsync(object payload)
+    {
+        try { await broadcast("binary:progress", payload); }
+        catch { /* a dead SSE client must not fail the install */ }
     }
 }

@@ -38,10 +38,7 @@ export const usePluginsStore = defineStore('plugins', () => {
     loading.value = true
     try {
       const raw = await fetchPlugins()
-      manifests.value = raw.map(p => ({
-        ...p,
-        permissions: p.permissions ?? { network: true, process: true, gui: true },
-      }))
+      manifests.value = raw
       // Load UI definitions for enabled plugins. Fan out with Promise.all so
       // the 10+ HTTP round-trips run in parallel instead of sequentially —
       // previously turned a fast /api/plugins/{id}/ui probe into N× the

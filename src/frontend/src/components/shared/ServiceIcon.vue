@@ -40,6 +40,8 @@ const SHORT_ID: Record<string, string> = {
   'nks.wdc.postgresql': 'postgresql',
   'nks.wdc.redis': 'redis',
   'nks.wdc.mailpit': 'mailpit',
+  'nks.wdc.mariadb': 'mariadb',
+  'nks.wdc.nginx': 'nginx',
 }
 
 // Normalise any input (long plugin id, short service id) to a known short id or
