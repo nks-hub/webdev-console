@@ -145,6 +145,39 @@ let updaterStatus = 'Idle'
 let updateDownloaded = false
 let checkingForUpdates = false
 
+// ── Daemon supervision ────────────────────────────────────────────────
+// A daemon that crashed used to stay dead until the user restarted the
+// whole app, and an adopted (CLI-started) or UAC-elevated daemon had no
+// watcher at all because we hold no child-process handle for it.
+//  - Crashed child  → respawn with exponential backoff, capped attempts.
+//  - Adopted daemon → /healthz poll; after repeated failures, respawn.
+//  - Deliberate stops (quit, elevation, update install) set
+//    `expectedDaemonExit` so the exit handler doesn't fight them.
+let expectedDaemonExit = false
+let daemonSpawning = false
+let crashRestarts = 0
+let crashRestartTimer: NodeJS.Timeout | null = null
+let crashStableTimer: NodeJS.Timeout | null = null
+let healthMonitor: NodeJS.Timeout | null = null
+let healthFailures = 0
+let monitorPausedUntil = 0
+let autoRestartSuspended = false
+const CRASH_RESTART_MAX = 5
+const CRASH_RESTART_BASE_MS = 1000
+const CRASH_RESTART_CAP_MS = 30_000
+// A daemon that stays up this long resets the crash counter.
+const CRASH_STABLE_MS = 60_000
+const HEALTH_INTERVAL_MS = 5000
+const HEALTH_FAILURE_LIMIT = 3
+// How long the monitor waits for an elevated daemon (UAC prompt + start)
+// before assuming the prompt was declined and starting a normal one.
+const ELEVATION_GRACE_MS = 90_000
+// Factory wipe deletes ~/.wdc while no daemon runs; keep the monitor off it.
+const FACTORY_WIPE_GRACE_MS = 120_000
+// Daemon exit code contract (Program.cs): 3 = DB migration failed (fatal,
+// respawning would loop), 98 = factory reset, 99 = restart requested.
+const EXIT_MIGRATION_FAILED = 3
+
 // Catalog source: the public NKS catalog at https://wdc.nks-hub.cz (baked
 // into SettingsStore.CatalogUrl as the built-in default). The Electron
 // shell no longer spawns a local catalog-api sidecar — production users
@@ -297,6 +330,112 @@ function findDaemonProject(): string {
   return candidates[0] // fallback
 }
 
+/** True when the port file points at a responding WDC daemon. Unlike
+ *  isDaemonAlive this never stops a version-skewed daemon — it's the
+ *  cheap probe the supervision loop runs every few seconds. */
+async function probeDaemonHealth(): Promise<boolean> {
+  const info = readPortFile()
+  if (!info) return false
+  try {
+    const body = await new Promise<string>((resolve, reject) => {
+      const req = http.get(`http://localhost:${info.port}/healthz`, (res) => {
+        let buf = ''
+        res.on('data', (chunk: Buffer) => { buf += chunk.toString() })
+        res.on('end', () => resolve(buf))
+      })
+      req.on('error', reject)
+      req.setTimeout(2000, () => { req.destroy(); reject(new Error('timeout')) })
+    })
+    const parsed = JSON.parse(body) as { service?: string; ok?: boolean }
+    return parsed.service === 'nks-wdc-daemon' && parsed.ok === true
+  } catch {
+    return false
+  }
+}
+
+function scheduleCrashRestart(reason: string) {
+  if (isQuitting || crashRestartTimer) return
+  if (crashRestarts >= CRASH_RESTART_MAX) {
+    autoRestartSuspended = true
+    log.error(`[daemon] ${reason} — giving up after ${crashRestarts} restart attempts`)
+    notifyDaemonDown(
+      'The WebDev Console daemon keeps stopping',
+      'Automatic restarts were stopped. Use "Start daemon" in the tray menu after checking the logs.',
+    )
+    void updateTray()
+    return
+  }
+  const delay = Math.min(CRASH_RESTART_BASE_MS * 2 ** crashRestarts, CRASH_RESTART_CAP_MS)
+  crashRestarts++
+  log.warn(`[daemon] ${reason} — restart ${crashRestarts}/${CRASH_RESTART_MAX} in ${delay} ms`)
+  crashRestartTimer = setTimeout(() => {
+    crashRestartTimer = null
+    void spawnDaemon().catch((e) => {
+      log.error('[daemon] respawn failed', e)
+      scheduleCrashRestart('respawn failed')
+    })
+  }, delay)
+}
+
+/** Manual "Start daemon" from the tray: forget earlier failures. */
+function restartDaemonManually() {
+  crashRestarts = 0
+  autoRestartSuspended = false
+  if (crashRestartTimer) { clearTimeout(crashRestartTimer); crashRestartTimer = null }
+  void spawnDaemon().catch((e) => {
+    log.error('[daemon] manual start failed', e)
+    notifyDaemonDown('The WebDev Console daemon could not be started', String(e instanceof Error ? e.message : e))
+  })
+}
+
+function notifyDaemonDown(title: string, body: string) {
+  try {
+    if (Notification.isSupported()) new Notification({ title, body }).show()
+  } catch { /* notifications unavailable — the tray state still shows it */ }
+}
+
+function startHealthMonitor() {
+  if (healthMonitor) return
+  healthMonitor = setInterval(() => { void healthTick() }, HEALTH_INTERVAL_MS)
+}
+
+async function healthTick() {
+  if (isQuitting || daemonSpawning || crashRestartTimer) return
+  const healthy = await probeDaemonHealth()
+  if (healthy) {
+    // Also covers a daemon the user started again from the CLI after we
+    // stopped auto-restarting.
+    healthFailures = 0
+    monitorPausedUntil = 0
+    autoRestartSuspended = false
+    if (!daemonConnected) {
+      daemonConnected = true
+      void updateTray()
+    }
+    return
+  }
+  if (daemonConnected) {
+    daemonConnected = false
+    void updateTray()
+  }
+  // Our own child reports its exit directly; the restart path below only
+  // covers daemons we adopted or launched elevated (no process handle).
+  if (daemon || autoRestartSuspended || Date.now() < monitorPausedUntil) return
+  if (++healthFailures >= HEALTH_FAILURE_LIMIT) {
+    healthFailures = 0
+    scheduleCrashRestart('adopted daemon stopped responding')
+  }
+}
+
+/** Resolves once `child` has exited, or after `timeoutMs`. */
+function waitForChildExit(child: ChildProcess, timeoutMs: number): Promise<boolean> {
+  if (child.exitCode !== null || child.signalCode !== null) return Promise.resolve(true)
+  return new Promise((resolve) => {
+    const t = setTimeout(() => resolve(false), timeoutMs)
+    child.once('exit', () => { clearTimeout(t); resolve(true) })
+  })
+}
+
 async function isDaemonAlive(): Promise<boolean> {
   const info = readPortFile()
   if (!info) return false
@@ -363,10 +502,22 @@ async function isDaemonAlive(): Promise<boolean> {
 }
 
 async function spawnDaemon() {
+  if (daemonSpawning || isQuitting) return
+  if (daemon && daemon.exitCode === null && daemon.signalCode === null) return
+  daemonSpawning = true
+  try {
+    await spawnDaemonInner()
+  } finally {
+    daemonSpawning = false
+  }
+}
+
+async function spawnDaemonInner() {
   // If a daemon is already running (e.g. started from CLI), reuse it
   if (await isDaemonAlive()) {
     console.log('[daemon] already running (port file exists and responds), reusing')
     daemonConnected = true
+    healthFailures = 0
     updateTray()
     return
   }
@@ -416,6 +567,13 @@ async function spawnDaemon() {
     daemon = spawn(daemonExe, [], { stdio: 'pipe', detached: false, env: daemonEnv })
   }
   log.info(`[daemon] spawned pid=${daemon.pid}`)
+  const child = daemon
+  expectedDaemonExit = false
+  if (crashStableTimer) clearTimeout(crashStableTimer)
+  crashStableTimer = setTimeout(() => {
+    crashStableTimer = null
+    if (daemon === child) crashRestarts = 0
+  }, CRASH_STABLE_MS)
 
   daemon.stdout?.on('data', (d) => {
     try { console.log('[daemon]', d.toString().trim()) } catch {}
@@ -426,11 +584,34 @@ async function spawnDaemon() {
   daemon.on('error', (err) => {
     console.error('[daemon] process error:', err.message)
   })
-  daemon.on('exit', (code) => {
-    console.log(`[daemon] exited code=${code}`)
+  daemon.on('exit', (code, signal) => {
+    console.log(`[daemon] exited code=${code} signal=${signal}`)
+    // A replacement may already be running (elevation, manual restart);
+    // only clear state that still belongs to this child.
+    if (daemon !== child) return
     daemonConnected = false
     daemon = null
+    if (crashStableTimer) { clearTimeout(crashStableTimer); crashStableTimer = null }
+    const deliberate = expectedDaemonExit
+    expectedDaemonExit = false
     updateTray()
+    if (!isQuitting && !deliberate && code !== 98 && code !== 99) {
+      if (code === EXIT_MIGRATION_FAILED) {
+        autoRestartSuspended = true
+        log.error('[daemon] database migration failed — not restarting')
+        notifyDaemonDown(
+          'WebDev Console database upgrade failed',
+          'The daemon stopped because its database could not be migrated. Check the daemon log, then use "Start daemon" in the tray.',
+        )
+      } else if (code === 0) {
+        // Clean exit we didn't ask for (e.g. `wdc daemon stop`): respect it,
+        // the tray offers "Start daemon".
+        log.info('[daemon] stopped cleanly outside the app — not restarting')
+        autoRestartSuspended = true
+      } else {
+        scheduleCrashRestart(`daemon exited unexpectedly (code=${code} signal=${signal})`)
+      }
+    }
     // F91.7: exit code 99 = "restart me" contract from the daemon's
     // /api/admin/restart endpoint. Don't respawn while the whole app is
     // quitting — we'd keep the process alive past Electron's own exit.
@@ -450,6 +631,7 @@ async function spawnDaemon() {
     // so the same codepath works on Win/macOS/Linux.
     if (code === 98 && !isQuitting) {
       console.log('[daemon] FACTORY RESET signal (exit 98) — wiping all state')
+      monitorPausedUntil = Date.now() + FACTORY_WIPE_GRACE_MS
       void performFactoryWipe().finally(() => {
         setTimeout(() => { void spawnDaemon() }, 500)
       })
@@ -965,9 +1147,8 @@ function buildUpdaterMenuItems(): Electron.MenuItemConstructorOptions[] {
       enabled: !checkingForUpdates,
       click: async () => {
         if (updateDownloaded) {
-          isQuitting = true
           try {
-            electronAutoUpdater.quitAndInstall(false, true)
+            await installUpdateAndRestart()
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error)
             void dialog.showMessageBox({
@@ -1006,9 +1187,13 @@ async function updateTray() {
     : 'Daemon unavailable'
   activeTray.setToolTip(`NKS WDC - ${summary}`)
 
+  const canStartDaemon = !snapshot.connected && !daemon && !daemonSpawning
   const trayMenu = Menu.buildFromTemplate([
     { label: trayMenuLabel, enabled: false },
     { label: summary, enabled: false },
+    ...(canStartDaemon
+      ? [{ label: 'Start daemon', click: () => restartDaemonManually() }] as Electron.MenuItemConstructorOptions[]
+      : []),
     { type: 'separator' },
     {
       label: 'Open Dashboard',
@@ -1163,6 +1348,16 @@ async function checkForAppUpdates(showNoUpdateDialog = false) {
   }
 }
 
+/** Stop the daemon before handing over to the installer. Setting
+ *  isQuitting first made before-quit skip shutdownDaemon, so the old
+ *  daemon kept its binary locked and the update failed or left a
+ *  version-skewed daemon running. */
+async function installUpdateAndRestart() {
+  isQuitting = true
+  await shutdownDaemon()
+  electronAutoUpdater.quitAndInstall(false, true)
+}
+
 async function setupAutoUpdater() {
   if (!app.isPackaged || isPortable) {
     updaterStatus = 'Disabled'
@@ -1218,8 +1413,7 @@ async function setupAutoUpdater() {
       })
 
       if (result.response === 0) {
-        isQuitting = true
-        autoUpdater.quitAndInstall(false, true)
+        await installUpdateAndRestart()
       }
     })
     autoUpdater.on('error', (error) => {
@@ -1425,9 +1619,27 @@ async function performFactoryWipe() {
 }
 
 async function shutdownDaemon() {
+  expectedDaemonExit = true
+  if (crashRestartTimer) { clearTimeout(crashRestartTimer); crashRestartTimer = null }
+  const child = daemon
   try { await daemonPost('/api/admin/shutdown') } catch { /* already dead or unreachable */ }
-  try { daemon?.kill() } catch { /* already dead */ }
+  if (child) {
+    // Give the daemon time to stop services and flush SQLite before the
+    // hard kill — the installer and the next launch both need its files.
+    const exited = await waitForChildExit(child, 8000)
+    if (!exited) {
+      log.warn('[daemon] graceful shutdown timed out — killing')
+      try { child.kill() } catch { /* already dead */ }
+      await waitForChildExit(child, 2000)
+    }
+  } else {
+    // Adopted/elevated daemon: wait until it stops answering.
+    for (let i = 0; i < 16 && await probeDaemonHealth(); i++) {
+      await new Promise(r => setTimeout(r, 500))
+    }
+  }
   daemon = null
+  daemonConnected = false
   // Best-effort port file cleanup so the next app launch sees a clean
   // slate instead of having to wait for its own isDaemonAlive probe.
   try {
@@ -1733,8 +1945,18 @@ ipcMain.handle('elevate-daemon', async () => {
   }
   try {
     log.info('[elevate-daemon] requested — killing current daemon pid=' + (daemon?.pid ?? 'none'))
+    // The elevated daemon is launched by PowerShell, so we never get a
+    // handle to it; the health monitor watches it instead and starts a
+    // normal daemon if the UAC prompt is declined.
+    monitorPausedUntil = Date.now() + ELEVATION_GRACE_MS
+    healthFailures = 0
+    if (crashRestartTimer) { clearTimeout(crashRestartTimer); crashRestartTimer = null }
     if (daemon && !daemon.killed) {
-      try { daemon.kill() } catch (e) { log.warn('[elevate-daemon] kill failed', e) }
+      expectedDaemonExit = true
+      const old = daemon
+      daemon = null
+      daemonConnected = false
+      try { old.kill() } catch (e) { log.warn('[elevate-daemon] kill failed', e) }
     }
     // Best-effort port-file wipe so the renderer doesn't latch onto the
     // stale token while the elevated daemon comes up.
@@ -1821,7 +2043,13 @@ app.whenReady().then(async () => {
   })
   // Catalog source is the public NKS catalog at https://wdc.nks-hub.cz
   // (SettingsStore default). No local sidecar — daemon fetches directly.
-  await spawnDaemon()
+  try {
+    await spawnDaemon()
+  } catch (e) {
+    log.error('[daemon] initial start failed', e)
+    scheduleCrashRestart('initial start failed')
+  }
+  startHealthMonitor()
   createWindow()
   createTray()
   await setupAutoUpdater()
