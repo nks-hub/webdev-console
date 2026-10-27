@@ -1,307 +1,87 @@
 <template>
-  <div class="cf-page">
-    <div class="page-header">
-      <div class="header-left">
-        <h1 class="page-title">{{ $t('apache.title') }}</h1>
-        <span class="page-subtitle">{{ $t('apache.subtitle') }}</span>
-      </div>
-      <div class="header-actions">
-        <el-button size="small" @click="refresh" :loading="refreshing">{{ $t('common.refresh') }}</el-button>
-        <el-button
-          size="small"
-          :type="serviceRunning ? 'danger' : 'success'"
-          :loading="toggling"
-          :disabled="!daemonStore.connected"
-          @click="toggleService"
-        >
-          {{ serviceRunning ? $t('common.stop') : $t('common.run') }} Apache
-        </el-button>
-      </div>
-    </div>
-    <div class="page-autostart-row">
-      <PluginAutostartSwitch plugin-id="nks.wdc.apache" />
-    </div>
+  <div class="wdc-page">
+    <ServicePageHead
+      service-id="apache"
+      plugin-id="nks.wdc.apache"
+      :title="t('apache.title')"
+      :subtitle="t('apache.subtitle')"
+    >
+      <template #actions="{ state }">
+        <el-button v-if="state === 'running' && localUrl" @click="openLocalUrl">{{ t('apache.openLocal', { url: localUrl }) }}</el-button>
+      </template>
+      <template #facts>
+        <div><dt>{{ t('apache.sites') }}</dt><dd>{{ t('apache.sitesCount', { n: sitesStore.sites.length }, sitesStore.sites.length) }}</dd></div>
+      </template>
+    </ServicePageHead>
 
-    <div class="status-strip">
-      <div class="status-card" :class="{ 'status-active': serviceRunning }">
-        <el-icon class="status-icon" :class="serviceRunning ? 'icon-running' : 'icon-stopped'">
-          <CircleCheckFilled v-if="serviceRunning" /><CircleClose v-else />
-        </el-icon>
-        <div class="status-body">
-          <div class="status-title">{{ serviceRunning ? $t('common.running') : $t('common.stopped') }}</div>
-          <div class="status-meta" v-if="serviceInfo?.uptime">{{ $t('apache.uptime') }}: {{ formatUptime(serviceInfo.uptime) }}</div>
-          <div class="status-meta" v-else>Apache</div>
-        </div>
-      </div>
-      <div class="status-card">
-        <el-icon class="status-icon"><Connection /></el-icon>
-        <div class="status-body">
-          <div class="status-title" v-if="serviceRunning">
-            <a class="local-url" :href="localUrl" @click.prevent="openLocalUrl">{{ localUrl }}</a>
-          </div>
-          <div class="status-title" v-else>{{ $t('apache.ports') }}: {{ httpPort }} / {{ httpsPort }}</div>
-          <div class="status-meta">{{ serviceInfo?.version || $t('apache.versionUnknown') }}</div>
-        </div>
-      </div>
-      <div class="status-card">
-        <el-icon class="status-icon"><List /></el-icon>
-        <div class="status-body">
-          <div class="status-title">{{ sitesStore.sites.length }} {{ $t('apache.vhostsActive') }}</div>
-          <div class="status-meta">{{ $t('apache.vhostsMeta') }}</div>
-        </div>
-      </div>
-    </div>
-
-    <el-tabs v-model="activeTab" class="cf-tabs">
-      <!-- Overview -->
-      <el-tab-pane name="overview">
-        <template #label>
-          <span class="tab-label"><el-icon><Monitor /></el-icon> {{ $t('apache.tabOverview') }}</span>
-        </template>
-        <div class="tab-content">
-          <EditCard :title="$t('apache.statusCard')">
-            <el-descriptions :column="2" border size="small">
-              <el-descriptions-item :label="$t('apache.status')">
-                <el-tag :type="serviceRunning ? 'success' : 'info'" size="small" effect="dark">
-                  {{ serviceRunning ? $t('common.running') : $t('common.stopped') }}
-                </el-tag>
-              </el-descriptions-item>
-              <el-descriptions-item :label="$t('apache.version')">{{ serviceInfo?.version || '—' }}</el-descriptions-item>
-              <el-descriptions-item label="HTTP">
-                <a v-if="serviceRunning" class="local-url" :href="localUrl" @click.prevent="openLocalUrl">{{ localUrl }}</a>
-                <span v-else>:{{ httpPort }}</span>
-              </el-descriptions-item>
-              <el-descriptions-item label="HTTPS">:{{ httpsPort }}</el-descriptions-item>
-              <el-descriptions-item :label="$t('apache.vhostsActive')">{{ sitesStore.sites.length }}</el-descriptions-item>
-              <el-descriptions-item :label="$t('apache.pid')">{{ serviceInfo?.pid ?? '—' }}</el-descriptions-item>
-            </el-descriptions>
-          </EditCard>
-          <EditCard :title="$t('apache.recentErrors')" :hint="$t('apache.recentErrorsHint')">
-            <LogViewer :service-id="'apache'" style="height: 200px" />
-          </EditCard>
-        </div>
+    <el-tabs v-if="installed" v-model="activeTab">
+      <el-tab-pane name="vhosts" :label="t('apache.tabVhosts')" lazy>
+        <el-empty v-if="sitesStore.sites.length === 0" :description="t('apache.noVhosts')" :image-size="48" />
+        <el-table v-else :data="sitesStore.sites" size="small">
+          <el-table-column prop="domain" :label="t('sites.domain')" min-width="200">
+            <template #default="{ row }">
+              <span class="mono">{{ row.domain }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="phpVersion" :label="t('sites.phpVersion')" width="140" />
+          <el-table-column label="HTTPS" width="90" align="center">
+            <template #default="{ row }">{{ row.ssl ? t('common.yes') : t('common.no') }}</template>
+          </el-table-column>
+          <el-table-column :label="t('common.actions')" width="110" align="center">
+            <template #default="{ row }">
+              <el-button size="small" text @click="router.push(`/sites/${row.domain}/edit`)">
+                {{ t('common.edit') }}
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
       </el-tab-pane>
 
-      <!-- Vhosts -->
-      <el-tab-pane name="vhosts">
-        <template #label>
-          <span class="tab-label"><el-icon><Share /></el-icon> {{ $t('apache.tabVhosts') }}</span>
-        </template>
-        <div class="tab-content">
-          <EditCard
-            :title="$t('apache.enabledSites')"
-            :hint="`${sitesStore.sites.length} ${$t('apache.vhostsActive')}`"
-          >
-            <el-empty v-if="sitesStore.sites.length === 0" :description="$t('apache.noVhosts')" :image-size="48" />
-            <el-table v-else :data="sitesStore.sites" size="small">
-              <el-table-column prop="domain" :label="$t('sites.domain')" min-width="200">
-                <template #default="{ row }">
-                  <span class="mono">{{ row.domain }}</span>
-                </template>
-              </el-table-column>
-              <el-table-column prop="phpVersion" :label="$t('sites.phpVersion')" width="140" />
-              <el-table-column label="HTTPS" width="80" align="center">
-                <template #default="{ row }">
-                  <el-tag v-if="row.ssl" size="small" type="success" effect="dark">SSL</el-tag>
-                  <el-tag v-else size="small" effect="plain">HTTP</el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column :label="$t('common.actions')" width="100" align="center">
-                <template #default="{ row }">
-                  <el-button size="small" text @click="$router.push(`/sites/${row.domain}/edit`)">
-                    {{ $t('common.edit') }}
-                  </el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-          </EditCard>
-        </div>
-      </el-tab-pane>
-
-      <!-- Tuning -->
-      <el-tab-pane name="tuning">
-        <template #label>
-          <span class="tab-label"><el-icon><Setting /></el-icon> {{ $t('apache.tabTuning') }}</span>
-        </template>
-        <div class="tab-content">
-          <el-alert
-            type="info"
-            :closable="false"
-            show-icon
-            :title="$t('apache.tuningPending')"
-            style="margin-bottom: var(--wdc-space-4)"
-          />
-          <EditCard :title="$t('apache.mpm')">
-            <el-form label-width="200px" size="default">
-              <el-form-item :label="$t('apache.mpmModule')">
-                <el-select v-model="tuning.mpm" disabled style="width: 200px">
-                  <el-option label="prefork" value="prefork" />
-                  <el-option label="worker" value="worker" />
-                  <el-option label="event" value="event" />
-                </el-select>
-              </el-form-item>
-              <el-form-item label="MaxRequestWorkers">
-                <el-input-number v-model="tuning.maxRequestWorkers" disabled :min="1" />
-              </el-form-item>
-              <el-form-item label="KeepAlive">
-                <el-switch v-model="tuning.keepAlive" disabled />
-              </el-form-item>
-              <el-form-item label="KeepAliveTimeout">
-                <el-input-number v-model="tuning.keepAliveTimeout" disabled :min="1" style="width: 120px" />
-                <span class="hint-inline">s</span>
-              </el-form-item>
-              <el-form-item label="Timeout">
-                <el-input-number v-model="tuning.timeout" disabled :min="1" style="width: 120px" />
-                <span class="hint-inline">s</span>
-              </el-form-item>
-            </el-form>
-            <div class="hint">{{ $t('apache.tuningPendingHint') }}</div>
-          </EditCard>
-        </div>
-      </el-tab-pane>
-
-      <!-- Logs -->
-      <el-tab-pane name="logs">
-        <template #label>
-          <span class="tab-label"><el-icon><Document /></el-icon> {{ $t('apache.tabLogs') }}</span>
-        </template>
-        <div class="tab-content">
-          <EditCard :title="$t('apache.tabLogs')" flush-body>
-            <LogViewer :service-id="'apache'" />
-          </EditCard>
-        </div>
+      <el-tab-pane name="logs" :label="t('apache.tabLogs')" lazy>
+        <LogViewer service-id="apache" class="tab-log" />
       </el-tab-pane>
     </el-tabs>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
-import { CircleCheckFilled, CircleClose, Connection, Monitor, Share, Setting, Document, List } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { computed, onActivated, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useDaemonStore } from '../../stores/daemon'
 import { useSitesStore } from '../../stores/sites'
-import { daemonBaseUrl, daemonAuthHeaders as authHeaders, startService, stopService } from '../../api/daemon'
-import { errorMessage } from '../../utils/errors'
+import { stateOf } from '../../utils/services'
 import LogViewer from '../shared/LogViewer.vue'
-import PluginAutostartSwitch from '../shared/PluginAutostartSwitch.vue'
-import EditCard from '../shared/EditCard.vue'
-import { useI18n } from 'vue-i18n'
-
-const { t } = useI18n()
+import ServicePageHead from '../shared/ServicePageHead.vue'
 
 defineOptions({ name: 'ApachePluginPage' })
 
+const { t } = useI18n()
+const router = useRouter()
 const daemonStore = useDaemonStore()
 const sitesStore = useSitesStore()
-const activeTab = ref<'overview' | 'vhosts' | 'tuning' | 'logs'>('overview')
-const refreshing = ref(false)
-const toggling = ref(false)
+const activeTab = ref<'vhosts' | 'logs'>('vhosts')
 
-const tuning = reactive({ mpm: 'event', maxRequestWorkers: 150, keepAlive: true, keepAliveTimeout: 5, timeout: 300 })
+const service = computed(() => daemonStore.services.find(s => s.id === 'apache'))
+const installed = computed(() => stateOf(service.value) !== 'notInstalled')
 
-const serviceInfo = computed(() => daemonStore.services.find(s => s.id === 'apache'))
-const serviceRunning = computed(() => serviceInfo.value?.state === 2 || serviceInfo.value?.status === 'running')
-
-// Task 13: surface the live HTTP URL. On macOS/Linux Apache defaults to :8080
-// (unprivileged) so plain `http://localhost/` gets nothing; show the resolved
-// port pulled from /api/plugins/ports so users click the right URL first time.
-const httpPort = ref<number>(isWindowsDefault() ? 80 : 8080)
-const httpsPort = ref<number>(isWindowsDefault() ? 443 : 8443)
+// HTTP port as the Apache module is configured (Settings → Ports); on
+// macOS/Linux that is usually 8080, so the link must not assume :80.
 const localUrl = computed(() => {
-  const p = httpPort.value
-  return p === 80 ? 'http://localhost/' : `http://localhost:${p}/`
+  const port = service.value?.ports?.http ?? service.value?.port
+  if (!port) return ''
+  return port === 80 ? 'http://localhost/' : `http://localhost:${port}/`
 })
-
-function isWindowsDefault(): boolean {
-  // Best-effort UA sniff; real value is overwritten by loadPorts() below.
-  return typeof navigator !== 'undefined' && /Windows/i.test(navigator.userAgent || '')
-}
 
 function openLocalUrl() {
-  const url = localUrl.value
-  const api = (window as unknown as { electronAPI?: { openExternal?: (u: string) => void } }).electronAPI
-  if (api?.openExternal) api.openExternal(url)
-  else window.open(url, '_blank')
+  if (window.electronAPI?.openExternal) void window.electronAPI.openExternal(localUrl.value)
+  else window.open(localUrl.value, '_blank')
 }
 
-async function loadPorts() {
-  try {
-    const r = await fetch(`${daemonBaseUrl()}/api/plugins/ports`, { headers: authHeaders() })
-    if (!r.ok) return
-    const data = await r.json() as Array<{ key: string; currentPort: number; defaultPort: number }>
-    const http = data.find(p => p.key === 'apache.http')
-    const https = data.find(p => p.key === 'apache.https')
-    if (http) httpPort.value = http.currentPort || http.defaultPort || httpPort.value
-    if (https) httpsPort.value = https.currentPort || https.defaultPort || httpsPort.value
-  } catch { /* fall back to platform default */ }
-}
-
-async function refresh() {
-  refreshing.value = true
-  try {
-    await loadPorts()
-    if (sitesStore.sites.length === 0) await sitesStore.load()
-  } finally {
-    refreshing.value = false
-  }
-}
-
-async function toggleService() {
-  toggling.value = true
-  try {
-    if (serviceRunning.value) await stopService('apache')
-    else await startService('apache')
-  } catch (e) {
-    ElMessage.error(t(serviceRunning.value ? 'toast.stopFailed' : 'toast.startFailed', { err: errorMessage(e) }))
-  } finally {
-    toggling.value = false
-  }
-}
-
-function formatUptime(secs: number | string | undefined): string {
-  if (typeof secs !== 'number') secs = Number(secs) || 0
-  if (!secs || secs < 1) return '—'
-  const h = Math.floor(secs / 3600)
-  const m = Math.floor((secs % 3600) / 60)
-  return h > 0 ? `${h}h ${m}m` : `${m}m`
-}
-
-onMounted(async () => {
-  void loadPorts()
-  if (sitesStore.sites.length === 0) void sitesStore.load()
-})
+// Also runs on first mount: every page lives inside <keep-alive>.
+onActivated(() => { void sitesStore.load() })
 </script>
 
 <style scoped>
-.cf-page { min-height: 100%; background: transparent; }
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 0 var(--wdc-space-4);
-  border-bottom: 1px solid var(--wdc-border);
-  background: transparent;
-}
-.page-autostart-row { padding: 10px 0 0; width: 100%; }
-.header-left { display: flex; flex-direction: column; gap: 2px; }
-.page-title { font-size: 1.6rem; font-weight: 800; color: var(--wdc-text); margin: 0; letter-spacing: -0.02em; }
-.page-subtitle { font-size: 0.78rem; color: var(--wdc-text-3); }
-.header-actions { display: flex; gap: 8px; }
-.status-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 18px 0 4px; }
-.status-card { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--wdc-surface); border: 1px solid var(--wdc-border); border-radius: var(--wdc-radius); }
-.status-card.status-active { border-color: var(--wdc-status-running); }
-.status-icon { font-size: 1.4rem; width: 30px; text-align: center; color: var(--wdc-text-3); }
-.status-active .status-icon { color: var(--wdc-status-running); }
-.status-body { display: flex; flex-direction: column; min-width: 0; }
-.status-title { font-size: 0.92rem; font-weight: 700; color: var(--wdc-text); }
-.status-meta { font-size: 0.72rem; color: var(--wdc-text-3); }
-.cf-tabs { padding: 16px 0; }
-.tab-content { display: flex; flex-direction: column; gap: 16px; }
-/* .edit-card CSS lives in EditCard shared primitive (plan §6). */
-.hint { margin-top: 6px; font-size: 0.78rem; color: var(--wdc-text-3); }
-.hint-inline { margin-left: 8px; font-size: 0.82rem; color: var(--wdc-text-3); }
-.mono { font-family: 'JetBrains Mono', monospace; }
-.local-url { color: var(--wdc-accent, #3b82f6); text-decoration: none; font-family: 'JetBrains Mono', monospace; cursor: pointer; }
-.local-url:hover { text-decoration: underline; }
+.tab-log { height: 460px; }
 </style>
