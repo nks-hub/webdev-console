@@ -31,6 +31,7 @@ const label = computed(() =>
 <style scoped>
 .site-status {
   display: inline-flex;
+  vertical-align: middle;
   align-items: center;
   gap: var(--wdc-space-1-5);
   min-width: 0;

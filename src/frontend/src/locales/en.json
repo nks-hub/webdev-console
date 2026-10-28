@@ -1022,7 +1022,7 @@
       "noProject": "No Composer project detected",
       "openComposerPage": "Open the Composer page",
       "init": "Initialize Composer",
-      "initHint": "Run composer init in your site root to get started",
+      "initHint": "The button below creates a composer.json in your site folder, the same as running composer init.",
       "install": "Run composer install",
       "require": "Require package",
       "packageName": "Package name",
