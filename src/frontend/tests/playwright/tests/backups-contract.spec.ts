@@ -46,6 +46,16 @@ test.describe('Backups contract', () => {
     expect(endpoint).toMatch(/new\s*\{\s*path = b\.Path, size = b\.Size, createdUtc = b\.Created, contentFlags = b\.ContentFlags\.ToString\(\),\s*databases = b\.Databases,/)
   })
 
+  // The backup_restore intent does not name the content, so an approved
+  // "restore the configuration" must not turn into a database overwrite.
+  test('an MCP token cannot restore databases or site files', () => {
+    const endpoint = read('..', 'daemon', 'NKS.WebDevConsole.Daemon', 'Backup', 'BackupEndpoints.cs')
+    expect(endpoint).toMatch(/McpCallerContext\.IsMcpToken && \(options\.Databases \|\| options\.SiteFiles\)/)
+    expect(endpoint.match(/if \(McpDataRestoreForbidden\(options\) is \{ \} forbidden\) return forbidden;/g)).toHaveLength(2)
+    const byId = endpoint.slice(endpoint.indexOf('"/api/backup/{id}/restore"'))
+    expect(byId.indexOf('McpDataRestoreForbidden(options)')).toBeLessThan(byId.indexOf('ValidateAndConsumeAsync'))
+  })
+
   test('restore dialog strings exist in both languages', () => {
     const cs = JSON.parse(read('src', 'locales', 'cs.json'))
     expect(cs.backupsPage.restore.databases).toBe('Obnovit databáze (přepíše jejich obsah)')
