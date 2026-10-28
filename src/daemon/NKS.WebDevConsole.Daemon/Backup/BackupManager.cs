@@ -668,6 +668,10 @@ public sealed class BackupManager
                 promoted++;
             }
 
+            // The create row was written after state.db was packed, so the restored database lacks it.
+            _history?.RecordOnce("backup", Path.GetFileName(archivePath), "INSERT",
+                manifest.Created ?? File.GetCreationTimeUtc(archivePath));
+
             if (restoreDatabases) RestoreDatabases(zip, items, skipped);
             if (restoreSiteFiles) RestoreSiteFiles(zip, manifest.Docroots, items, skipped);
 
@@ -899,7 +903,10 @@ public sealed class BackupManager
             if (root.TryGetProperty("docroots", out var r) && r.ValueKind == JsonValueKind.Object)
                 foreach (var site in r.EnumerateObject().Where(p => p.Value.ValueKind == JsonValueKind.String))
                     docroots[site.Name] = site.Value.GetString()!;
-            return new BackupManifest(flags, databases, docroots);
+            var created = root.TryGetProperty("created", out var c) && c.ValueKind == JsonValueKind.String
+                && DateTime.TryParse(c.GetString(), CultureInfo.InvariantCulture,
+                    DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var when) ? when : (DateTime?)null;
+            return new BackupManifest(flags, databases, docroots, created);
         }
         catch (Exception ex) when (ex is JsonException or IOException or InvalidDataException)
         {
@@ -908,7 +915,8 @@ public sealed class BackupManager
     }
 
     private sealed record BackupManifest(
-        BackupContentFlags Flags, IReadOnlyList<string> Databases, IReadOnlyDictionary<string, string> Docroots)
+        BackupContentFlags Flags, IReadOnlyList<string> Databases, IReadOnlyDictionary<string, string> Docroots,
+        DateTime? Created = null)
     {
         public static readonly BackupManifest Fallback =
             new(BackupContentFlags.Default, Array.Empty<string>(), new Dictionary<string, string>());

@@ -1,3 +1,6 @@
+using System.Globalization;
+using System.IO.Compression;
+using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using NKS.WebDevConsole.Daemon.Backup;
 
@@ -45,6 +48,30 @@ public sealed class BackupActivityTests : IDisposable
         Assert.Equal(["INSERT", "RESTORE"], rows.Select(r => (string)r.operation));
         Assert.Equal("manual.zip", (string)rows[1].entity_name);
         Assert.DoesNotContain(rows, r => ((string)r.entity_name).StartsWith("auto-pre-restore"));
+    }
+
+    [Fact]
+    public void A_restored_archive_gets_its_create_row_back_stamped_with_the_archive_time()
+    {
+        // state.db inside the backup root, so the archive packs it and the restore swaps it.
+        using var live = new ActivityTestDb(path: Path.Combine(_root, "data", "state.db"));
+        var backups = new BackupManager(NullLogger<BackupManager>.Instance, _root, history: live.Repository());
+        var archive = backups.CreateBackup("manual.zip").Path;
+        Assert.Single(live.Rows("entity_type = 'backup' AND operation = 'INSERT'"));
+        Thread.Sleep(50);
+
+        backups.RestoreBackup(archive);
+
+        var rows = live.Rows("entity_type = 'backup'");
+        Assert.Equal(["INSERT", "RESTORE"], rows.Select(r => (string)r.operation));
+        Assert.All(rows, r => Assert.Equal("manual.zip", (string)r.entity_name));
+        using var zip = ZipFile.OpenRead(archive);
+        using var manifest = JsonDocument.Parse(zip.GetEntry("manifest.json")!.Open());
+        var madeAt = DateTime.Parse(manifest.RootElement.GetProperty("created").GetString()!,
+            CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+        Assert.Equal(madeAt.ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", CultureInfo.InvariantCulture),
+            (string)rows[0].created_at);
+        Assert.NotEqual((string)rows[0].created_at, (string)rows[1].created_at);
     }
 
     [Fact]

@@ -11,10 +11,12 @@ namespace NKS.WebDevConsole.Daemon.Tests;
 /// <summary>A state.db migrated by the real scripts, for the tests of the code that writes config_history.</summary>
 internal sealed class ActivityTestDb : IDisposable
 {
-    private readonly string _path = Path.Combine(Path.GetTempPath(), $"wdc-activity-{Guid.NewGuid():N}.db");
+    private readonly string _path;
 
-    public ActivityTestDb(int? lastMigration = null)
+    public ActivityTestDb(int? lastMigration = null, string? path = null)
     {
+        _path = path ?? Path.Combine(Path.GetTempPath(), $"wdc-activity-{Guid.NewGuid():N}.db");
+        Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
         Database = new Database(_path);
         if (lastMigration is null)
         {

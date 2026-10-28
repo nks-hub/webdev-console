@@ -60,6 +60,36 @@ public sealed class ConfigHistoryRepository
             _logger?.LogWarning(ex, "Could not record {Operation} {EntityType} {EntityName} in config_history", operation, entityType, entityName);
         }
     }
+
+    /// <summary>
+    /// Writes a row stamped <paramref name="at"/> unless the entity already has one for that
+    /// operation. A restore uses it to give the restored database the create row of the
+    /// archive it came from, which was written after the archive's state.db was packed.
+    /// The source is always 'app': the archive does not say who made it.
+    /// </summary>
+    public void RecordOnce(string entityType, string entityName, string operation, DateTime at)
+    {
+        try
+        {
+            using var conn = _db.CreateConnection();
+            conn.Execute(
+                "INSERT INTO config_history (entity_type, entity_id, entity_name, operation, source, created_at) " +
+                "SELECT @EntityType, 0, @EntityName, @Operation, 'app', @CreatedAt " +
+                "WHERE NOT EXISTS (SELECT 1 FROM config_history " +
+                "WHERE entity_type = @EntityType AND entity_name = @EntityName AND operation = @Operation)",
+                new
+                {
+                    EntityType = entityType,
+                    EntityName = entityName,
+                    Operation = operation,
+                    CreatedAt = at.ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", System.Globalization.CultureInfo.InvariantCulture),
+                });
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Could not record {Operation} {EntityType} {EntityName} in config_history", operation, entityType, entityName);
+        }
+    }
 }
 
 /// <summary>
