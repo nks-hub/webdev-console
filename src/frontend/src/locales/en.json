@@ -4116,7 +4116,7 @@
     "name": "NKS WebDev Console",
     "short": "WDC",
     "advancedPageNote": "This page belongs to Advanced mode, so the menu does not list it in Simple mode.",
-    "switchToAdvanced": "Switch to Advanced",
+    "switchToAdvanced": "Switch to Advanced mode",
     "skipToContent": "Skip to content"
   },
   "pageError": {
