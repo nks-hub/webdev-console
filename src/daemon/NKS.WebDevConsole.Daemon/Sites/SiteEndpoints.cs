@@ -311,40 +311,15 @@ internal static class SiteEndpoints
 
             var limit = Math.Clamp(lines ?? 100, 1, 1000);
 
-            // The site's own error log in every installed Apache version. A site whose vhost writes to
-            // {domain}-error.log / {domain}-ssl-error.log gets an empty list until that file exists, never
-            // the global error.log (it holds the lines of every other site). The global log (and the
-            // daemon's own Apache log dir) is only for a vhost that defines no log of its own.
-            var apacheLogs = bm.ListInstalled("apache")
-                .SelectMany(apache => ApacheSiteErrorLogs.Resolve(
-                    domain, apache.InstallPath, Path.Combine(WdcPaths.LogsRoot, "apache", "error.log")))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            // Build PHP error log candidate list — per-version FPM global error log
-            // (php{versionTag}-fpm-error.log) and per-version web error log
-            // (php{majorMinor}-errors.log). Scan all available version dirs under
-            // ~/.wdc/logs/php/ rather than hard-coding specific versions.
-            var phpFpmCandidates = new List<string>();
-            var phpWebCandidates = new List<string>();
-            var phpLogDir = Path.Combine(WdcPaths.LogsRoot, "php");
-            if (Directory.Exists(phpLogDir))
-            {
-                foreach (var f in Directory.EnumerateFiles(phpLogDir, "*-fpm-error.log"))
-                    phpFpmCandidates.Add(f);
-                foreach (var f in Directory.EnumerateFiles(phpLogDir, "php*-errors.log"))
-                    phpWebCandidates.Add(f);
-            }
-
             try
             {
-                // One source per file: Tail reads only the first existing path of a source.
-                var sources = apacheLogs
-                    .Select(path => (Paths: (IEnumerable<string>)[path], Source: "apache-error"))
-                    .ToList();
-                sources.Add((phpFpmCandidates, "php-fpm-error"));
-                sources.Add((phpWebCandidates, "php-error"));
-                var entries = ErrorLogInspector.TailMultiple(sources, limit, since);
+                var entries = SiteErrorLogReader.Read(
+                    domain,
+                    bm.ListInstalled("apache").Select(apache => apache.InstallPath),
+                    Path.Combine(WdcPaths.LogsRoot, "apache", "error.log"),
+                    Path.Combine(WdcPaths.LogsRoot, "php"),
+                    limit,
+                    since);
 
                 return Results.Ok(entries.Select(e => new
                 {

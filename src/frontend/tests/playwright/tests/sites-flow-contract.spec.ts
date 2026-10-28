@@ -128,9 +128,12 @@ test.describe('Sites flow contract', () => {
     const endpoints = readFileSync(
       resolve(srcRoot, '..', '..', 'daemon', 'NKS.WebDevConsole.Daemon', 'Sites', 'SiteEndpoints.cs'), 'utf-8')
     const handler = endpoints.match(/"\/api\/sites\/\{domain\}\/logs\/errors"[\s\S]*?"\/api\/sites\/\{domain\}\/logs\/access"/)?.[0] ?? ''
-    expect(handler).toMatch(/ApacheSiteErrorLogs\.Resolve\(/)
+    expect(handler).toMatch(/SiteErrorLogReader\.Read\(/)
+    const reader = readFileSync(
+      resolve(srcRoot, '..', '..', 'daemon', 'NKS.WebDevConsole.Daemon', 'Sites', 'SiteErrorLogReader.cs'), 'utf-8')
+    expect(reader).toMatch(/ApacheSiteErrorLogs\.Resolve\(/)
     // The global log is chosen inside ApacheSiteErrorLogs, not added for every site here.
-    expect(handler).not.toMatch(/Path\.Combine\(logsDir, "error\.log"\)/)
+    expect(reader).not.toMatch(/"error\.log"/)
   })
 
   test('i18n keys of the new states exist in both locales', () => {
