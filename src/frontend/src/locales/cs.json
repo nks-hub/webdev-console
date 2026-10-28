@@ -812,7 +812,9 @@
       "source": {
         "mcp": "MCP",
         "cli": "příkazový řádek",
-        "api": "API"
+        "api": "API",
+        "migration": "migraci",
+        "import": "import"
       }
     }
   },
@@ -3384,6 +3386,10 @@
       "mcp": {
         "title": "AI klienti (MCP)",
         "body": "<p>WDC obsahuje server MCP (Model Context Protocol), přes který AI klienti (Claude Code, Cursor a další) vytvářejí a spravují weby. Zapnete ho v Nastavení → AI klienti (MCP), kde je i návod na připojení klienta. Aktivitu, žádosti a pravidla najdete v menu pod položkou <strong>AI klienti (MCP)</strong>.</p><h3 id='tools'>Příklady nástrojů</h3><ul><li><code>wdc_create_site</code></li><li><code>wdc_list_databases</code></li><li><code>wdc_generate_cert</code></li><li><code>wdc_get_cloudflare_config</code></li><li><code>wdc_save_cloudflare_config</code></li></ul><p>Nevratné akce AI provede až po vašem schválení, pokud je nepokryje pravidlo.</p>"
+      },
+      "cli": {
+        "title": "Příkazový řádek (wdc)",
+        "body": "<p>Instalátor obsahuje nástroj <code>wdc</code>, kterým WDC ovládáte z terminálu. Instalátor pro Windows ho přidá do proměnné PATH (otevřete nový terminál), jinde ho najdete ve složce <code>resources/cli</code> v adresáři aplikace. Aplikace, a s ní démon, musí běžet.</p><h3 id='commands'>Příklady</h3><ul><li><code>wdc status</code>: stav démona a služeb</li><li><code>wdc sites</code>: seznam webů</li><li><code>wdc new mojeapp.loc</code>: nový web, složku webu zadáte volitelně přes <code>--docroot</code></li><li><code>wdc services start apache</code>: spuštění služby, podobně <code>stop</code> a <code>restart</code></li><li><code>wdc databases</code>: seznam databází</li><li><code>wdc ssl generate mojeapp.loc</code>: certifikát pro doménu</li><li><code>wdc doctor</code>: kontrola, jestli vše funguje</li></ul><p>Přepínač <code>--json</code> vypíše strojově čitelný výstup, <code>wdc --help</code> všechny příkazy.</p>"
       },
       "shortcuts": {
         "title": "Klávesové zkratky",
