@@ -3305,7 +3305,7 @@
     "problems": "{n} problém | {n} problémy | {n} problémů",
     "simpleOffline": "Aplikace se nemůže spojit se službou na pozadí",
     "simpleProblems": "{n} služba má problém | {n} služby mají problém | {n} služeb má problém",
-    "simpleAllRunning": "Vše běží"
+    "simpleAllRunning": "Všechny nainstalované služby běží"
   },
   "help": {
     "title": "Nápověda",
