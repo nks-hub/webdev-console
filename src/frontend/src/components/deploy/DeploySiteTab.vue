@@ -154,9 +154,9 @@ function onWizardDone(_form: unknown): void {
 </script>
 
 <style scoped>
-.site-tab { display: flex; flex-direction: column; gap: 24px; padding: 8px 0; }
+.site-tab { display: flex; flex-direction: column; gap: 24px; }
 .site-tab-loading { display: flex; align-items: center; gap: 8px; padding: 32px; color: var(--el-text-color-secondary); }
-.site-tab-empty { max-width: 640px; padding: 16px 0; display: flex; flex-direction: column; gap: 12px; }
+.site-tab-empty { max-width: 640px; display: flex; flex-direction: column; gap: 12px; }
 .site-tab-empty h3 { margin: 0; }
 .site-tab-points { display: flex; flex-direction: column; gap: 6px; padding-left: 20px; }
 .site-tab-actions { display: flex; gap: 12px; margin-top: 8px; }
