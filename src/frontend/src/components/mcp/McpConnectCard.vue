@@ -139,12 +139,11 @@ const uiMode = useUiModeStore()
 const onTabRoute = (): boolean =>
   (uiMode.isAdvanced ? /\/mcp\/(intents|grants|kinds)$/ : /\/mcp\/intents$/).test(route.path)
 const setupRequested = (): boolean => route.query.setup === '1'
-const expanded = ref(setupRequested() || !onTabRoute())
-// The hub is kept alive, so this also has to happen when the route changes.
-watch(() => route.fullPath, () => {
-  if (setupRequested()) expanded.value = true
-  else if (onTabRoute()) expanded.value = false
-})
+const wantExpanded = (): boolean => setupRequested() || (!onTabRoute() && !lastCallAt.value)
+const expanded = ref(wantExpanded())
+// The hub is kept alive: Requests → Rules in simple mode kept the steps
+// collapsed above an empty Activity, so every route or mode change decides again.
+watch([() => route.fullPath, () => uiMode.isAdvanced], () => { expanded.value = wantExpanded() })
 
 const serverPath = computed(() => serverInfo.value?.serverPath ?? MCP_SERVER_PATH_PLACEHOLDER)
 
@@ -250,7 +249,7 @@ let timer: ReturnType<typeof setInterval> | null = null
 
 onMounted(async () => {
   await refresh()
-  if (lastCallAt.value && !setupRequested()) expanded.value = false
+  expanded.value = wantExpanded()
   unsubscribe = subscribeEventsMap({
     'mcp:tool-call': () => { void refreshLastCall() },
     'mcp:settings-changed': () => { void flags.load() },
