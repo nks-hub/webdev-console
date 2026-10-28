@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.IO.Compression;
+using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using NKS.WebDevConsole.Core.Interfaces;
@@ -31,10 +33,10 @@ public sealed class BackupManager
     private readonly string _wdcRoot;
     private readonly string _backupRoot;
     private readonly ISiteRegistry? _sites;
-    private readonly IMysqlBackupDumper? _mysqlDumper;
+    private readonly IMysqlBackupClient? _mysql;
 
-    public BackupManager(ILogger<BackupManager> logger, ISiteRegistry sites, IMysqlBackupDumper mysqlDumper)
-        : this(logger, WdcPaths.Root, sites, mysqlDumper)
+    public BackupManager(ILogger<BackupManager> logger, ISiteRegistry sites, IMysqlBackupClient mysql)
+        : this(logger, WdcPaths.Root, sites, mysql)
     {
     }
 
@@ -44,13 +46,13 @@ public sealed class BackupManager
     /// or dumper the Docroots and Databases categories are reported as skipped.
     /// </summary>
     public BackupManager(ILogger<BackupManager> logger, string wdcRoot,
-        ISiteRegistry? sites = null, IMysqlBackupDumper? mysqlDumper = null)
+        ISiteRegistry? sites = null, IMysqlBackupClient? mysql = null)
     {
         _logger = logger;
         _wdcRoot = wdcRoot;
         _backupRoot = Path.Combine(_wdcRoot, "backups");
         _sites = sites;
-        _mysqlDumper = mysqlDumper;
+        _mysql = mysql;
         Directory.CreateDirectory(_backupRoot);
     }
 
@@ -184,6 +186,10 @@ public sealed class BackupManager
 
         int count = 0;
         var skipped = new List<BackupSkip>();
+        // Recorded in the manifest so restore can list them and knows where
+        // each site's files go back.
+        var dumped = new List<string>();
+        var siteRoots = new SortedDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         try
         {
             using var fs = OpenNewArchive(target);
@@ -203,13 +209,13 @@ public sealed class BackupManager
             // null = the whole category could not be packed; it leaves the flags.
             if (flags.HasFlag(BackupContentFlags.Databases))
             {
-                if (PackDatabases(zip, skipped) is int dumped) count += dumped;
+                if (PackDatabases(zip, skipped, dumped) is int dumpCount) count += dumpCount;
                 else flags &= ~BackupContentFlags.Databases;
             }
 
             if (flags.HasFlag(BackupContentFlags.Docroots))
             {
-                if (PackDocroots(zip, skipped) is int siteFiles) count += siteFiles;
+                if (PackDocroots(zip, skipped, siteRoots) is int siteFiles) count += siteFiles;
                 else flags &= ~BackupContentFlags.Docroots;
             }
 
@@ -217,7 +223,15 @@ public sealed class BackupManager
             count += PackStateDb(zip);
 
             // Manifest last, so its flags name only what was actually packed.
-            var manifest = $"{{\"created\":\"{DateTime.UtcNow:O}\",\"source\":\"{Environment.MachineName}\",\"version\":\"2\",\"flags\":\"{flags}\"}}";
+            var manifest = JsonSerializer.Serialize(new
+            {
+                created = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture),
+                source = Environment.MachineName,
+                version = "2",
+                flags = flags.ToString(),
+                databases = dumped,
+                docroots = siteRoots,
+            });
             var manifestEntry = zip.CreateEntry("manifest.json", CompressionLevel.Optimal);
             using (var writer = new StreamWriter(manifestEntry.Open()))
                 writer.Write(manifest);
@@ -292,10 +306,11 @@ public sealed class BackupManager
     /// One <c>databases/{name}.sql</c> per user database (mysqldump with
     /// CREATE DATABASE, so <c>mysql &lt; file</c> restores it). Returns null
     /// when no database could be dumped: MySQL missing, stopped or refusing root.
+    /// Names of the packed databases go to <paramref name="dumped"/>.
     /// </summary>
-    private int? PackDatabases(ZipArchive zip, List<BackupSkip> skipped)
+    private int? PackDatabases(ZipArchive zip, List<BackupSkip> skipped, List<string> dumped)
     {
-        if (_mysqlDumper is null)
+        if (_mysql is null)
         {
             skipped.Add(new(BackupContentFlags.Databases, "MySQL dumps are not available in this process"));
             return null;
@@ -303,7 +318,7 @@ public sealed class BackupManager
         IReadOnlyList<string> databases;
         try
         {
-            databases = _mysqlDumper.ListDatabases();
+            databases = _mysql.ListDatabases();
         }
         catch (Exception ex)
         {
@@ -314,17 +329,23 @@ public sealed class BackupManager
         int count = 0;
         foreach (var database in databases)
         {
+            if (!MysqlBackupClient.IsSafeDatabaseName(database))
+            {
+                skipped.Add(new(BackupContentFlags.Databases, $"{database}: the name has characters backups do not handle"));
+                continue;
+            }
             // Dump to a temp file first: a dump that fails halfway must not
             // leave a truncated .sql in the archive (zip entries can't be removed).
             var tempPath = Path.Combine(_backupRoot, $".dump-{Guid.NewGuid():N}.sql");
             try
             {
                 using var dump = OpenTempFile(tempPath);
-                _mysqlDumper.Dump(database, dump);
+                _mysql.Dump(database, dump);
                 dump.Position = 0;
                 var entry = zip.CreateEntry($"databases/{database}.sql", CompressionLevel.Optimal);
                 using var entryStream = entry.Open();
                 dump.CopyTo(entryStream);
+                dumped.Add(database);
                 count++;
             }
             catch (Exception ex)
@@ -340,8 +361,9 @@ public sealed class BackupManager
     /// folders (junctions, symlinks) are not followed, so a link cannot pull in
     /// a tree outside the site or loop; the backups folder itself is never packed.
     /// Returns null when there is no site registry to read the folders from.
+    /// Each packed domain and its folder go to <paramref name="roots"/>.
     /// </summary>
-    private int? PackDocroots(ZipArchive zip, List<BackupSkip> skipped)
+    private int? PackDocroots(ZipArchive zip, List<BackupSkip> skipped, IDictionary<string, string> roots)
     {
         if (_sites is null)
         {
@@ -361,6 +383,7 @@ public sealed class BackupManager
             }
             var root = Path.GetFullPath(site.DocumentRoot);
             if (!packedRoots.Add(root)) continue;
+            roots[domain] = root;
 
             var pending = new Stack<string>();
             pending.Push(root);
@@ -517,16 +540,34 @@ public sealed class BackupManager
     /// Restores a backup zip into the user's NKS WebDev Console state. Before
     /// touching anything an automatic safety backup of the current state is
     /// written, so the operation can be reversed manually if needed.
+    ///
+    /// MySQL dumps and site files are restored only when
+    /// <paramref name="options"/> asks for them; the safety backup then also
+    /// holds the current databases and site files they overwrite. What could
+    /// not be restored (MySQL not running, a path outside the site folder) is
+    /// reported in <c>Skipped</c> and does not stop the rest of the restore.
     /// </summary>
-    public (int RestoredFiles, string SafetyBackupPath) RestoreBackup(string archivePath)
+    public (int RestoredFiles, string SafetyBackupPath, IReadOnlyList<BackupRestored> Items, IReadOnlyList<BackupSkip> Skipped) RestoreBackup(
+        string archivePath, BackupRestoreOptions? options = null)
     {
         if (!File.Exists(archivePath))
             throw new FileNotFoundException("Backup archive not found", archivePath);
+        options ??= new BackupRestoreOptions();
+
+        BackupManifest manifest;
+        using (var peekFs = File.OpenRead(archivePath))
+        using (var peekZip = new ZipArchive(peekFs, ZipArchiveMode.Read))
+            manifest = ReadManifest(peekZip);
+        var restoreDatabases = options.Databases && manifest.Databases.Count > 0;
+        var restoreSiteFiles = options.SiteFiles && manifest.Docroots.Count > 0;
 
         var safetyBackup = UniquePath("auto-pre-restore");
         try
         {
-            CreateBackup(safetyBackup);
+            var safetyFlags = BackupContentFlags.Default
+                | (restoreDatabases ? BackupContentFlags.Databases : BackupContentFlags.None)
+                | (restoreSiteFiles ? BackupContentFlags.Docroots : BackupContentFlags.None);
+            CreateBackup(safetyBackup, safetyFlags);
         }
         catch (Exception ex)
         {
@@ -534,29 +575,10 @@ public sealed class BackupManager
             throw;
         }
 
-        // Detect flags from manifest to know which dirs to restore
-        BackupContentFlags flags = BackupContentFlags.Default;
-        try
-        {
-            using var peekFs = File.OpenRead(archivePath);
-            using var peekZip = new ZipArchive(peekFs, ZipArchiveMode.Read);
-            var manifestEntry = peekZip.GetEntry("manifest.json");
-            if (manifestEntry != null)
-            {
-                using var sr = new StreamReader(manifestEntry.Open());
-                var json = sr.ReadToEnd();
-                // Simple parse — avoid System.Text.Json dependency just for one field
-                var flagsMatch = System.Text.RegularExpressions.Regex.Match(json, "\"flags\":\"([^\"]+)\"");
-                if (flagsMatch.Success && Enum.TryParse<BackupContentFlags>(flagsMatch.Groups[1].Value, out var parsed))
-                    flags = parsed;
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Could not read manifest from {Archive} — using default restore set", archivePath);
-        }
-
-        _logger.LogInformation("Restoring {Archive} (flags={Flags})", archivePath, flags);
+        _logger.LogInformation("Restoring {Archive} (flags={Flags}, databases={Databases}, siteFiles={SiteFiles})",
+            archivePath, manifest.Flags, restoreDatabases, restoreSiteFiles);
+        var items = new List<BackupRestored>();
+        var skipped = new List<BackupSkip>();
 
         var tempExtract = Path.Combine(_backupRoot, $"restore-staging-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempExtract);
@@ -568,8 +590,8 @@ public sealed class BackupManager
             {
                 if (string.IsNullOrEmpty(entry.Name)) continue;
                 if (entry.FullName.Contains("..")) continue;
-                // Database dumps and site files are not restored (the confirm
-                // dialog says so); staging them would only copy gigabytes.
+                // Database dumps and site files are read straight from the
+                // archive below, only when asked; staging would copy gigabytes.
                 if (entry.FullName.StartsWith("databases/", StringComparison.Ordinal)
                     || entry.FullName.StartsWith("docroots/", StringComparison.Ordinal)) continue;
                 var dest = Path.Combine(tempExtract, entry.FullName.Replace('/', Path.DirectorySeparatorChar));
@@ -638,8 +660,13 @@ public sealed class BackupManager
                 promoted++;
             }
 
+            if (restoreDatabases) RestoreDatabases(zip, items, skipped);
+            if (restoreSiteFiles) RestoreSiteFiles(zip, manifest.Docroots, items, skipped);
+
+            foreach (var skip in skipped)
+                _logger.LogWarning("Restore of {Archive} left out {Content}: {Detail}", archivePath, skip.Content, skip.Detail);
             _logger.LogInformation("Restored {Count} files from {Archive}", promoted, archivePath);
-            return (promoted, safetyBackup);
+            return (promoted, safetyBackup, items, skipped);
         }
         finally
         {
@@ -656,6 +683,135 @@ public sealed class BackupManager
         Directory.CreateDirectory(Path.GetDirectoryName(dst)!);
         Directory.Move(src, dst);
         return Directory.EnumerateFiles(dst, "*", SearchOption.AllDirectories).Count();
+    }
+
+    /// <summary>
+    /// Imports each <c>databases/{name}.sql</c> (CREATE DATABASE when missing).
+    /// MySQL not answering skips the whole category with one reason.
+    /// </summary>
+    private void RestoreDatabases(ZipArchive zip, List<BackupRestored> items, List<BackupSkip> skipped)
+    {
+        if (_mysql is null)
+        {
+            skipped.Add(new(BackupContentFlags.Databases, "MySQL is not available in this process"));
+            return;
+        }
+        try
+        {
+            _mysql.ListDatabases();
+        }
+        catch (Exception ex)
+        {
+            skipped.Add(new(BackupContentFlags.Databases, ex.Message));
+            return;
+        }
+
+        foreach (var entry in zip.Entries.Where(IsDatabaseDump))
+        {
+            var database = Path.GetFileNameWithoutExtension(entry.Name);
+            if (!MysqlBackupClient.IsSafeDatabaseName(database))
+            {
+                skipped.Add(new(BackupContentFlags.Databases, $"{database}: not a database name restore accepts"));
+                continue;
+            }
+            try
+            {
+                using var sql = entry.Open();
+                _mysql.Import(database, sql);
+                items.Add(new(BackupContentFlags.Databases, database, 1));
+            }
+            catch (Exception ex)
+            {
+                skipped.Add(new(BackupContentFlags.Databases, $"{database}: {ex.Message}"));
+            }
+        }
+    }
+
+    private static bool IsDatabaseDump(ZipArchiveEntry entry) =>
+        entry.FullName.StartsWith("databases/", StringComparison.Ordinal)
+        && entry.FullName.EndsWith(".sql", StringComparison.OrdinalIgnoreCase)
+        && entry.FullName.IndexOf('/', "databases/".Length) < 0;
+
+    /// <summary>
+    /// Writes <c>docroots/{domain}/…</c> back into the folder the manifest
+    /// recorded for that domain, overwriting files of the same name and
+    /// leaving other files alone. Nothing is written outside that folder: an
+    /// entry whose path leaves it (<c>..</c>, an absolute path) or runs
+    /// through a linked folder is skipped, as is a domain with no usable folder.
+    /// </summary>
+    private void RestoreSiteFiles(ZipArchive zip, IReadOnlyDictionary<string, string> roots,
+        List<BackupRestored> items, List<BackupSkip> skipped)
+    {
+        var byDomain = zip.Entries
+            .Where(e => e.FullName.StartsWith("docroots/", StringComparison.Ordinal) && !string.IsNullOrEmpty(e.Name))
+            .GroupBy(e => e.FullName.Split('/')[1], StringComparer.OrdinalIgnoreCase);
+        foreach (var group in byDomain)
+        {
+            var domain = group.Key;
+            var problem = roots.TryGetValue(domain, out var recorded)
+                ? SiteRootProblem(recorded)
+                : "the backup does not record the site folder";
+            if (problem is not null)
+            {
+                skipped.Add(new(BackupContentFlags.Docroots, $"{domain}: {problem}"));
+                continue;
+            }
+            var root = Path.GetFullPath(recorded!);
+            var prefix = $"docroots/{domain}/";
+            int files = 0;
+            foreach (var entry in group)
+            {
+                var rel = entry.FullName.Substring(prefix.Length);
+                if (SiteFileTarget(root, rel) is not { } target)
+                {
+                    skipped.Add(new(BackupContentFlags.Docroots, $"{domain}: {rel} would land outside {root}"));
+                    continue;
+                }
+                try
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+                    entry.ExtractToFile(target, overwrite: true);
+                    files++;
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    skipped.Add(new(BackupContentFlags.Docroots, $"{domain}: {rel}: {ex.Message}"));
+                }
+            }
+            items.Add(new(BackupContentFlags.Docroots, domain, files));
+        }
+    }
+
+    /// <summary>Why a recorded site folder cannot take files back, or null when it can.</summary>
+    internal static string? SiteRootProblem(string? recorded)
+    {
+        if (string.IsNullOrWhiteSpace(recorded) || !Path.IsPathFullyQualified(recorded))
+            return $"the recorded folder '{recorded}' is not an absolute path";
+        var full = Path.TrimEndingDirectorySeparator(Path.GetFullPath(recorded));
+        // "C:\" or "/" as a site folder would let a foreign archive write anywhere on the disk.
+        if (string.Equals(full, Path.TrimEndingDirectorySeparator(Path.GetPathRoot(full) ?? ""), StringComparison.OrdinalIgnoreCase))
+            return $"the recorded folder '{recorded}' is a drive root";
+        return null;
+    }
+
+    /// <summary>
+    /// Where <paramref name="relativePath"/> from the archive goes under
+    /// <paramref name="root"/>, or null when it would leave the folder (zip
+    /// slip) or pass through a junction or symlink that could point elsewhere.
+    /// </summary>
+    internal static string? SiteFileTarget(string root, string relativePath)
+    {
+        if (string.IsNullOrEmpty(relativePath) || Path.IsPathRooted(relativePath)) return null;
+        var target = Path.GetFullPath(Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar)));
+        if (!NKS.WebDevConsole.Daemon.Config.PathContainment.IsUnder(root, target)) return null;
+        // The target is inside root, so every longer ancestor is a folder in the site.
+        var rootLength = Path.TrimEndingDirectorySeparator(root).Length;
+        for (var dir = Path.GetDirectoryName(target); dir is not null && dir.Length > rootLength; dir = Path.GetDirectoryName(dir))
+        {
+            if (Directory.Exists(dir) && new DirectoryInfo(dir).Attributes.HasFlag(FileAttributes.ReparsePoint)) return null;
+        }
+        if (File.Exists(target) && File.GetAttributes(target).HasFlag(FileAttributes.ReparsePoint)) return null;
+        return target;
     }
 
     /// <summary>
@@ -689,37 +845,82 @@ public sealed class BackupManager
         return Directory.GetFiles(_backupRoot, "*.zip")
             .Select(p =>
             {
-                var flags = ReadFlagsFromManifest(p);
-                return new BackupEntry(p, new FileInfo(p).Length, File.GetCreationTimeUtc(p), flags);
+                var manifest = ReadManifest(p);
+                return new BackupEntry(p, new FileInfo(p).Length, File.GetCreationTimeUtc(p),
+                    manifest.Flags, manifest.Databases, manifest.Docroots);
             })
             .OrderByDescending(x => x.Created)
             .ToList();
     }
 
-    private BackupContentFlags ReadFlagsFromManifest(string zipPath)
+    private static BackupManifest ReadManifest(string zipPath)
     {
         try
         {
             using var fs = File.OpenRead(zipPath);
             using var zip = new ZipArchive(fs, ZipArchiveMode.Read);
-            var entry = zip.GetEntry("manifest.json");
-            if (entry == null) return BackupContentFlags.Default;
-            using var sr = new StreamReader(entry.Open());
-            var json = sr.ReadToEnd();
-            var m = System.Text.RegularExpressions.Regex.Match(json, "\"flags\":\"([^\"]+)\"");
-            if (m.Success && Enum.TryParse<BackupContentFlags>(m.Groups[1].Value, out var f))
-                return f;
+            return ReadManifest(zip);
         }
-        catch { /* corrupt zip or not our format */ }
-        return BackupContentFlags.Default;
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
+        {
+            return BackupManifest.Fallback; // corrupt zip or not our format
+        }
     }
 
-    /// <summary>Represents a single backup archive in the listing.</summary>
-    public record BackupEntry(string Path, long Size, DateTime Created, BackupContentFlags ContentFlags);
+    /// <summary>
+    /// What manifest.json says the archive holds. Archives without one (or
+    /// with an unreadable one) count as the default content set.
+    /// </summary>
+    private static BackupManifest ReadManifest(ZipArchive zip)
+    {
+        var entry = zip.GetEntry("manifest.json");
+        if (entry is null) return BackupManifest.Fallback;
+        try
+        {
+            using var stream = entry.Open();
+            using var doc = JsonDocument.Parse(stream);
+            var root = doc.RootElement;
+            var flags = root.TryGetProperty("flags", out var f) && f.ValueKind == JsonValueKind.String
+                && Enum.TryParse<BackupContentFlags>(f.GetString(), out var parsed) ? parsed : BackupContentFlags.Default;
+            var databases = root.TryGetProperty("databases", out var d) && d.ValueKind == JsonValueKind.Array
+                ? d.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.String).Select(x => x.GetString()!).ToList()
+                : new List<string>();
+            var docroots = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (root.TryGetProperty("docroots", out var r) && r.ValueKind == JsonValueKind.Object)
+                foreach (var site in r.EnumerateObject().Where(p => p.Value.ValueKind == JsonValueKind.String))
+                    docroots[site.Name] = site.Value.GetString()!;
+            return new BackupManifest(flags, databases, docroots);
+        }
+        catch (Exception ex) when (ex is JsonException or IOException or InvalidDataException)
+        {
+            return BackupManifest.Fallback;
+        }
+    }
+
+    private sealed record BackupManifest(
+        BackupContentFlags Flags, IReadOnlyList<string> Databases, IReadOnlyDictionary<string, string> Docroots)
+    {
+        public static readonly BackupManifest Fallback =
+            new(BackupContentFlags.Default, Array.Empty<string>(), new Dictionary<string, string>());
+    }
+
+    /// <summary>
+    /// A single backup archive in the listing. <paramref name="Databases"/>
+    /// and <paramref name="Sites"/> (domain → recorded folder) are what a
+    /// restore can bring back on request.
+    /// </summary>
+    public record BackupEntry(string Path, long Size, DateTime Created, BackupContentFlags ContentFlags,
+        IReadOnlyList<string> Databases, IReadOnlyDictionary<string, string> Sites);
 }
 
 /// <summary>Something a backup was asked to include but left out, and why.</summary>
 public sealed record BackupSkip(BackupContentFlags Content, string Detail);
+
+/// <summary>Opt-in parts of a restore; without them only the configuration comes back.</summary>
+public sealed record BackupRestoreOptions(bool Databases = false, bool SiteFiles = false);
+
+/// <summary>One database or one site's files a restore brought back.</summary>
+public sealed record BackupRestored(BackupContentFlags Content, string Name, int Files);
 
 /// <summary>A backup was asked to write to a path that already exists.</summary>
 public sealed class BackupTargetExistsException(string path)

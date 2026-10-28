@@ -87,7 +87,10 @@ public class BackupAndCrashRecoveryTests : IDisposable
         Directory.Delete(Path.Combine(_wdcDir, "sites"), recursive: true);
         Assert.False(File.Exists(Path.Combine(_wdcDir, "sites", "roundtrip.loc.toml")));
 
-        var (count, safetyBackup) = bm.RestoreBackup(outZip);
+        var (count, safetyBackup, items, skipped) = bm.RestoreBackup(outZip);
+        // Without the opt-in flags nothing beyond the configuration is touched.
+        Assert.Empty(items);
+        Assert.Empty(skipped);
         Assert.True(count >= 1);
         Assert.True(File.Exists(safetyBackup));
         Assert.Equal(originalToml, File.ReadAllText(Path.Combine(_wdcDir, "sites", "roundtrip.loc.toml")));

@@ -200,11 +200,43 @@
 
       </SettingsShell>
     </div>
+
+    <!-- MySQL dumps and site files come back only when ticked (both off by default). -->
+    <el-dialog
+      v-model="restoreOpen"
+      :title="$t('backupsPage.snapshots.restoreConfirmTitle')"
+      width="560px"
+      :close-on-click-modal="!restoring"
+      @closed="restoreTarget = null"
+    >
+      <template v-if="restoreTarget">
+        <p class="restore-text">{{ $t('backupsPage.snapshots.restoreConfirmMessage', { date: formatDate(restoreTarget.createdUtc) }) }}</p>
+        <p v-if="!restoreDbNames.length && !restoreSites.length" class="restore-text">{{ $t('backupsPage.restore.noData') }}</p>
+        <template v-else>
+          <p class="restore-text">{{ $t('backupsPage.restore.optional') }}</p>
+          <div v-if="restoreDbNames.length" class="restore-option">
+            <el-checkbox v-model="restoreDatabases">{{ $t('backupsPage.restore.databases') }}</el-checkbox>
+            <div class="restore-list mono">{{ restoreDbNames.join(', ') }}</div>
+          </div>
+          <div v-if="restoreSites.length" class="restore-option">
+            <el-checkbox v-model="restoreSiteFiles">{{ $t('backupsPage.restore.siteFiles') }}</el-checkbox>
+            <div class="restore-hint">{{ $t('backupsPage.restore.siteFilesHint') }}</div>
+            <div v-for="site in restoreSites" :key="site.domain" class="restore-list">
+              {{ site.domain }} → <span class="mono">{{ site.folder }}</span>
+            </div>
+          </div>
+        </template>
+      </template>
+      <template #footer>
+        <el-button :disabled="restoring" @click="restoreOpen = false">{{ $t('common.cancel') }}</el-button>
+        <el-button type="warning" :loading="restoring" @click="confirmRestore">{{ $t('backupsPage.snapshots.restore') }}</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, h, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { errorMessage } from '../../utils/errors'
@@ -234,6 +266,16 @@ interface BackupEntry {
   size: number
   createdUtc: string
   contentFlags: string
+  /** Dumps and site folders in the archive; restored only on request. */
+  databases?: string[]
+  sites?: Array<{ domain: string; folder: string }>
+}
+
+interface RestoreResult {
+  restored: number
+  safetyBackup: string
+  items?: Array<{ content: string; name: string; files: number }>
+  skipped?: Array<{ content: string; detail: string }>
 }
 
 interface BackupStats {
@@ -426,30 +468,63 @@ async function downloadBackup(path: string) {
   }
 }
 
-async function restoreBackup(b: BackupEntry) {
-  try {
-    await ElMessageBox.confirm(
-      t('backupsPage.snapshots.restoreConfirmMessage', { date: formatDate(b.createdUtc) }),
-      t('backupsPage.snapshots.restoreConfirmTitle'),
-      { type: 'warning', confirmButtonText: t('backupsPage.snapshots.restore'), cancelButtonText: t('common.cancel') }
-    )
-  } catch { return }
+// Restore dialog. Dumps and site files are opt-in and start unticked.
+const restoreTarget = ref<BackupEntry | null>(null)
+const restoreOpen = ref(false)
+const restoreDatabases = ref(false)
+const restoreSiteFiles = ref(false)
+const restoring = ref(false)
+const restoreDbNames = computed(() => restoreTarget.value?.databases ?? [])
+const restoreSites = computed(() => restoreTarget.value?.sites ?? [])
 
+function restoreBackup(b: BackupEntry) {
+  restoreTarget.value = b
+  restoreDatabases.value = false
+  restoreSiteFiles.value = false
+  restoreOpen.value = true
+}
+
+async function confirmRestore() {
+  const b = restoreTarget.value
+  if (!b) return
+  restoring.value = true
+  let data: RestoreResult
   try {
-    const name = fileName(b.path)
-    const res = await fetch(`${daemonBaseUrl()}/api/backup/${encodeURIComponent(name)}/restore`, {
+    const res = await fetch(`${daemonBaseUrl()}/api/backup/${encodeURIComponent(fileName(b.path))}/restore`, {
       method: 'POST',
-      headers: daemonAuthHeaders(),
+      headers: { ...daemonAuthHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        databases: restoreDatabases.value && restoreDbNames.value.length > 0,
+        siteFiles: restoreSiteFiles.value && restoreSites.value.length > 0,
+      }),
     })
     if (!res.ok) throw new Error(await responseError(res, t('backupsPage.snapshots.restoreFailed')))
-    const data = await res.json()
-    ElMessage.success({
-      message: t('backupsPage.toast.restored', { files: data.restored, safety: fileName(data.safetyBackup) }, data.restored),
-      duration: 3500,
-    })
+    data = await res.json()
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : String(e))
     return
+  } finally {
+    restoring.value = false
+  }
+  restoreOpen.value = false
+
+  const names = (content: string) => (data.items ?? []).filter(i => i.content === content).map(i => i.name)
+  const dbs = names('Databases')
+  const sites = names('Docroots')
+  if (data.skipped?.length) {
+    // The window reloads right after, so what was left out must be read first.
+    await ElMessageBox.alert(restoreSkippedMessage(data.skipped), t('backupsPage.restore.incompleteTitle'), {
+      type: 'warning', confirmButtonText: t('backupsPage.restore.continue'),
+    }).catch(() => {})
+  } else {
+    ElMessage.success({
+      message: [
+        t('backupsPage.toast.restored', { files: data.restored, safety: fileName(data.safetyBackup) }, data.restored),
+        dbs.length ? t('backupsPage.restore.doneDatabases', { names: dbs.join(', ') }) : '',
+        sites.length ? t('backupsPage.restore.doneSites', { names: sites.join(', ') }) : '',
+      ].filter(Boolean).join(' '),
+      duration: 3500,
+    })
   }
   // The restore replaced state.db and the site files under a running
   // daemon, which still holds the old sites and settings in memory.
@@ -529,14 +604,28 @@ function fileName(path: string): string {
 
 // Content asked for but left out (MySQL stopped, a site folder missing),
 // grouped per category: one plain-language line, then the daemon's details.
-const skippedGroups = computed(() => {
+function groupSkipped(skipped: Array<{ content: string; detail: string }>) {
   const groups = new Map<string, string[]>()
-  for (const s of backupResult.value?.skipped ?? []) {
+  for (const s of skipped) {
     const key = backupContentKeys(s.content)[0] ?? s.content
     groups.set(key, [...(groups.get(key) ?? []), s.detail])
   }
   return [...groups].map(([key, details]) => ({ key, details }))
-})
+}
+
+const skippedGroups = computed(() => groupSkipped(backupResult.value?.skipped ?? []))
+
+// Rendered by ElMessageBox outside this component, so scoped classes do not
+// reach it: inline styles, plus the global .mono.
+function restoreSkippedMessage(skipped: Array<{ content: string; detail: string }>) {
+  return h('div', groupSkipped(skipped).map(group => h('div', { style: 'margin-top: var(--wdc-space-2)' }, [
+    h('div', t(`backupsPage.restore.skipped.${group.key}`)),
+    ...group.details.map(detail => h('div', {
+      class: 'mono',
+      style: 'font-size: 0.76rem; color: var(--wdc-text-3); overflow-wrap: anywhere',
+    }, detail)),
+  ])))
+}
 
 function formatSize(bytes: number): string {
   return formatBytes(bytes, locale.value)
@@ -625,6 +714,17 @@ function formatDate(iso: string): string {
   flex-wrap: wrap;
 }
 .backup-result-path { font-size: 0.8rem; overflow-wrap: anywhere; }
+
+/* ── Restore dialog ── */
+.restore-text { margin: 0 0 var(--wdc-space-3); line-height: 1.5; }
+.restore-option { margin-top: var(--wdc-space-3); }
+.restore-hint { font-size: 0.78rem; color: var(--wdc-text-3); margin-left: var(--wdc-space-6); }
+.restore-list {
+  font-size: 0.8rem;
+  color: var(--wdc-text-2);
+  margin-left: var(--wdc-space-6);
+  overflow-wrap: anywhere;
+}
 .backup-skip { margin-top: var(--wdc-space-2); }
 .backup-skip-detail {
   font-size: 0.76rem;

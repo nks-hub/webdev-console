@@ -244,7 +244,7 @@
       "restore": "Obnovit",
       "delete": "Smazat",
       "restoreConfirmTitle": "Obnovit zálohu",
-      "restoreConfirmMessage": "Obnovit zálohu z {date}? Přepíše se konfigurace webů, SSL certifikáty, konfigurace pluginů a interní databáze aplikace (nastavení a seznam webů). Databáze MySQL a soubory webů se neobnovují; pokud je záloha obsahuje, najdete je v archivu ve složkách databases a docroots. Aktuální stav se nejdřív uloží jako bezpečnostní záloha. Po obnovení se aplikace restartuje a okno se znovu načte.",
+      "restoreConfirmMessage": "Obnovit zálohu z {date}? Přepíše se konfigurace webů, SSL certifikáty, konfigurace pluginů a interní databáze aplikace (nastavení a seznam webů). Aktuální stav se nejdřív uloží jako bezpečnostní záloha. Po obnovení se aplikace restartuje a okno se znovu načte.",
       "deleteConfirmTitle": "Smazat zálohu",
       "deleteConfirmMessage": "Smazat zálohu {name}?",
       "backupFailed": "Záloha selhala",
@@ -263,6 +263,21 @@
     "skipped": {
       "databases": "Některé databáze MySQL v záloze nejsou. Zkontrolujte, že MySQL běží.",
       "docroots": "Soubory některých webů v záloze nejsou. Složka webu chybí nebo nejde přečíst."
+    },
+    "restore": {
+      "noData": "Databáze MySQL ani soubory webů tato záloha neobsahuje, zůstanou beze změny.",
+      "optional": "Databáze MySQL a soubory webů se obnoví, jen když je zaškrtnete. Bezpečnostní záloha pak obsahuje i jejich současný stav.",
+      "databases": "Obnovit databáze (přepíše jejich obsah)",
+      "siteFiles": "Obnovit soubory webů (přepíše složky webů)",
+      "siteFilesHint": "Soubory ze zálohy nahradí stejnojmenné soubory. Ostatní soubory ve složkách zůstanou.",
+      "incompleteTitle": "Obnovení není úplné",
+      "continue": "Pokračovat",
+      "doneDatabases": "Databáze: {names}.",
+      "doneSites": "Soubory webů: {names}.",
+      "skipped": {
+        "databases": "Některé databáze se neobnovily. Zkontrolujte, že MySQL běží.",
+        "docroots": "Některé soubory webů se neobnovily."
+      }
     },
     "schedule": {
       "cardTitle": "Interval automatické zálohy",
