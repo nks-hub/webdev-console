@@ -243,7 +243,9 @@ export function registerCloudflareTools(server: McpServer, opts: RegisterOptions
       title: 'Delete DNS record (destructive)',
       description:
         'DESTRUCTIVE: Delete a DNS record from a Cloudflare zone.\n\n' +
-        'Args:\n  zoneId: Zone id.\n  recordId: Record id.\n  confirm: Must be "YES".\n\n' +
+        'Needs the user\'s approval: wdc_request_confirmation(operation: "dns_record_delete", target: zoneId), ' +
+        'then pass the approved intentToken.\n\n' +
+        'Args:\n  zoneId: Zone id.\n  recordId: Record id.\n  confirm: Must be "YES".\n  intentToken: Approved intent.\n\n' +
         'You MUST show the user the full record (call wdc_list_cloudflare_dns first) ' +
         'before passing confirm="YES".',
       inputSchema: {

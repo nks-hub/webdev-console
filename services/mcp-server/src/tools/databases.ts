@@ -370,10 +370,13 @@ export function registerDatabasesTools(server: McpServer, opts: RegisterOptions)
         'Execute a mutating SQL statement (INSERT/UPDATE/DELETE/DDL) against a local ' +
         'MySQL database. Requires confirm: "YES" because statements can destroy data ' +
         'irreversibly.\n\n' +
+        'Needs the user\'s approval: wdc_request_confirmation(operation: "database_execute", target: database), ' +
+        'then pass the approved intentToken.\n\n' +
         'Args:\n' +
         '  database: MySQL database name.\n' +
         '  sql: SQL statement.\n' +
-        '  confirm: Must be "YES".\n\n' +
+        '  confirm: Must be "YES".\n' +
+        '  intentToken: Approved intent.\n\n' +
         'Returns: { rows: [], message } with the daemon result.\n\n' +
         'You MUST show the user the exact SQL and the target database before passing confirm="YES".',
       inputSchema: {
@@ -421,7 +424,9 @@ export function registerDatabasesTools(server: McpServer, opts: RegisterOptions)
       title: 'Drop MySQL database (destructive)',
       description:
         'DESTRUCTIVE: Drop a MySQL database with all its tables.\n\n' +
-        'Args:\n  name: Database to drop.\n  confirm: Must be "YES".\n\n' +
+        'Needs the user\'s approval: wdc_request_confirmation(operation: "database_drop", target: name), ' +
+        'then pass the approved intentToken.\n\n' +
+        'Args:\n  name: Database to drop.\n  confirm: Must be "YES".\n  intentToken: Approved intent.\n\n' +
         'You MUST show the user the exact database name and tables it contains ' +
         '(call wdc_database_tables first) before passing confirm="YES".',
       inputSchema: {

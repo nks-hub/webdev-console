@@ -312,6 +312,20 @@ html:not(.dark) {
   --el-color-info:                var(--wdc-text-2);
 }
 
+/* Element Plus draws its empty-state box for pure white; on the light page
+   background its near-white fills vanish, so shift them a few steps darker. */
+html:not(.dark) .el-empty {
+  --el-empty-fill-color-1: oklch(95% 0.006 255);
+  --el-empty-fill-color-2: oklch(93% 0.007 255);
+  --el-empty-fill-color-3: oklch(92% 0.008 255);
+  --el-empty-fill-color-4: oklch(89% 0.009 255);
+  --el-empty-fill-color-5: oklch(88% 0.009 255);
+  --el-empty-fill-color-6: oklch(86% 0.010 255);
+  --el-empty-fill-color-7: oklch(84% 0.010 255);
+  --el-empty-fill-color-8: oklch(82% 0.011 255);
+  --el-empty-fill-color-9: oklch(76% 0.012 255);
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -936,6 +950,14 @@ html.dark .nav-item-tunnel .nav-label {
   color: var(--wdc-text-2) !important;
   font-size: 0.78rem !important;
   font-weight: 500;
+}
+
+/* Controls are 36px tall (34px inner + border) while Element sizes a small
+   form's label for 24px, which put side labels 6px above the control's midline. */
+.el-form-item--label-left .el-form-item__label,
+.el-form-item--label-right .el-form-item__label {
+  height: 36px;
+  line-height: 36px;
 }
 
 .el-form-item {

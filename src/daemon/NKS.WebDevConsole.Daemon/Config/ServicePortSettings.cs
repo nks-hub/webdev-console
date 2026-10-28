@@ -21,7 +21,8 @@ internal static class ServicePortSettings
         // and Linux uses it; on Windows sites run through mod_fcgid.
         "apache" => [.. WebServer, ("ports.phpFpmBase", "PhpFpmBasePort")],
         "caddy" or "nginx" => WebServer,
-        "php" => [("ports.phpFpmBase", "PhpFpmBasePort")],
+        // php.ini sends mail() to Mailpit's SMTP port.
+        "php" => [("ports.phpFpmBase", "PhpFpmBasePort"), ("ports.mailpitSmtp", "MailSmtpPort")],
         "mysql" => [("ports.mysql", "Port")],
         "mariadb" => [("ports.mariadb", "Port")],
         "postgresql" => [("ports.postgresql", "Port")],

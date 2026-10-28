@@ -16,6 +16,9 @@
       </template>
     </ServicePageHead>
 
+    <!-- php.ini routes mail() here; apps with their own SMTP config need these settings. -->
+    <p v-if="installed && smtpPort" class="smtp-hint">{{ t('mailpitPlugin.smtpHint', { port: smtpPort }) }}</p>
+
     <section v-if="installed" class="log-section">
       <h2 class="section-title">{{ t('mailpitPlugin.tabLogs') }}</h2>
       <LogViewer service-id="mailpit" />
@@ -42,6 +45,7 @@ const uiUrl = computed(() => {
   const port = service.value?.ports?.http ?? service.value?.port
   return port ? `http://localhost:${port}` : ''
 })
+const smtpPort = computed(() => service.value?.ports?.smtp)
 
 function openExternal(url: string) {
   if (window.electronAPI?.openExternal) void window.electronAPI.openExternal(url)
@@ -50,6 +54,7 @@ function openExternal(url: string) {
 </script>
 
 <style scoped>
+.smtp-hint { max-width: 60ch; color: var(--wdc-text-2); line-height: 1.5; }
 .log-section { display: grid; gap: var(--wdc-space-3); }
 .section-title { font-size: 1.1rem; }
 .log-section :deep(.log-viewer) { height: 420px; }

@@ -69,7 +69,7 @@
                     @click="selectDatabase(db)"
                   >
                     <span class="database-name">{{ db }}</span>
-                    <span v-if="databaseTables[db]" class="database-meta">{{ databaseTables[db].length }} {{ $t('databases.tables') }}</span>
+                    <span v-if="databaseTables[db]" class="database-meta">{{ t('databases.tree.tableCount', { count: databaseTables[db].length }, databaseTables[db].length) }}</span>
                   </button>
                 </aside>
 
@@ -721,7 +721,7 @@ async function executeQuery() {
     queryResult.value = JSON.stringify(data, null, 2)
   } catch (e) {
     queryTime.value = Date.now() - start
-    queryResult.value = `Error: ${errorMessage(e)}`
+    queryResult.value = `${t('common.status.err')}: ${errorMessage(e)}`
   } finally {
     queryRunning.value = false
   }

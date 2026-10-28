@@ -317,6 +317,18 @@ describe('intents for the new gated tools', () => {
   })
 })
 
+describe('Returns line matches the daemon response', () => {
+  it('wdc_create_backup names every field POST /api/backup returns', () => {
+    const src = readFileSync(join(here, '..', '..', '..', '..', 'src', 'daemon', 'NKS.WebDevConsole.Daemon', 'Backup', 'BackupEndpoints.cs'), 'utf8')
+    const ok = /MapPost\("\/api\/backup"[\s\S]*?return Results\.Ok\(new \{ ([^}]*) \}\);/.exec(src)![1]!
+    const fields = ok.split(',').map(f => f.split('=')[0]!.trim())
+    expect(fields).toEqual(['path', 'files', 'size', 'contentFlags', 'skipped'])
+    const description = allTools().tools.get('wdc_create_backup')!.config.description!
+    const returns = description.slice(description.indexOf('Returns:'))
+    for (const f of fields) expect(returns).toMatch(new RegExp(`\\b${f}\\b`))
+  })
+})
+
 describe('annotations and read-only mode', () => {
   it('read-only mode registers exactly the tools marked readOnlyHint', () => {
     const all = allTools().tools
@@ -344,6 +356,12 @@ describe('annotations and read-only mode', () => {
       expect(allTools().tools.get(tool)!.config.annotations).toMatchObject({ destructiveHint: true, idempotentHint: false })
     },
   )
+
+  it('every tool that takes an intentToken says how to get one', () => {
+    const silent = [...allTools().tools.values()].filter(t =>
+      'intentToken' in (t.config.inputSchema ?? {}) && !/wdc_(request_confirmation|deploy_create_intent)/.test(t.config.description ?? ''))
+    expect(silent.map(t => t.name)).toEqual([])
+  })
 
   it('wdc_refresh_catalog is a mutation and is hidden in read-only mode', () => {
     expect(allTools().tools.get('wdc_refresh_catalog')!.config.annotations?.readOnlyHint).toBe(false)

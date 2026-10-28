@@ -64,9 +64,9 @@
         >
           <title>{{ t('mcpActivity.timeline.errorsInHour', { n: b.errors, hour: localHour(b.hour) }, b.errors) }}</title>
         </polygon>
-        <!-- Hour label every 6th bar -->
+        <!-- Hour label every 6th bar, counted from the current hour on the right -->
         <text
-          v-if="idx % 6 === 0"
+          v-if="(buckets.length - 1 - idx) % 6 === 0"
           :x="idx * barWidth + barWidth / 2"
           :y="viewHeight - 1"
           text-anchor="middle"

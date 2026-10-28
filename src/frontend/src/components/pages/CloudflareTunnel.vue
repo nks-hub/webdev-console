@@ -176,14 +176,31 @@
               <el-input
                 v-model="config.subdomainTemplate"
                 class="mono"
-                placeholder="{stem}-dev"
+                :placeholder="DEFAULT_SUBDOMAIN_TEMPLATE"
               />
               <div class="hint">
                 {{ $t('cloudflare.subdomainPlaceholders') }}
                 <code>{stem}</code> {{ $t('cloudflare.subdomainStem', { loc: '.loc', local: '.local', test: '.test' }) }},
+                <code>{hash}</code> {{ $t('cloudflare.subdomainHash') }},
                 <code>{user}</code> {{ $t('cloudflare.subdomainUser') }}.
                 {{ $t('cloudflare.subdomainExample', { domain: 'myapp.loc' }) }}
                 <code>{{ previewTemplate }}</code>
+              </div>
+              <div class="default-zone">
+                <label class="default-zone-label" for="cf-default-zone">{{ $t('cloudflare.defaultZone') }}</label>
+                <el-select
+                  id="cf-default-zone"
+                  v-model="config.defaultZoneId"
+                  :placeholder="config.apiToken ? $t('cloudflare.pickZone') : $t('cloudflare.defaultZoneNeedsToken')"
+                  :disabled="!config.apiToken"
+                  :loading="loadingZones"
+                  filterable
+                  class="default-zone-select"
+                  @change="saveDefaultZone"
+                >
+                  <el-option v-for="z in zones" :key="z.id" :label="z.name" :value="z.id" />
+                </el-select>
+                <div class="hint">{{ $t('cloudflare.defaultZoneHint') }}</div>
               </div>
               <div class="card-actions">
                 <el-button size="small" :loading="savingConfig" @click="saveSubdomainTemplate">
@@ -413,6 +430,9 @@ import { installErrorMessage } from '../../utils/binaries'
 
 defineOptions({ name: 'CloudflareTunnel' })
 
+// Same default as the Cloudflare plugin's CloudflareConfig.SubdomainTemplate.
+const DEFAULT_SUBDOMAIN_TEMPLATE = '{stem}-{hash}'
+
 const daemonStore = useDaemonStore()
 const sitesStore = useSitesStore()
 
@@ -458,7 +478,7 @@ async function saveBinaryPath() {
 async function saveSubdomainTemplate() {
   savingConfig.value = true
   try {
-    await saveCloudflareConfig({ subdomainTemplate: config.subdomainTemplate || '{stem}-dev' })
+    await saveCloudflareConfig({ subdomainTemplate: config.subdomainTemplate || DEFAULT_SUBDOMAIN_TEMPLATE })
     ElMessage.success(t('cloudflare.toast.subdomainTemplateSaved'))
   } catch (e) {
     ElMessage.error(t('cloudflare.toast.saveFailed', { err: errorMessage(e) }))
@@ -467,17 +487,29 @@ async function saveSubdomainTemplate() {
   }
 }
 
+// A new site created with the tunnel on takes its zone from here; nothing else sets it.
+async function saveDefaultZone(zoneId: string) {
+  try {
+    await saveCloudflareConfig({ defaultZoneId: zoneId || null })
+    ElMessage.success(t('cloudflare.toast.defaultZoneSaved'))
+  } catch (e) {
+    ElMessage.error(t('cloudflare.toast.saveFailed', { err: errorMessage(e) }))
+  }
+}
+
 // Live preview of how the template resolves for the stem "myapp".
 // {hash} is rendered as a fixed example — the real value comes from
 // backend where the install salt lives, but that's fine for a preview.
 const previewTemplate = computed(() => {
-  const t = config.subdomainTemplate || '{stem}-{hash}'
-  return t
+  const t = config.subdomainTemplate || DEFAULT_SUBDOMAIN_TEMPLATE
+  const sub = t
     .replace('{stem}', 'myapp')
     .replace('{hash}', 'bffa44')
     .replace('{user}', 'me')
     .replace(/-+/g, '-')
     .replace(/^-+|-+$/g, '')
+  const zone = zones.value.find(z => z.id === config.defaultZoneId)?.name
+  return zone ? `${sub}.${zone}` : sub
 })
 
 // ── Auto-setup (one-token flow) ──────────────────────────────────────
@@ -865,6 +897,15 @@ async function autoVerifyToken() {
   align-items: center;
   margin-top: var(--wdc-space-3);
 }
+.default-zone { margin-top: var(--wdc-space-3-5); }
+.default-zone-label {
+  display: block;
+  margin-bottom: var(--wdc-space-1-5);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--wdc-text-2);
+}
+.default-zone-select { width: 320px; max-width: 100%; }
 .save-status { font-size: 0.82rem; font-weight: 600; }
 .save-status.ok { color: var(--wdc-status-running); }
 .save-status.err { color: var(--wdc-status-error); }

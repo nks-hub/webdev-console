@@ -233,11 +233,61 @@ public sealed class McpToolCallsRepositoryTests
             Assert.Equal(1, stats.Destructives);
             Assert.Equal(1, stats.Errors);
             Assert.Equal(2, stats.DistinctSessions);
-            // p50 of [10,20,30,40,100] = idx 2 = 30
+            // Nearest rank over [10,20,30,40,100]: p50 = 3rd value, p95 = 5th.
             Assert.Equal(30, stats.P50DurationMs);
-            // p95 of 5 items = idx floor(0.95*4) = 3 = 40
-            Assert.Equal(40, stats.P95DurationMs);
+            Assert.Equal(100, stats.P95DurationMs);
             Assert.Equal(20, stats.ErrorRatePercent);
+        }
+        finally { try { File.Delete(path); } catch { /* SQLite pool */ } }
+    }
+
+    [Fact]
+    public async Task GetStats_PercentilesNeverSitBelowTheirShareOfCalls()
+    {
+        var (db, path) = NewDb();
+        try
+        {
+            var repo = new McpToolCallsRepository(db);
+            // The eight durations of a recorded stdio smoke session.
+            foreach (var ms in new[] { 58, 1, 2, 60, 2, 2, 35, 4 })
+                await repo.InsertAsync(new McpToolCallRow { ToolName = "t", DurationMs = ms }, CancellationToken.None);
+
+            var stats = await repo.GetStatsAsync(60, CancellationToken.None);
+            Assert.Equal(2, stats.P50DurationMs);
+            Assert.Equal(60, stats.P95DurationMs);
+            Assert.Equal(60, stats.P99DurationMs);
+
+            for (var i = 0; i < 12; i++)
+                await repo.InsertAsync(new McpToolCallRow { ToolName = "t", DurationMs = 100 + i }, CancellationToken.None);
+            // 20 calls: the 95th percentile is the 19th smallest, not the largest.
+            stats = await repo.GetStatsAsync(60, CancellationToken.None);
+            Assert.Equal(110, stats.P95DurationMs);
+            Assert.Equal(111, stats.P99DurationMs);
+        }
+        finally { try { File.Delete(path); } catch { /* SQLite pool */ } }
+    }
+
+    [Fact]
+    public async Task ListAll_ReadsPastTheListCapWithFilters()
+    {
+        var (db, path) = NewDb();
+        try
+        {
+            var repo = new McpToolCallsRepository(db);
+            for (var i = 0; i < 1003; i++)
+                await repo.InsertAsync(new McpToolCallRow { ToolName = "wdc_list_sites", ArgsSummary = $"{{\"n\":{i}}}" }, CancellationToken.None);
+            await repo.InsertAsync(new McpToolCallRow { ToolName = "wdc_get_site", ArgsSummary = "{\"domain\":\"blog.loc\"}" }, CancellationToken.None);
+
+            var all = new List<McpToolCallRow>();
+            await foreach (var row in repo.ListAllAsync(null, null, null, null, CancellationToken.None))
+                all.Add(row);
+            Assert.Equal(1004, all.Count);
+            Assert.Equal(1004, all.Select(r => r.Id).Distinct().Count());
+
+            var searched = new List<McpToolCallRow>();
+            await foreach (var row in repo.ListAllAsync(null, null, null, "blog", CancellationToken.None))
+                searched.Add(row);
+            Assert.Equal("wdc_get_site", Assert.Single(searched).ToolName);
         }
         finally { try { File.Delete(path); } catch { /* SQLite pool */ } }
     }

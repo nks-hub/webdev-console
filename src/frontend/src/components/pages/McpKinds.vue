@@ -358,6 +358,8 @@ async function refresh(): Promise<void> {
   font-weight: 700;
 }
 .muted { color: var(--el-text-color-secondary); }
+/* Same intro size as the Requests tab. */
+.page-header + .muted { font-size: 13px; max-width: 760px; }
 .kinds-table { margin-top: 8px; }
 .mono { font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace; font-size: 12px; }
 .kinds-summary {

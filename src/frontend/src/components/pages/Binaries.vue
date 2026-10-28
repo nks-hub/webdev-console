@@ -6,8 +6,8 @@
         <div class="header-title-block">
           <h1 class="page-title">{{ $t('binaries.title') }}</h1>
           <p class="page-subtitle">
-            {{ $t('binaries.modulesCount', { n: moduleCards.length }, moduleCards.length) }} ·
-            {{ $t('binaries.installedCount', { n: installed.length }, installed.length) }} ·
+            {{ $t('binaries.modulesCount', { n: moduleCount }, moduleCount) }} ·
+            {{ $t('binaries.installedCount', { n: installedModuleCount }, installedModuleCount) }} ·
             {{ $t('binaries.availableCount', { n: totalAvailable }, totalAvailable) }}
             <template v-if="outdatedCount > 0"> ·
               <el-button
@@ -532,6 +532,10 @@ const moduleCards = computed<ModuleCard[]>(() => {
 })
 
 const totalAvailable = computed(() => moduleCards.value.reduce((s, c) => s + c.available, 0))
+// The header counts the same cards the grid shows, Composer's built-in card included.
+const moduleCount = computed(() => moduleCards.value.length + 1)
+const installedModuleCount = computed(() =>
+  moduleCards.value.filter(c => c.installedCount > 0).length + (composerInstalled.value ? 1 : 0))
 
 const outdatedCount = computed(() => moduleCards.value.filter(c => c.outdated).length)
 

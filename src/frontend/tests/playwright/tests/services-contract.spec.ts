@@ -1,7 +1,7 @@
 import { test, expect } from './_fixtures'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import { cleanError, errorCause, installRouteOf, portsLabel, stateKeyOf, stateOf } from '../../../src/utils/services'
+import { cleanError, errorCause, installRouteOf, isConfigless, portsLabel, stateKeyOf, stateOf } from '../../../src/utils/services'
 import { firstErrorLine, logLevelOf, matchesLogLevel } from '../../../src/utils/logLevel'
 import type { ServiceInfo } from '../../../src/api/types'
 
@@ -144,6 +144,41 @@ test.describe('Services UI contract', () => {
     for (const lang of ['cs', 'en']) {
       expect(read('locales', `${lang}.json`), lang).not.toMatch(/Backend endpoint/)
     }
+  })
+
+  test('"Edit configuration" is offered only for services with a config file', () => {
+    expect(isConfigless('mailpit')).toBe(true)
+    expect(isConfigless('cloudflare')).toBe(true)
+    expect(isConfigless('apache')).toBe(false)
+    expect(read('components', 'pages', 'ServicesPage.vue')).toMatch(/v-if="!isConfigless\(selected\.id\)"[^>]*\/config/)
+  })
+
+  test('the Apache page lists sites with their real HTTPS state and an Open action', () => {
+    const page = read('components', 'pages', 'ApachePluginPage.vue')
+    expect(page).toContain('row.sslEnabled')
+    expect(page).not.toMatch(/row\.ssl\b(?!Enabled)/)
+    expect(page).toContain('openUrl(siteUrl(row))')
+    // http://localhost/ hits the default vhost, which denies every request.
+    expect(page).not.toMatch(/localhost/)
+  })
+
+  test('the Mailpit page names the SMTP settings an app needs, from the daemon port', () => {
+    expect(read('components', 'pages', 'MailpitPluginPage.vue')).toMatch(/smtpHint', \{ port: smtpPort \}/)
+    for (const lang of ['cs', 'en']) {
+      expect((locale(lang).mailpitPlugin as Record<string, string>).smtpHint, lang).toContain('{port}')
+    }
+  })
+
+  test('log Copy and Clear are off while the log is empty', () => {
+    const viewer = read('components', 'shared', 'LogViewer.vue')
+    expect(viewer).toMatch(/:disabled="!hasLines" @click="copyLogs"/)
+    expect(viewer).toMatch(/:disabled="!hasLines" @click="clearTerminal"/)
+  })
+
+  test('MySQL page text goes through the locale files', () => {
+    const page = read('components', 'pages', 'MySqlPluginPage.vue')
+    expect(page).not.toMatch(/`Error: /)
+    expect(page).toContain("t('databases.tree.tableCount'")
   })
 
   test('every service state has a word and a sentence in both locales', () => {

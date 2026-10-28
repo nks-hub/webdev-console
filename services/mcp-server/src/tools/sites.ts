@@ -346,9 +346,12 @@ export function registerSitesTools(server: McpServer, opts: RegisterOptions): vo
       description:
         'DESTRUCTIVE: Delete a local development site. Removes the vhost config, ' +
         'hosts file entry, and TOML. Document root and databases are NOT touched.\n\n' +
+        'Needs the user\'s approval: wdc_request_confirmation(operation: "site_delete", target: domain), ' +
+        'then pass the approved intentToken.\n\n' +
         'Args:\n' +
         '  domain: Local domain to remove.\n' +
-        '  confirm: Must be the literal string "YES".\n\n' +
+        '  confirm: Must be the literal string "YES".\n' +
+        '  intentToken: Approved intent.\n\n' +
         'You MUST show the user exactly which site will be removed and get explicit ' +
         'verbal confirmation before passing confirm="YES".',
       inputSchema: {

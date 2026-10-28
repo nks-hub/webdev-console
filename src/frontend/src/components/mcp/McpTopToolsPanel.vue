@@ -22,7 +22,7 @@
           <div class="bar-fill" :class="`fill-${r.dangerLevel}`" :style="{ width: barPct(r) + '%' }" />
         </div>
         <span class="count">{{ r.count }}</span>
-        <span class="muted avg">{{ r.avgDurationMs }}ms</span>
+        <span class="muted avg">{{ r.avgDurationMs }} ms</span>
         <span v-if="r.errors > 0" class="errors">{{ r.errors }}!</span>
       </div>
     </div>

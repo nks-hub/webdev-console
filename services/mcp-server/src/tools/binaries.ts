@@ -86,7 +86,9 @@ export function registerBinariesTools(server: McpServer, opts: RegisterOptions):
       description:
         'Download and extract a binary from the catalog. Synchronous — returns when ' +
         'extraction completes. Use wdc_list_catalog first to find valid {app, version} pairs.\n\n' +
-        'Args:\n  app: App identifier.\n  version: Full version string.',
+        'Needs the user\'s approval: wdc_request_confirmation(operation: "binary_install", target: app), ' +
+        'then pass the approved intentToken.\n\n' +
+        'Args:\n  app: App identifier.\n  version: Full version string.\n  intentToken: Approved intent.',
       inputSchema: {
         app: AppNameSchema,
         version: VersionSchema,

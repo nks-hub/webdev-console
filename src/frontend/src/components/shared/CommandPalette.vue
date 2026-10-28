@@ -66,12 +66,13 @@ import { useRouter } from 'vue-router'
 import {
   Monitor, DataBoard, Coin, Lock, Grid, Box, Connection, Setting, Share, Message, Plus, Refresh,
   VideoPlay, VideoPause, Promotion, CircleClose, Edit, Link, DataLine, Key, Operation, SetUp,
-  FolderOpened, Download,
+  FolderOpened, Download, Collection, Document, QuestionFilled,
 } from '@element-plus/icons-vue'
 import { useDaemonStore } from '../../stores/daemon'
 import { useSitesStore } from '../../stores/sites'
 import { useUiModeStore } from '../../stores/uiMode'
 import { useFeatureFlagsStore } from '../../stores/featureFlags'
+import { usePluginsStore } from '../../stores/plugins'
 import { isRunning, serviceViewState, shortServiceName } from '../../utils/serviceState'
 import { runServiceAction, runServiceBatch } from '../../utils/serviceActions'
 import { openMailpit } from '../../utils/mailpit'
@@ -81,6 +82,7 @@ const { t } = useI18n()
 const router = useRouter()
 const uiModeStore = useUiModeStore()
 const featureFlagsStore = useFeatureFlagsStore()
+const pluginsStore = usePluginsStore()
 const daemonStore = useDaemonStore()
 const sitesStore = useSitesStore()
 
@@ -110,6 +112,8 @@ interface Command {
   advanced?: boolean
   /** Also offered in the empty-query "recommended" list. */
   recommended?: boolean
+  /** Page this command opens; it is left out while the plugin that owns the page is off. */
+  route?: string
   action: () => void
 }
 
@@ -135,6 +139,7 @@ function go(path: string, label: string, icon: Component, extra: Partial<Command
     group: 'navigate',
     label,
     icon,
+    route: path,
     advanced: !!target.meta.advancedNav,
     action: () => { void router.push(path) },
     ...extra,
@@ -152,10 +157,13 @@ const navigation = computed<Command[]>(() => {
     go('/ssl', t('commandPalette.gotoSsl'), Lock),
     go('/php', t('commandPalette.gotoPhp'), Grid),
     go('/binaries', t('commandPalette.gotoBinaries'), Box),
+    go('/composer', t('nav.composer'), Collection),
     go('/plugins', t('commandPalette.gotoPlugins'), Share),
     go('/cloudflare', t('commandPalette.gotoCloudflare'), Connection),
+    go('/hosts', t('nav.hosts'), Document),
     go('/backups', t('nav.backups'), FolderOpened),
     go('/settings', t('commandPalette.gotoSettings'), Setting, { recommended: true }),
+    go('/help', t('nav.help'), QuestionFilled),
   ]
   // Always listed; while MCP is off the page itself offers the switch.
   const off = !featureFlagsStore.mcpEnabled
@@ -166,7 +174,7 @@ const navigation = computed<Command[]>(() => {
     go('/mcp/grants', t('commandPalette.gotoMcpRules'), Key, { description: desc('commandPalette.gotoMcpRulesDesc') }),
     go('/mcp/kinds', t('commandPalette.gotoMcpCatalog'), Operation, { description: desc('commandPalette.gotoMcpCatalogDesc') }),
   )
-  return nav
+  return nav.filter(c => !c.route || pluginsStore.isRouteVisible(c.route))
 })
 
 function siteUrl(site: { domain: string; sslEnabled?: boolean; httpPort?: number; httpsPort?: number }): string {

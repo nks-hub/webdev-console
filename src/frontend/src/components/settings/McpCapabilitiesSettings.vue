@@ -14,7 +14,7 @@
           type="primary"
           class="caps-connect-link"
           data-testid="settings-mcp-connect-link"
-          @click="router.push('/mcp/activity')"
+          @click="router.push('/mcp/activity?setup=1')"
         >
           {{ t('mcpCapabilities.master.connectGuide') }}
         </el-button>

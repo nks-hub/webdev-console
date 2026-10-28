@@ -17,8 +17,8 @@
         @keydown.enter="searchInTerminal"
       />
       <el-button size="small" @click="searchInTerminal" :disabled="!searchText">{{ t('logs.viewer.find') }}</el-button>
-      <el-button size="small" @click="copyLogs">{{ t('logs.viewer.copy') }}</el-button>
-      <el-button size="small" @click="clearTerminal">{{ t('logs.viewer.clear') }}</el-button>
+      <el-button size="small" :disabled="!hasLines" @click="copyLogs">{{ t('logs.viewer.copy') }}</el-button>
+      <el-button size="small" :disabled="!hasLines" @click="clearTerminal">{{ t('logs.viewer.clear') }}</el-button>
     </div>
     <p v-if="notice" class="log-notice" role="status">{{ notice }}</p>
     <div ref="terminalRef" class="terminal-container" />
@@ -46,6 +46,8 @@ const terminalRef = ref<HTMLElement>()
 const logLevel = ref<LogLevelFilter>('all')
 const searchText = ref('')
 const notice = ref('')
+// `lines` is not reactive; this drives Copy and Clear.
+const hasLines = ref(false)
 
 // Matches the scrollback: the Phase 4 acceptance criterion ("handles 10k+
 // lines without lag") and e2e scenario #14 fetch 10 000 lines.
@@ -66,6 +68,7 @@ let live = false
 
 function append(line: string) {
   lines.push(line)
+  hasLines.value = true
   if (lines.length > MAX_LINES) lines = lines.slice(-MAX_LINES)
   if (matchesLogLevel(line, logLevel.value)) terminal?.writeln(stripStreamTag(line))
 }
@@ -80,6 +83,7 @@ watch(logLevel, redraw)
 
 function clearTerminal() {
   lines = []
+  hasLines.value = false
   terminal?.clear()
 }
 
@@ -113,6 +117,7 @@ async function start() {
   const id = props.serviceId
   notice.value = ''
   lines = []
+  hasLines.value = false
   terminal.clear()
   terminal.reset()
 

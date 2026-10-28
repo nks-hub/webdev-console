@@ -1,5 +1,5 @@
 import { test, expect } from './_fixtures'
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 // Source-level contract for the app shell: the menu badge, status bar and
@@ -113,6 +113,72 @@ test.describe('Shell services contract', () => {
     const types = read('api', 'types.ts')
     expect(types).toMatch(/installed\?: boolean/)
     expect(types).toMatch(/crashKind\?:/)
+  })
+
+  test('palette offers every menu page and skips pages of a disabled plugin', () => {
+    const palette = read('components', 'shared', 'CommandPalette.vue')
+    for (const path of ['/composer', '/hosts', '/help']) {
+      expect(palette, path).toContain(`go('${path}'`)
+    }
+    // The router bounces a disabled plugin's page to /sites, so the palette must not offer it.
+    expect(palette).toMatch(/pluginsStore\.isRouteVisible\(c\.route\)/)
+  })
+
+  test('app tour points at the MCP page, not at a wdc CLI the installer does not ship', () => {
+    const tour = read('components', 'shared', 'GettingStartedWizard.vue')
+    expect(tour).not.toMatch(/wdc (sites|db|ssl)/)
+    expect(tour).toMatch(/key: 'mcp'/)
+    for (const locale of ['cs', 'en']) {
+      const data = JSON.parse(read('locales', `${locale}.json`)) as {
+        help: { wizard: { steps: Record<string, { title: string; desc: string; tip: string }> } }
+      }
+      const steps = data.help.wizard.steps
+      expect(steps.cli, `${locale} help.wizard.steps.cli`).toBeUndefined()
+      expect(steps.mcp?.desc, `${locale} help.wizard.steps.mcp`).toBeTruthy()
+      expect(steps.mcp.desc).not.toMatch(/<code>wdc<\/code>/)
+    }
+  })
+
+  test('help names only MCP tools that exist', () => {
+    const toolsDir = resolve(srcRoot, '..', '..', '..', 'services', 'mcp-server', 'src', 'tools')
+    const toolSource = readdirSync(toolsDir)
+      .filter(f => f.endsWith('.ts') && !f.includes('.test.'))
+      .map(f => readFileSync(join(toolsDir, f), 'utf-8'))
+      .join('\n')
+    for (const locale of ['cs', 'en']) {
+      const data = JSON.parse(read('locales', `${locale}.json`)) as { help: { topics: { mcp: { body: string } } } }
+      const names = data.help.topics.mcp.body.match(/wdc_[a-z_]+/g) ?? []
+      expect(names.length, locale).toBeGreaterThan(0)
+      for (const name of names) expect(toolSource, `${locale} ${name}`).toContain(`'${name}'`)
+    }
+  })
+
+  test('a new page opens at the top of the shared scroll container', () => {
+    const app = read('App.vue')
+    expect(app).toMatch(/watch\(\(\) => route\.path, \(\) => \{[\s\S]*?getElementById\('main'\)\?\.scrollTo\(0, 0\)/)
+  })
+
+  test('side form labels share the control height so they sit on its midline', () => {
+    const tokens = read('assets', 'tokens.css')
+    const rule = tokens.match(/\.el-form-item--label-left \.el-form-item__label,\s*\.el-form-item--label-right \.el-form-item__label \{([^}]*)\}/)?.[1] ?? ''
+    expect(rule).toMatch(/height: 36px/)
+    expect(rule).toMatch(/line-height: 36px/)
+  })
+
+  test('simple status bar says which services it counts and counts the same set', () => {
+    const bar = read('components', 'layout', 'AppStatusBar.vue')
+    // "Everything is running" covers installed services only; the rest falls back to the advanced wording.
+    expect(bar).toMatch(/s\.installed !== false/)
+    expect(bar).toMatch(/t\('footer\.servicesRunning', \{ running: runningCount\.value, total: totalCount\.value \}/)
+    for (const [locale, text] of [['cs', 'Všechny nainstalované služby běží'], ['en', 'All installed services are running']]) {
+      const data = JSON.parse(read('locales', `${locale}.json`)) as { footer: { simpleAllRunning: string } }
+      expect(data.footer.simpleAllRunning, locale).toBe(text)
+    }
+  })
+
+  test('mode names are lower case inside a sentence', () => {
+    const cs = JSON.parse(read('locales', 'cs.json')) as { app: { advancedPageNote: string } }
+    expect(cs.app.advancedPageNote).toBe('Tato stránka patří do pokročilého režimu, proto ji menu v jednoduchém režimu neukazuje.')
   })
 
   test('new shell copy exists in cs and en', () => {

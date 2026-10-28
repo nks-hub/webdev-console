@@ -1153,9 +1153,10 @@ public static class McpEndpoints
             string? dangerLevel,
             string? toolName,
             string? sessionId,
+            string? q,
             CancellationToken ct) =>
         {
-            var entries = await repo.ListAsync(10_000, 0, dangerLevel, toolName, sessionId, ct);
+            var entries = repo.ListAllAsync(dangerLevel, toolName, sessionId, q, ct);
             httpCtx.Response.ContentType = "text/csv; charset=utf-8";
             httpCtx.Response.Headers.Append("Content-Disposition",
                 $"attachment; filename=\"mcp-audit-{DateTime.UtcNow:yyyy-MM-dd}.csv\"");
@@ -1168,7 +1169,7 @@ public static class McpEndpoints
             }
             await using var writer = new StreamWriter(httpCtx.Response.Body);
             await writer.WriteLineAsync("called_at,session_id,caller,tool_name,danger_level,duration_ms,result_code,error_message,intent_id,args_summary");
-            foreach (var e in entries)
+            await foreach (var e in entries)
             {
                 await writer.WriteLineAsync(string.Join(',',
                     Esc(e.CalledAt), Esc(e.SessionId), Esc(e.Caller),
