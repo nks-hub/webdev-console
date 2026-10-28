@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog, protocol, net, ipcMain, clipboard } from 'electron'
+import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog, protocol, net, ipcMain, clipboard, screen } from 'electron'
 import { dirname, join, resolve, sep } from 'path'
 import { pathToFileURL } from 'node:url'
 import { spawn, execFile, ChildProcess } from 'child_process'
@@ -28,6 +28,7 @@ import {
   showOsNotification,
   updateNotificationPrefs,
 } from './notifications'
+import { defaultWindowState, MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, type WindowState } from './windowBounds'
 import { runMcpSelftest } from './mcpSelftest'
 import type { OsNotifyPayload } from '../src/services/osNotificationShared'
 
@@ -782,14 +783,12 @@ async function waitForPortFile(maxWaitMs = 15000): Promise<{ port: number; token
 // Stored as a tiny JSON blob in app.getPath('userData')/window-state.json so
 // it travels with the user profile (or with the portable.txt override).
 // Defaults are used when the file is missing, corrupted, or off-screen.
-interface WindowState { width: number; height: number; x?: number; y?: number; maximized?: boolean }
-
 function windowStateFile(): string {
   return join(app.getPath('userData'), 'window-state.json')
 }
 
 function loadWindowState(): WindowState {
-  const defaults: WindowState = { width: 960, height: 640 }
+  const defaults = defaultWindowState(screen.getPrimaryDisplay().workArea)
   try {
     const raw = readFileSync(windowStateFile(), 'utf-8')
     const parsed = JSON.parse(raw) as Partial<WindowState>
@@ -853,6 +852,8 @@ async function createWindow() {
     height: saved.height,
     x: saved.x,
     y: saved.y,
+    minWidth: MIN_WINDOW_WIDTH,
+    minHeight: MIN_WINDOW_HEIGHT,
     backgroundColor: '#141620',
     show: false,
     webPreferences: {
