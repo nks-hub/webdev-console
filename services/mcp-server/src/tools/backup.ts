@@ -18,8 +18,9 @@ export function registerBackupTools(server: McpServer, opts: RegisterOptions): v
       title: 'List backups',
       description:
         'List all existing backup zip files under ~/.wdc/backups/, newest first.\n\n' +
-        'Returns: { count, backups: [{ path, size (bytes), createdUtc, contentFlags }] }. contentFlags ' +
-        'names what the archive holds (Vhosts, PluginConfigs, Ssl, Databases, Docroots).',
+        'Returns: { count, backups: [{ path, size (bytes), createdUtc, contentFlags, databases, ' +
+        'sites: [{ domain, folder }] }] }. contentFlags names what the archive holds (Vhosts, ' +
+        'PluginConfigs, Ssl, Databases, Docroots); databases and sites list the dumps and site folders in it.',
       inputSchema: {},
       annotations: {
         readOnlyHint: true,
@@ -94,14 +95,16 @@ export function registerBackupTools(server: McpServer, opts: RegisterOptions): v
       title: 'Restore backup (destructive)',
       description:
         'DESTRUCTIVE: Restore a backup zip file over the current state (site configs, certificates, ' +
-        'plugin configs, state.db). Database dumps and site files in the archive are not restored. ' +
+        'plugin configs, state.db). Database dumps and site files are not restored through MCP: the ' +
+        'user restores them in the WDC app (Backups). ' +
         'The daemon creates a safety pre-restore backup automatically.\n\n' +
         `${BACKUP_RESTORE} Each restore needs the user's approval: ` +
         'wdc_request_confirmation(operation: "backup_restore").\n\n' +
         'Args:\n  path: Absolute path to a backup zip under the backup root.\n  confirm: Must be "YES".\n' +
         '  intentToken: Approved intent.\n\n' +
         'You MUST show the user the backup path + timestamp before passing confirm="YES".\n\n' +
-        'Returns: { restored, safetyBackup, archive }.',
+        'Returns: { restored (config files), safetyBackup, archive, items, skipped }; items and skipped ' +
+        'stay empty because only the configuration is restored.',
       inputSchema: {
         path: BackupPathSchema,
         confirm: ConfirmYesSchema,
@@ -148,14 +151,16 @@ export function registerBackupTools(server: McpServer, opts: RegisterOptions): v
       title: 'Restore backup by name (destructive)',
       description:
         'DESTRUCTIVE: Restore a backup from the backup directory, by file name, over the current state ' +
-        '(site configs, certificates, plugin configs, state.db). Database dumps and site files in the ' +
-        'archive are not restored. The daemon makes a safety backup first.\n\n' +
+        '(site configs, certificates, plugin configs, state.db). Database dumps and site files are not ' +
+        'restored through MCP: the user restores them in the WDC app (Backups). The daemon makes a ' +
+        'safety backup first.\n\n' +
         `${BACKUP_RESTORE} Each restore needs the user's approval: ` +
         'wdc_request_confirmation(operation: "backup_restore").\n\n' +
         'Args:\n  id: File name of the backup (or its path from wdc_list_backups).\n  confirm: Must be "YES".\n' +
         '  intentToken: Approved intent.\n\n' +
         'You MUST show the user the backup name and date before passing confirm="YES".\n\n' +
-        'Returns: { restored, safetyBackup, archive }.',
+        'Returns: { restored (config files), safetyBackup, archive, items, skipped }; items and skipped ' +
+        'stay empty because only the configuration is restored.',
       inputSchema: {
         id: BackupPathSchema.describe('Backup file name like wdc-backup-2026-01-01-10-00-00.zip, or its path'),
         confirm: ConfirmYesSchema,

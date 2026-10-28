@@ -317,7 +317,7 @@ describe('intents for the new gated tools', () => {
   })
 })
 
-describe('Returns line matches the daemon response', () => {
+describe('backup tools match the daemon', () => {
   it('wdc_create_backup names every field POST /api/backup returns', () => {
     const src = readFileSync(join(here, '..', '..', '..', '..', 'src', 'daemon', 'NKS.WebDevConsole.Daemon', 'Backup', 'BackupEndpoints.cs'), 'utf8')
     const ok = /MapPost\("\/api\/backup"[\s\S]*?return Results\.Ok\(new \{ ([^}]*) \}\);/.exec(src)![1]!
@@ -326,6 +326,29 @@ describe('Returns line matches the daemon response', () => {
     const description = allTools().tools.get('wdc_create_backup')!.config.description!
     const returns = description.slice(description.indexOf('Returns:'))
     for (const f of fields) expect(returns).toMatch(new RegExp(`\\b${f}\\b`))
+  })
+
+  it('both restore tools name every field the restore routes return', () => {
+    const src = readFileSync(join(here, '..', '..', '..', '..', 'src', 'daemon', 'NKS.WebDevConsole.Daemon', 'Backup', 'BackupEndpoints.cs'), 'utf8')
+    const body = /object RestoreResponse\([\s\S]*?=> new\s*\{([\s\S]*?)\};/.exec(src)![1]!
+    const fields = body.split('\n').map(l => l.trim().split(/[\s=,]/)[0]).filter(Boolean)
+    expect(fields).toEqual(['restored', 'safetyBackup', 'archive', 'items', 'skipped'])
+    for (const tool of ['wdc_restore_backup', 'wdc_restore_backup_by_id']) {
+      const description = allTools().tools.get(tool)!.config.description!
+      const returns = description.slice(description.indexOf('Returns:'))
+      for (const f of fields) expect(returns, tool).toMatch(new RegExp(`\\b${f}\\b`))
+    }
+  })
+
+  // The backup_restore intent does not name the opt-in data restore, so an AI
+  // must not overwrite live databases or site files with it.
+  it.each([
+    ['wdc_restore_backup', { path: 'C:\\b\\wdc-backup-1.zip', confirm: 'YES', intentToken: TOKEN }],
+    ['wdc_restore_backup_by_id', { id: 'wdc-backup-1.zip', confirm: 'YES', intentToken: TOKEN }],
+  ])('%s restores only the configuration', async (tool, args) => {
+    recorder.reset(respond)
+    await allTools().call(tool, args)
+    expect(JSON.stringify(recorder.calls[0]!.body ?? {})).not.toMatch(/databases|siteFiles/i)
   })
 })
 
