@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using NKS.WebDevConsole.Daemon.Data;
 using NKS.WebDevConsole.Daemon.Mcp;
 
 namespace NKS.WebDevConsole.Daemon.Config;
@@ -76,6 +77,8 @@ internal static class DaemonAuth
                 }
 
                 McpCallerContext.IsMcpToken = isMcp;
+                ActivityContext.ViaCli = string.Equals(
+                    ctx.Request.Headers[ActivityContext.ClientHeader].FirstOrDefault(), "cli", StringComparison.OrdinalIgnoreCase);
                 if (isMcp)
                 {
                     var denied = await McpTokenPolicy.EvaluateAsync(ctx);

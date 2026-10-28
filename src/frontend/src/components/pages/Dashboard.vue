@@ -109,7 +109,8 @@
             <span class="activity-op">{{ activityLabel('op', row.operation) }}</span>
             <span class="activity-entity">{{ activityLabel('entity', row.entityType) }}</span>
             <span class="activity-name mono" v-if="row.entityName">{{ row.entityName }}</span>
-            <span class="activity-source" v-if="row.source && !SILENT_SOURCES.has(row.source)">{{ $t('dashboard.activity.via', { source: activityLabel('source', row.source) }) }}</span>
+            <span class="activity-fields" v-if="changedFieldLabels(row)">{{ changedFieldLabels(row) }}</span>
+            <span class="activity-source" v-if="activityLabel('source', row.source ?? '')">{{ $t('dashboard.activity.via', { source: activityLabel('source', row.source ?? '') }) }}</span>
             <time class="activity-time mono" :datetime="row.createdAt">{{ formatWhen(row.createdAt) }}</time>
           </li>
         </ol>
@@ -253,16 +254,25 @@ interface ActivityRow {
 }
 const activity = ref<ActivityRow[]>([])
 
-// Operation, entity and source codes come straight from the daemon; show a
-// translated word when we know the code, the raw code otherwise.
-function activityLabel(kind: 'op' | 'entity' | 'source', code: string): string {
-  const key = `dashboard.activity.${kind}.${(code || '').toLowerCase()}`
-  return te(key) ? t(key) : code
+// Operation, entity, source and field codes come straight from the daemon. Show the
+// translated word, or nothing: a raw code ("trigger", "php_version") is an internal
+// name. "app" (the default) and "trigger" (the database's own audit trigger) have no
+// label on purpose, since neither says who made the change.
+function activityLabel(kind: 'op' | 'entity' | 'source' | 'field', code: string): string {
+  // Field names are camelCase keys ("phpVersion"); the other codes are upper or lower case words.
+  const key = `dashboard.activity.${kind}.${kind === 'field' ? code : (code || '').toLowerCase()}`
+  return te(key) ? t(key) : ''
 }
 
-// "app" is the default and "trigger" is the database's own audit trigger (every row of the
-// settings table); neither tells the reader who made the change.
-const SILENT_SOURCES = new Set(['app', 'trigger'])
+// An update lists what it changed ("PHP, HTTPS") when the daemon recorded the field names.
+function changedFieldLabels(row: ActivityRow): string {
+  if (!row.changedFields) return ''
+  let fields: unknown
+  try { fields = JSON.parse(row.changedFields) } catch { return '' }
+  if (!Array.isArray(fields)) return ''
+  const labels = fields.flatMap(f => (typeof f === 'string' && activityLabel('field', f)) || [])
+  return [...new Set(labels)].join(', ')
+}
 
 const activityLoading = ref(false)
 async function loadActivity() {
@@ -287,6 +297,7 @@ function activityColor(operation: string): 'primary' | 'success' | 'warning' | '
   if (op.includes('create') || op.includes('insert')) return 'success'
   if (op.includes('delete') || op.includes('remove')) return 'danger'
   if (op.includes('update') || op.includes('edit') || op.includes('apply')) return 'primary'
+  if (op.includes('restore')) return 'warning'
   return 'info'
 }
 
@@ -496,7 +507,7 @@ function openConfig(id: string) {
 .tone-primary { background: var(--wdc-accent); }
 .tone-warning { background: var(--wdc-status-starting); }
 .activity-op { color: var(--wdc-text); font-weight: 500; }
-.activity-entity, .activity-source { color: var(--wdc-text-2); }
+.activity-entity, .activity-source, .activity-fields { color: var(--wdc-text-2); }
 .activity-name { color: var(--wdc-text); }
 .activity-time { margin-left: auto; color: var(--wdc-text-3); font-size: 0.78rem; }
 :global(.full-dialog) {

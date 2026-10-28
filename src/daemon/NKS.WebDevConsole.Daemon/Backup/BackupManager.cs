@@ -5,6 +5,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using NKS.WebDevConsole.Core.Interfaces;
 using NKS.WebDevConsole.Core.Services;
+using NKS.WebDevConsole.Daemon.Data;
 
 namespace NKS.WebDevConsole.Daemon.Backup;
 
@@ -34,9 +35,11 @@ public sealed class BackupManager
     private readonly string _backupRoot;
     private readonly ISiteRegistry? _sites;
     private readonly IMysqlBackupClient? _mysql;
+    private readonly ConfigHistoryRepository? _history;
 
-    public BackupManager(ILogger<BackupManager> logger, ISiteRegistry sites, IMysqlBackupClient mysql)
-        : this(logger, WdcPaths.Root, sites, mysql)
+    public BackupManager(ILogger<BackupManager> logger, ISiteRegistry sites, IMysqlBackupClient mysql,
+        ConfigHistoryRepository? history = null)
+        : this(logger, WdcPaths.Root, sites, mysql, history)
     {
     }
 
@@ -46,13 +49,14 @@ public sealed class BackupManager
     /// or dumper the Docroots and Databases categories are reported as skipped.
     /// </summary>
     public BackupManager(ILogger<BackupManager> logger, string wdcRoot,
-        ISiteRegistry? sites = null, IMysqlBackupClient? mysql = null)
+        ISiteRegistry? sites = null, IMysqlBackupClient? mysql = null, ConfigHistoryRepository? history = null)
     {
         _logger = logger;
         _wdcRoot = wdcRoot;
         _backupRoot = Path.Combine(_wdcRoot, "backups");
         _sites = sites;
         _mysql = mysql;
+        _history = history;
         Directory.CreateDirectory(_backupRoot);
     }
 
@@ -160,12 +164,15 @@ public sealed class BackupManager
     /// Returns the absolute path, file count, archive size, the categories the
     /// archive really holds, and what was left out (MySQL not running, a site
     /// folder missing). The manifest records the same categories as the result.
+    /// The backup is listed in the activity feed unless <paramref name="recordActivity"/>
+    /// is false (the safety copy a restore makes first is not news).
     /// </summary>
     /// <exception cref="ArgumentException">The path is outside the backup folder or not a .zip file.</exception>
     /// <exception cref="BackupTargetExistsException">A file already exists at the path.</exception>
     public (string Path, int FileCount, long SizeBytes, BackupContentFlags Flags, IReadOnlyList<BackupSkip> Skipped) CreateBackup(
         string? outputPath = null,
-        BackupContentFlags flags = BackupContentFlags.Default)
+        BackupContentFlags flags = BackupContentFlags.Default,
+        bool recordActivity = true)
     {
         var target = ResolveOutputPath(outputPath);
         var targetDir = Path.GetDirectoryName(target)!;
@@ -264,6 +271,7 @@ public sealed class BackupManager
         foreach (var skip in skipped)
             _logger.LogWarning("Backup {Path} left out {Content}: {Detail}", target, skip.Content, skip.Detail);
         _logger.LogInformation("Backup complete: {Path} ({Files} files, {Size} bytes, flags={Flags})", target, count, size, flags);
+        if (recordActivity) _history?.Record("backup", Path.GetFileName(target), "INSERT");
         return (target, count, size, flags, skipped);
     }
 
@@ -567,7 +575,7 @@ public sealed class BackupManager
             var safetyFlags = BackupContentFlags.Default
                 | (restoreDatabases ? BackupContentFlags.Databases : BackupContentFlags.None)
                 | (restoreSiteFiles ? BackupContentFlags.Docroots : BackupContentFlags.None);
-            CreateBackup(safetyBackup, safetyFlags);
+            CreateBackup(safetyBackup, safetyFlags, recordActivity: false);
         }
         catch (Exception ex)
         {
@@ -666,6 +674,8 @@ public sealed class BackupManager
             foreach (var skip in skipped)
                 _logger.LogWarning("Restore of {Archive} left out {Content}: {Detail}", archivePath, skip.Content, skip.Detail);
             _logger.LogInformation("Restored {Count} files from {Archive}", promoted, archivePath);
+            // After the state.db swap above, so the row lands in the restored database.
+            _history?.Record("backup", Path.GetFileName(archivePath), "RESTORE");
             return (promoted, safetyBackup, items, skipped);
         }
         finally

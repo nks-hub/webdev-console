@@ -805,6 +805,7 @@
         "cert": "Certifikát",
         "certificate": "Certifikát",
         "backup": "Záloha",
+        "php_version": "Verze PHP",
         "vhost": "Virtuální host",
         "config": "Konfigurace",
         "hosts": "Soubor hosts"
@@ -815,6 +816,25 @@
         "api": "API",
         "migration": "migraci",
         "import": "import"
+      },
+      "field": {
+        "phpVersion": "PHP",
+        "documentRoot": "složka",
+        "sslEnabled": "HTTPS",
+        "enabled": "zapnutí",
+        "aliases": "aliasy",
+        "httpPort": "port HTTP",
+        "httpsPort": "port HTTPS",
+        "framework": "framework",
+        "environment": "proměnné prostředí",
+        "cloudflare": "tunel Cloudflare",
+        "phpSettings": "nastavení PHP",
+        "apacheSettings": "nastavení Apache",
+        "bindAddress": "síť",
+        "bindAddresses": "síť",
+        "localhostLoopbackEnabled": "localhost",
+        "nodeUpstreamPort": "Node.js",
+        "nodeStartCommand": "Node.js"
       }
     }
   },
