@@ -285,7 +285,7 @@ function navigate(path: string, query?: Record<string, string>) {
   display: flex;
   flex-direction: column;
   gap: var(--wdc-space-0-5);
-  padding: var(--wdc-space-3) var(--wdc-space-3) var(--wdc-space-4);
+  padding: var(--wdc-space-3) var(--wdc-space-3) var(--wdc-space-2);
   background: var(--wdc-chrome);
   border-right: 1px solid var(--wdc-border);
   overflow-y: auto;
@@ -414,10 +414,23 @@ function navigate(path: string, query?: Record<string, string>) {
 }
 .nav-problems-text { font-family: var(--wdc-font-display); }
 
+/* Pinned to the bottom edge when the menu is taller than the window. Electron opens at
+   960x640, where Settings and Help used to sit below the fold of the scrolling menu. */
 .nav-foot {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
   margin-top: auto;
-  padding-top: var(--wdc-space-3);
+  padding: var(--wdc-space-3) 0 var(--wdc-space-2);
+  background: var(--wdc-chrome);
   border-top: 1px solid var(--wdc-border);
+}
+
+/* Short windows: tighter rows so less of the menu has to scroll. */
+@media (max-height: 760px) {
+  .brand { margin-bottom: var(--wdc-space-1); }
+  .nav-group { margin-top: var(--wdc-space-2); }
+  .nav-item { min-height: 28px; }
 }
 
 .nav-label-sso {

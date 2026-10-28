@@ -3758,7 +3758,9 @@
       "serviceSubject": "Služba {name}",
       "apacheMissing": "Webový server Apache není nainstalovaný, weby se nenačtou.",
       "phpMissing": "PHP není nainstalované, weby v PHP nepoběží.",
-      "install": "Instalovat {name}"
+      "install": "Instalovat {name}",
+      "daemonOffline": "neodpovídá. Aplikace se připojí znovu sama, jakmile odpoví.",
+      "retryConnection": "Připojit hned"
     },
     "stack": {
       "title": "Služby",

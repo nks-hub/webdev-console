@@ -19,9 +19,11 @@
 
       <span class="status-sep" />
 
-      <router-link class="status-item status-link" to="/services">
+      <router-link v-if="daemonStore.connected" class="status-item status-link" to="/services">
         {{ t('footer.servicesRunning', { running: runningCount, total: totalCount }, totalCount) }}
       </router-link>
+      <!-- The services list is emptied while the daemon is away: "0 of 0 running" would be wrong. -->
+      <span v-else class="status-item status-alert" role="status">{{ t('footer.simpleOffline') }}</span>
 
       <router-link v-if="crashedCount > 0" class="status-item status-link status-alert" :to="problemsLink">
         {{ t('footer.problems', { n: crashedCount }, crashedCount) }}
