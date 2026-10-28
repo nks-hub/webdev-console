@@ -1096,6 +1096,7 @@
       "moreHeader": "More actions",
       "loadFailedTitle": "Could not load the sites",
       "loadFailedText": "The WDC service is not responding. Check that the app is running and try again.",
+      "loadFailedStatus": "The WDC service refused the request (HTTP {status}). Try again.",
       "aliasesLabel": "{n} alias: {list} | {n} aliases: {list}",
       "openUrlAria": "Open {url} in the browser",
       "openAria": "Open {domain} in the browser",

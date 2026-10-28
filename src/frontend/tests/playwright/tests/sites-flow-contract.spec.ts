@@ -16,6 +16,17 @@ test.describe('Sites flow contract', () => {
     expect(source).toMatch(/if \(activatedOnce\) void reload\(\)/)
   })
 
+  test('a failed list load drops the "no sites yet" summary and tells a refusal from an unreachable daemon', () => {
+    const source = read('components', 'pages', 'Sites.vue')
+    expect(source).toMatch(/const sitesSummary = computed\(\(\) => \{\s+if \(loadError\.value\) return ''/)
+    expect(source).toContain('loadErrorStatus.value = e instanceof DaemonError ? e.status : 0')
+    expect(source).toContain("$t('sites.list.loadFailedStatus', { status: loadErrorStatus })")
+    for (const locale of ['cs', 'en']) {
+      const sites = (JSON.parse(read('locales', `${locale}.json`)) as { sites: { list: Record<string, string> } }).sites.list
+      expect(sites.loadFailedStatus, locale).toContain('{status}')
+    }
+  })
+
   test('New site dialog does not default to HTTPS while the certificate authority is missing', () => {
     const source = read('components', 'sites', 'CreateSiteDialog.vue')
     expect(source).toMatch(/form\.sslEnabled = !needsSetup/)

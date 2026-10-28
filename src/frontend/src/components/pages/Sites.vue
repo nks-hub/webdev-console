@@ -3,7 +3,7 @@
     <header class="page-head">
       <div>
         <h1 class="page-title">{{ $t('sites.title') }}</h1>
-        <p class="page-sub">{{ sitesSummary }}</p>
+        <p v-if="sitesSummary" class="page-sub">{{ sitesSummary }}</p>
       </div>
       <div class="header-actions">
         <el-dropdown trigger="click" @command="onHeaderCommand">
@@ -25,7 +25,9 @@
 
     <div v-if="loadError" class="state-panel" role="alert">
       <p class="state-title">{{ $t('sites.list.loadFailedTitle') }}</p>
-      <p class="state-text">{{ $t('sites.list.loadFailedText') }}</p>
+      <p class="state-text">
+        {{ loadErrorStatus ? $t('sites.list.loadFailedStatus', { status: loadErrorStatus }) : $t('sites.list.loadFailedText') }}
+      </p>
       <el-button @click="reload">{{ $t('common.retry') }}</el-button>
     </div>
 
@@ -111,7 +113,7 @@ import { usePluginsStore } from '../../stores/plugins'
 import { useSiteApplyStore } from '../../stores/siteApply'
 import { useSiteStateStore } from '../../stores/siteState'
 import type { SiteInfo } from '../../api/types'
-import { daemonBaseUrl, fetchDockerComposeStatus, setSiteEnabled, type DockerComposeStatus } from '../../api/daemon'
+import { DaemonError, daemonBaseUrl, fetchDockerComposeStatus, setSiteEnabled, type DockerComposeStatus } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import { openHostsFile } from '../../utils/hostsFile'
 import { revealFolder } from '../../utils/siteUrl'
@@ -132,6 +134,8 @@ const search = ref('')
 const searchInput = ref<{ focus?: () => void; blur?: () => void } | null>(null)
 const selected = ref<string[]>([])
 const loadError = ref(false)
+// HTTP status when the daemon answered with an error; 0 when it could not be reached.
+const loadErrorStatus = ref(0)
 const reapplying = ref(false)
 const bulkBusy = ref(false)
 
@@ -188,6 +192,7 @@ const showToolbar = computed(() =>
   sitesStore.sites.length >= SEARCH_FROM || !!search.value || stateFilter.value !== 'all')
 
 const sitesSummary = computed(() => {
+  if (loadError.value) return ''
   const total = sitesStore.sites.length
   if (total === 0) return t('sites.list.summaryEmpty')
   const parts = [t('sites.list.summaryTotal', { n: total }, total)]
@@ -253,7 +258,8 @@ async function reload() {
   loadError.value = false
   try {
     await sitesStore.load()
-  } catch {
+  } catch (e) {
+    loadErrorStatus.value = e instanceof DaemonError ? e.status : 0
     loadError.value = true
     return
   }

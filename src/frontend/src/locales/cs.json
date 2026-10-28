@@ -1096,6 +1096,7 @@
       "moreHeader": "Další akce",
       "loadFailedTitle": "Weby se nepodařilo načíst",
       "loadFailedText": "Služba WDC neodpovídá. Zkontrolujte, že aplikace běží, a zkuste to znovu.",
+      "loadFailedStatus": "Služba WDC požadavek odmítla (HTTP {status}). Zkuste to znovu.",
       "aliasesLabel": "{n} alias: {list} | {n} aliasy: {list} | {n} aliasů: {list}",
       "openUrlAria": "Otevřít {url} v prohlížeči",
       "openAria": "Otevřít {domain} v prohlížeči",
