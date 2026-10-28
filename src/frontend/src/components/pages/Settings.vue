@@ -1201,14 +1201,20 @@ function openAdvancedTab(tab: string): void {
   activeTab.value = tab
 }
 
-// Scrolls a Simple-mode panel into view only when it is not already in the
-// upper part of the window. The first row (General, Update, the banner) always
-// is, and scrolling to it only pushed the page title out of sight.
+// Brings a Simple-mode panel into view. A panel near the top of the page
+// (General, Update, the banner) is shown by scrolling the page to its top, so
+// the title stays visible; aligning such a panel to the top edge, or leaving a
+// page scrolled down from an earlier link, hid the title. Lower panels are
+// scrolled to the top edge.
 function revealPanel(id: string): void {
   const el = document.getElementById(id)
   if (!el) return
-  const top = el.getBoundingClientRect().top
-  if (top < 0 || top > window.innerHeight * 0.6) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const scroller = document.getElementById('main')
+  const offset = scroller
+    ? el.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop
+    : el.getBoundingClientRect().top + window.scrollY
+  if (offset < window.innerHeight * 0.6) (scroller ?? window).scrollTo({ top: 0, behavior: 'smooth' })
+  else el.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 // Label of the Advanced-only section a link asked for, named in the banner.

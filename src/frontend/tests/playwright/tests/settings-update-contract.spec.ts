@@ -63,6 +63,8 @@ test.describe('Settings update contract', () => {
     const card = read('src', 'components', 'settings', 'easy', 'EasyUpdateSettings.vue')
     expect(card).toMatch(/compareSemver\(versionCore\(props\.latestVersion\), versionCore\(props\.currentVersion\)\) < 0/)
     expect(card).toMatch(/<el-tag v-else-if="newerBuild" type="info"[\s\S]*?settings\.update\.newerBuild/)
+    // The tag is words: it must not inherit the mono font of the version number.
+    expect(card).toMatch(/<span class="mono">v\{\{ latestVersion \}\}<\/span>\s*<el-tag v-if="hasUpdate"/)
     for (const lang of ['cs', 'en'])
       expect(JSON.parse(read('src', 'locales', `${lang}.json`)).settings.update.newerBuild).toBeTruthy()
   })
@@ -73,7 +75,10 @@ test.describe('Settings update contract', () => {
     const settings = read('src', 'components', 'pages', 'Settings.vue')
     expect(settings).toMatch(/\$t\('settings\.simple\.hiddenTab', \{ name: hiddenTabLabel \}\)/)
     expect(settings).toMatch(/if \(panel\) setTimeout\(\(\) => revealPanel\(panel\), 100\)/)
-    expect(settings).toMatch(/if \(top < 0 \|\| top > window\.innerHeight \* 0\.6\) el\.scrollIntoView/)
+    // Measured from the page top, so a page left scrolled down by an earlier
+    // link still goes back up for a first-row panel (round 8: 093, 096).
+    expect(settings).toMatch(/el\.getBoundingClientRect\(\)\.top - scroller\.getBoundingClientRect\(\)\.top \+ scroller\.scrollTop/)
+    expect(settings).toMatch(/if \(offset < window\.innerHeight \* 0\.6\) \(scroller \?\? window\)\.scrollTo\(\{ top: 0, behavior: 'smooth' \}\)\s*else el\.scrollIntoView/)
     for (const lang of ['cs', 'en'])
       expect(JSON.parse(read('src', 'locales', `${lang}.json`)).settings.simple.hiddenTab).toContain('{name}')
   })
