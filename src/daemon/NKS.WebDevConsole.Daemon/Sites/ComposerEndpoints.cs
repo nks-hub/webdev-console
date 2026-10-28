@@ -58,6 +58,31 @@ internal static class ComposerEndpoints
         return (exitCode == 0, exitCode, stdout, stderr);
     }
 
+    /// <summary>
+    /// Whether the Composer plugin has an executable to run: its <c>ComposerConfig.ExecutablePath</c> is set once
+    /// composer.phar is installed. Null when the invoker does not expose it, so callers can still try.
+    /// </summary>
+    internal static bool? ComposerAvailable(object invoker)
+    {
+        try
+        {
+            var config = invoker.GetType()
+                .GetField("_config", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                ?.GetValue(invoker);
+            var path = config?.GetType().GetProperty("ExecutablePath");
+            return path is null ? null : !string.IsNullOrWhiteSpace(path.GetValue(config) as string);
+        }
+        catch { return null; }
+    }
+
+    /// <summary>
+    /// <c>composer outdated</c> compares the installed packages with their latest versions. Without a
+    /// composer.json there is nothing to compare, and without Composer nothing can run; both answer with an
+    /// empty list instead of a failure, because the site page asks for it on its own.
+    /// </summary>
+    internal static bool OutdatedHasNothingToCheck(string composerRoot, bool? composerAvailable) =>
+        !File.Exists(Path.Combine(composerRoot, "composer.json")) || composerAvailable == false;
+
     public static void MapComposerEndpoints(this WebApplication app, PluginLoader pluginLoader)
     {
         // ── Composer endpoints ────────────────────────────────────────────────────────
@@ -346,6 +371,9 @@ internal static class ComposerEndpoints
             if (invoker is null) return Results.Problem(title: "Composer plugin not loaded", statusCode: 503);
             var composerRoot = ResolveComposerRoot(site.DocumentRoot);
             var logger = lf.CreateLogger("Composer");
+            var available = ComposerAvailable(invoker);
+            if (OutdatedHasNothingToCheck(composerRoot, available))
+                return Results.Ok(new { installed = Array.Empty<object>(), composerAvailable = available != false });
             try
             {
                 var phpOverride = ResolveSitePhpBinary(site);
@@ -372,9 +400,9 @@ internal static class ComposerEndpoints
                     }
                     catch (Exception ex) { logger.LogWarning(ex, "composer outdated parse failed"); }
                 }
-                return Results.Ok(new { installed });
+                return Results.Ok(new { installed, composerAvailable = true });
             }
-            catch (Exception ex) { return Results.Problem(title: "composer outdated failed", detail: ex.Message, statusCode: 500); }
+            catch (Exception ex) { return Results.Problem(title: "composer outdated failed", detail: ex.InnerException?.Message ?? ex.Message, statusCode: 500); }
         });
 
         app.MapGet("/api/composer/version", async (IServiceProvider sp, PluginLoader pluginLoader, CancellationToken ct) =>

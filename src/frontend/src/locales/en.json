@@ -945,6 +945,7 @@
     "composer": {
       "tabLabel": "Composer",
       "noProject": "No Composer project detected",
+      "openComposerPage": "Open the Composer page",
       "init": "Initialize Composer",
       "initHint": "Run composer init in your site root to get started",
       "install": "Run composer install",

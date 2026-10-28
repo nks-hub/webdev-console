@@ -1400,7 +1400,7 @@ export interface ComposerOutdatedEntry {
   latestStatus: string | null
 }
 
-export const composerOutdated = (domain: string): Promise<{ installed: ComposerOutdatedEntry[] }> =>
+export const composerOutdated = (domain: string): Promise<{ installed: ComposerOutdatedEntry[]; composerAvailable?: boolean }> =>
   json(`/api/sites/${encodeURIComponent(domain)}/composer/outdated`)
 
 export const composerInit = (domain: string, body: Record<string, string>): Promise<{ exitCode: number; stdout: string; stderr: string; composerRoot: string }> =>
