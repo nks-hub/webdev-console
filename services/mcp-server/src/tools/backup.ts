@@ -17,8 +17,9 @@ export function registerBackupTools(server: McpServer, opts: RegisterOptions): v
     {
       title: 'List backups',
       description:
-        'List all existing backup zip files under ~/.wdc/backups/ with size and creation ' +
-        'timestamp, newest-first.',
+        'List all existing backup zip files under ~/.wdc/backups/, newest first.\n\n' +
+        'Returns: { count, backups: [{ path, size (bytes), createdUtc, contentFlags }] }. contentFlags ' +
+        'names what the archive holds (Vhosts, PluginConfigs, Ssl, Databases, Docroots).',
       inputSchema: {},
       annotations: {
         readOnlyHint: true,
@@ -49,9 +50,13 @@ export function registerBackupTools(server: McpServer, opts: RegisterOptions): v
     {
       title: 'Create backup',
       description:
-        'Create a zip backup of the user WDC state (sites, ssl certs, caddy config, state.db). ' +
-        'Excludes binaries (re-downloadable) and mysql data files (huge).\n\n' +
-        'Returns: { path, fileCount, sizeBytes }.',
+        'Create a zip backup in ~/.wdc/backups/ with the content chosen in WDC Settings → Backups: ' +
+        'site configs, plugin configs and site certificates by default; a mysqldump of every user ' +
+        'database and the site folders when the user turned those on. state.db is always included, ' +
+        'binaries never.\n\n' +
+        'Returns: { path, files, size (bytes), contentFlags, skipped: [{ content, detail }] }. ' +
+        'contentFlags names what the archive really holds. skipped lists what was asked for but left ' +
+        'out (for example MySQL not running, a site folder missing); tell the user about it.',
       inputSchema: {},
       annotations: {
         readOnlyHint: false,
@@ -88,13 +93,15 @@ export function registerBackupTools(server: McpServer, opts: RegisterOptions): v
     {
       title: 'Restore backup (destructive)',
       description:
-        'DESTRUCTIVE: Restore a backup zip file, overwriting current state. The daemon ' +
-        'creates a safety pre-restore backup automatically.\n\n' +
+        'DESTRUCTIVE: Restore a backup zip file over the current state (site configs, certificates, ' +
+        'plugin configs, state.db). Database dumps and site files in the archive are not restored. ' +
+        'The daemon creates a safety pre-restore backup automatically.\n\n' +
         `${BACKUP_RESTORE} Each restore needs the user's approval: ` +
         'wdc_request_confirmation(operation: "backup_restore").\n\n' +
         'Args:\n  path: Absolute path to a backup zip under the backup root.\n  confirm: Must be "YES".\n' +
         '  intentToken: Approved intent.\n\n' +
-        'You MUST show the user the backup path + timestamp before passing confirm="YES".',
+        'You MUST show the user the backup path + timestamp before passing confirm="YES".\n\n' +
+        'Returns: { restored, safetyBackup, archive }.',
       inputSchema: {
         path: BackupPathSchema,
         confirm: ConfirmYesSchema,
@@ -141,7 +148,8 @@ export function registerBackupTools(server: McpServer, opts: RegisterOptions): v
       title: 'Restore backup by name (destructive)',
       description:
         'DESTRUCTIVE: Restore a backup from the backup directory, by file name, over the current state ' +
-        '(sites, certificates, state.db). The daemon makes a safety backup first.\n\n' +
+        '(site configs, certificates, plugin configs, state.db). Database dumps and site files in the ' +
+        'archive are not restored. The daemon makes a safety backup first.\n\n' +
         `${BACKUP_RESTORE} Each restore needs the user's approval: ` +
         'wdc_request_confirmation(operation: "backup_restore").\n\n' +
         'Args:\n  id: File name of the backup (or its path from wdc_list_backups).\n  confirm: Must be "YES".\n' +
