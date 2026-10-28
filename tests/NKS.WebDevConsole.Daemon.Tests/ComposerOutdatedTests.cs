@@ -1,3 +1,5 @@
+using System.Text.Json;
+using Microsoft.AspNetCore.Http;
 using NKS.WebDevConsole.Daemon.Sites;
 
 namespace NKS.WebDevConsole.Daemon.Tests;
@@ -60,5 +62,26 @@ public sealed class ComposerOutdatedTests : IDisposable
     public void ComposerAvailable_IsUnknownWhenTheInvokerHidesItsConfig()
     {
         Assert.Null(ComposerEndpoints.ComposerAvailable(new OldInvoker()));
+    }
+
+    // ── Actions without Composer ─────────────────────────────────────────────
+
+    [Fact]
+    public void ComposerNotInstalled_WithoutAnExecutable_Is409WithAMachineReadableError()
+    {
+        var result = ComposerEndpoints.ComposerNotInstalled(new FakeInvoker(null));
+
+        var status = Assert.IsAssignableFrom<IStatusCodeHttpResult>(result);
+        Assert.Equal(409, status.StatusCode);
+        var body = JsonSerializer.Serialize(Assert.IsAssignableFrom<IValueHttpResult>(result).Value);
+        Assert.Contains("\"error\":\"composer_not_installed\"", body);
+        Assert.Contains("\"code\":\"composer_not_installed\"", body);
+    }
+
+    [Fact]
+    public void ComposerNotInstalled_WithComposer_OrWhenUnknown_LetsTheActionRun()
+    {
+        Assert.Null(ComposerEndpoints.ComposerNotInstalled(new FakeInvoker(@"C:\wdc\composer.phar")));
+        Assert.Null(ComposerEndpoints.ComposerNotInstalled(new OldInvoker()));
     }
 }

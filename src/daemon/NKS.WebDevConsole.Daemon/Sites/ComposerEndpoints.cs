@@ -76,6 +76,16 @@ internal static class ComposerEndpoints
     }
 
     /// <summary>
+    /// <c>409 { error: "composer_not_installed" }</c> when the Composer plugin has no composer.phar. An action then
+    /// fails with a state the UI words itself, instead of the plugin's English "ExecutablePath is not set" as a 500.
+    /// Null when Composer can run, or when that cannot be told (the action is tried and a real failure stays a 500).
+    /// </summary>
+    internal static IResult? ComposerNotInstalled(object invoker) =>
+        ComposerAvailable(invoker) == false
+            ? Results.Json(new { error = "composer_not_installed", code = "composer_not_installed" }, statusCode: 409)
+            : null;
+
+    /// <summary>
     /// <c>composer outdated</c> compares the installed packages with their latest versions. Without a
     /// composer.json there is nothing to compare, and without Composer nothing can run; both answer with an
     /// empty list instead of a failure, because the site page asks for it on its own.
@@ -209,6 +219,7 @@ internal static class ComposerEndpoints
             if (invoker is null)
                 return Results.Problem(title: "Composer plugin not loaded",
                     detail: "Install the Composer plugin and restart the daemon.", statusCode: 503);
+            if (ComposerNotInstalled(invoker) is { } notInstalled) return notInstalled;
 
             var logger = lf.CreateLogger("Composer");
             var installRoot = ResolveComposerRoot(site.DocumentRoot);
@@ -237,6 +248,7 @@ internal static class ComposerEndpoints
             if (invoker is null)
                 return Results.Problem(title: "Composer plugin not loaded",
                     detail: "Install the Composer plugin and restart the daemon.", statusCode: 503);
+            if (ComposerNotInstalled(invoker) is { } notInstalled) return notInstalled;
 
             Dictionary<string, object?>? body;
             try { body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, object?>>(); }
@@ -279,6 +291,7 @@ internal static class ComposerEndpoints
             if (invoker is null)
                 return Results.Problem(title: "Composer plugin not loaded",
                     detail: "Install the Composer plugin and restart the daemon.", statusCode: 503);
+            if (ComposerNotInstalled(invoker) is { } notInstalled) return notInstalled;
 
             Dictionary<string, object?>? body;
             try { body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, object?>>(); }
@@ -319,6 +332,7 @@ internal static class ComposerEndpoints
             var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(cancellationToken: ct);
             var invoker = ResolveComposerInvoker(sp, pluginLoader);
             if (invoker is null) return Results.Problem(title: "Composer plugin not loaded", statusCode: 503);
+            if (ComposerNotInstalled(invoker) is { } notInstalled) return notInstalled;
             var composerRoot = ResolveComposerRoot(site.DocumentRoot);
             if (!File.Exists(Path.Combine(composerRoot, "composer.json")))
                 composerRoot = site.DocumentRoot;
@@ -343,6 +357,7 @@ internal static class ComposerEndpoints
             if (site is null) return Results.NotFound(new { error = $"Site '{domain}' not found" });
             var invoker = ResolveComposerInvoker(sp, pluginLoader);
             if (invoker is null) return Results.Problem(title: "Composer plugin not loaded", statusCode: 503);
+            if (ComposerNotInstalled(invoker) is { } notInstalled) return notInstalled;
             var composerRoot = ResolveComposerRoot(site.DocumentRoot);
             var logger = lf.CreateLogger("Composer");
             try

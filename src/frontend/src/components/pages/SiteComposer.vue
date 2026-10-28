@@ -1,5 +1,17 @@
 <template>
   <div class="site-composer">
+    <el-alert
+      v-if="composerMissing"
+      :title="$t('composer.notInstalledTitle')"
+      type="warning"
+      show-icon
+      :closable="false"
+      class="composer-alert"
+    >
+      <p class="banner-description">{{ $t('composer.notInstalledHint') }}</p>
+      <el-button size="small" type="primary" @click="router.push('/composer')">{{ $t('sites.composer.openComposerPage') }}</el-button>
+    </el-alert>
+
     <!-- F75: loading skeleton now announces the current operation so users
          during multi-second composer calls (install / outdated fetch) know
          what they're waiting on instead of a silent skeleton. -->
@@ -38,18 +50,6 @@
 
     <!-- Main composer panel -->
     <div v-else-if="status" class="composer-panel">
-      <el-alert
-        v-if="composerMissing"
-        :title="$t('composer.notInstalledTitle')"
-        type="warning"
-        show-icon
-        :closable="false"
-        class="composer-alert"
-      >
-        <p class="banner-description">{{ $t('composer.notInstalledHint') }}</p>
-        <el-button size="small" type="primary" @click="router.push('/composer')">{{ $t('sites.composer.openComposerPage') }}</el-button>
-      </el-alert>
-
       <!-- Framework auto-install suggestion banner -->
       <el-alert
         v-if="status.installSuggestion && !isBannerDismissed"
@@ -423,6 +423,7 @@ import { Check, Warning, Refresh, WarningFilled, Delete, Loading } from '@elemen
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import { composerErrorMessage, isComposerNotInstalled } from '../../utils/composerError'
 import { composerStatus, composerInstall, composerRequire, composerRemove, composerOutdated, composerInit, composerDiagnose } from '../../api/daemon'
 import type { ComposerStatus, ComposerCommandResult } from '../../api/types'
 
@@ -456,8 +457,14 @@ const diagnoseResult = ref<{ warnings: string[]; errors: string[] } | null>(null
 const DISMISS_KEY = computed(() => `wdc-composer-dismiss-${props.domain}`)
 const isBannerDismissed = ref(false)
 
-// The daemon answers "outdated" without running anything when composer.phar is not installed.
+// The daemon answers "outdated" without running anything when composer.phar is not installed, and
+// refuses every action with 409 composer_not_installed.
 const composerMissing = ref(false)
+
+function reportError(err: unknown): void {
+  if (isComposerNotInstalled(err)) composerMissing.value = true
+  ElMessage.error(composerErrorMessage(err, t))
+}
 
 // Outdated map keyed by package name
 const outdatedMap = ref<Record<string, { version?: string; latest: string; status: string }>>({})
@@ -649,7 +656,7 @@ async function runInstall(): Promise<void> {
       ElMessage.error(t('sites.composer.failed', { code: result.exitCode }))
     }
   } catch (err: unknown) {
-    ElMessage.error(err instanceof Error ? err.message : String(err))
+    reportError(err)
   } finally {
     running.value = false
     currentOperation.value = ''
@@ -680,7 +687,7 @@ async function runRequire(): Promise<void> {
       ElMessage.error(t('sites.composer.failed', { code: result.exitCode }))
     }
   } catch (err: unknown) {
-    ElMessage.error(err instanceof Error ? err.message : String(err))
+    reportError(err)
   } finally {
     running.value = false
   }
@@ -715,7 +722,7 @@ async function confirmRemove(pkg: string): Promise<void> {
       ElMessage.error(t('sites.composer.failed', { code: result.exitCode }))
     }
   } catch (err: unknown) {
-    ElMessage.error(err instanceof Error ? err.message : String(err))
+    reportError(err)
   } finally {
     removing.value = null
   }
@@ -745,7 +752,7 @@ async function runInit(): Promise<void> {
       ElMessage.error(t('sites.composer.failed', { code: result.exitCode }))
     }
   } catch (err: unknown) {
-    ElMessage.error(err instanceof Error ? err.message : String(err))
+    reportError(err)
   } finally {
     running.value = false
   }
@@ -757,7 +764,7 @@ async function runDiagnose(): Promise<void> {
     diagnoseResult.value = await composerDiagnose(props.domain)
     showDiagnoseDialog.value = true
   } catch (err: unknown) {
-    ElMessage.error(err instanceof Error ? err.message : String(err))
+    reportError(err)
   } finally {
     diagnosing.value = false
   }
