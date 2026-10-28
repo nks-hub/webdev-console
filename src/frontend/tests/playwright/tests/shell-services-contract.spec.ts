@@ -176,6 +176,20 @@ test.describe('Shell services contract', () => {
     }
   })
 
+  test('simple dashboard totals come from the access and error logs the Metrics tab reads', () => {
+    const source = read('components', 'pages', 'DashboardSimple.vue')
+    expect(source).toMatch(/fetchHourlyRequests\(domain\)/)
+    expect(source).toMatch(/fetchRecentErrors\(domain\)/)
+    // /metrics/history has no per-request fields (requestCount is cumulative) and returns samples oldest first.
+    expect(source).not.toMatch(/metrics\/history/)
+    expect(source).not.toMatch(/s\.requests \?\? s\.hits/)
+    // The component is a lazy chunk that mounts after the page's first activation, so mount must load too.
+    expect(source).toMatch(/onMounted\(\(\) => \{ void loadAggregates\(\) \}\)/)
+    const helper = read('utils', 'siteActivity.ts')
+    expect(helper).toMatch(/granularity: '1h'/)
+    expect(helper).toMatch(/ERROR_SEVERITIES/)
+  })
+
   test('mode names are lower case inside a sentence', () => {
     const cs = JSON.parse(read('locales', 'cs.json')) as { app: { advancedPageNote: string } }
     expect(cs.app.advancedPageNote).toBe('Tato stránka patří do pokročilého režimu, proto ji menu v jednoduchém režimu neukazuje.')

@@ -88,14 +88,14 @@
 // matching the original Dashboard.vue behaviour. Recent sites + tile
 // figures are derived live from the shared sitesStore / daemonStore.
 
-import { computed, onActivated, ref, watch } from 'vue'
+import { computed, onActivated, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ArrowRight, Plus } from '@element-plus/icons-vue'
 import HealthStatusDot from '../shared/HealthStatusDot.vue'
 import { useSitesStore } from '../../stores/sites'
 import { useDaemonStore } from '../../stores/daemon'
-import { daemonBaseUrl } from '../../api/daemon'
+import { fetchHourlyRequests, fetchRecentErrors } from '../../utils/siteActivity'
 import { isRunning } from '../../utils/serviceState'
 import { openMailpit } from '../../utils/mailpit'
 
@@ -120,42 +120,13 @@ const recentSimpleSites = computed(() => sitesStore.sites.slice(0, 5))
 async function loadAggregates() {
   aggregatesLoading.value = true
   const domains = sitesStore.sites.map(s => s.domain)
+  // Same access and error logs as the site's Metrics tab, so the totals agree with it.
   const results = await Promise.allSettled(domains.map(async (domain: string) => {
-    try {
-      const [metricsR, errorsR] = await Promise.allSettled([
-        fetch(
-          `${daemonBaseUrl()}/api/sites/${encodeURIComponent(domain)}/metrics/history?minutes=1440&limit=24`,
-          { headers: sitesStore.authHeaders() },
-        ),
-        fetch(
-          `${daemonBaseUrl()}/api/sites/${encodeURIComponent(domain)}/logs/errors?limit=100`,
-          { headers: sitesStore.authHeaders() },
-        ),
-      ])
-      let hits = 0
-      let errs = 0
-      if (metricsR.status === 'fulfilled' && metricsR.value.ok) {
-        const data: unknown = await metricsR.value.json()
-        const samples: Array<{ requests?: number; hits?: number }> = Array.isArray(data)
-          ? data
-          : ((data as { samples?: Array<{ requests?: number; hits?: number }> })?.samples ?? [])
-        hits = samples.reduce((sum, s) => sum + (s.requests ?? s.hits ?? 0), 0)
-      }
-      if (errorsR.status === 'fulfilled' && errorsR.value.ok) {
-        const data: unknown = await errorsR.value.json()
-        const entries: Array<{ timestamp?: string }> = Array.isArray(data)
-          ? data
-          : ((data as { entries?: Array<{ timestamp?: string }> })?.entries ?? [])
-        const cutoff = Date.now() - 24 * 60 * 60 * 1000
-        errs = entries.filter(e => {
-          // A log line without a readable time is not counted as today's error.
-          if (!e.timestamp) return false
-          const ts = new Date(e.timestamp).getTime()
-          return !isNaN(ts) && ts > cutoff
-        }).length
-      }
-      return { hits, errs }
-    } catch { return { hits: 0, errs: 0 } }
+    const [hourly, errors] = await Promise.allSettled([fetchHourlyRequests(domain), fetchRecentErrors(domain)])
+    return {
+      hits: hourly.status === 'fulfilled' ? hourly.value.reduce((sum, n) => sum + n, 0) : 0,
+      errs: errors.status === 'fulfilled' ? errors.value.length : 0,
+    }
   }))
   totalHits.value = results.reduce(
     (sum, r) => r.status === 'fulfilled' ? sum + r.value.hits : sum, 0,
@@ -169,6 +140,9 @@ async function loadAggregates() {
 
 // Reload when the page is shown again and once the site list arrives; on a
 // cold start the sites are empty at first and the totals would stay at 0.
+// This component loads as a lazy chunk, after the page's first activation, so the
+// first load has to come from mount.
+onMounted(() => { void loadAggregates() })
 onActivated(() => { void loadAggregates() })
 watch(() => sitesStore.sites.length, () => { void loadAggregates() })
 
