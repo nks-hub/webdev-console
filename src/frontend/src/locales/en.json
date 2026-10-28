@@ -1926,6 +1926,7 @@
       "zoneCount": "{n} zone | {n} zones",
       "defaultSelected": "Default selected",
       "pickDefaultZone": "Pick one in step 3",
+      "zonesNeedToken": "They load after you paste the token",
       "pidUptime": "PID {pid} · up {uptime}",
       "tokenMissingHint": "Paste it in step 1",
       "finishSetup": "Finish steps 1 and 2"

@@ -1926,6 +1926,7 @@
       "zoneCount": "{n} zóna | {n} zóny | {n} zón",
       "defaultSelected": "Výchozí vybrána",
       "pickDefaultZone": "Vyberte ji v kroku 3",
+      "zonesNeedToken": "Načtou se po vložení tokenu",
       "pidUptime": "PID {pid} · běží {uptime}",
       "tokenMissingHint": "Vložte ho v kroku 1",
       "finishSetup": "Dokončete kroky 1 a 2"

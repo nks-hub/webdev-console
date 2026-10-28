@@ -153,8 +153,8 @@ public sealed class PluginCatalogClientTests
         {
             new() { Id = "nks.wdc.apache", Releases = new() { new() { Version = "nks.wdc.apache-v1.0.15", Downloads = new() {
                 new() { Url = "https://example/apache.zip", Os = "any", Arch = "any" } } } } },
-            new() { Id = "nks.wdc.postgresql", Releases = new() { new() { Version = "nks.wdc.postgresql-v1.0.0", Downloads = new() {
-                new() { Url = "https://example/pg.zip", Sha256 = new string('a', 64) } } } } },
+            new() { Id = "acme.extra", Releases = new() { new() { Version = "acme.extra-v1.0.0", Downloads = new() {
+                new() { Url = "https://example/extra.zip", Sha256 = new string('a', 64) } } } } },
             new() { Id = "nks.wdc.localrsync", Releases = new() { new() { Version = "nks.wdc.deploy.localrsync-v0.1.0", Downloads = new() {
                 new() { Url = "https://example/rsync.zip" } } } } },
         };
@@ -173,11 +173,11 @@ public sealed class PluginCatalogClientTests
         Assert.True(apache.BuiltIn);
         Assert.Null(apache.DownloadUrl); // no SHA-256, the install endpoint would refuse it
 
-        var pg = rows.Single(r => r.Id == "nks.wdc.postgresql");
-        Assert.False(pg.Installed);
-        Assert.False(pg.BuiltIn);
-        Assert.Equal("https://example/pg.zip", pg.DownloadUrl);
-        Assert.Equal(new string('a', 64), pg.Sha256);
+        var extra = rows.Single(r => r.Id == "acme.extra");
+        Assert.False(extra.Installed);
+        Assert.False(extra.BuiltIn);
+        Assert.Equal("https://example/extra.zip", extra.DownloadUrl);
+        Assert.Equal(new string('a', 64), extra.Sha256);
 
         // Bundled but not in the catalog: still listed, named after the loaded plugin.
         var cf = rows.Single(r => r.Id == "nks.wdc.cloudflare");
@@ -187,10 +187,11 @@ public sealed class PluginCatalogClientTests
         // The release tag, not the archive-derived catalog id, names the installed plugin.
         var rsync = rows.Single(r => r.Id == "nks.wdc.deploy.localrsync");
         Assert.True(rsync.Installed);
+        Assert.True(rsync.BuiltIn);
         Assert.Equal("Local rsync deploy", rsync.Name);
         Assert.DoesNotContain(rows, r => r.Id == "nks.wdc.localrsync");
 
-        Assert.Equal(PluginEndpoints.BundledPlugins.Length + 2, rows.Count);
+        Assert.Equal(PluginEndpoints.BundledPlugins.Length + 1, rows.Count);
     }
 
     [Theory]
