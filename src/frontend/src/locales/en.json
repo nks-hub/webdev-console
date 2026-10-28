@@ -843,15 +843,15 @@
     "bindIpHint": "* means the site answers on every address of this computer (default). To restrict it, pick one or more specific IP addresses. Localhost always works through localhost and 127.0.0.1.",
     "create": "New Site",
     "openHosts": "Open hosts file",
-    "runtimeStatic": "Static",
+    "runtimeStatic": "Static site",
     "composeBadge": "Compose",
     "noMatching": "No site matches “{q}”",
-    "reapplyAll": "Regenerate configuration of all sites…",
+    "reapplyAll": "Apply configuration of all sites again…",
     "saveAndApply": "Save & Apply",
     "history": {
       "emptyDescription": "No config history yet"
     },
-    "detect": "Detect",
+    "detect": "Detect framework",
     "delete": "Delete site",
     "backToSites": "Back to sites",
     "notFound": "Site “{domain}” was not found",
@@ -1015,7 +1015,7 @@
       "tunnelOffline": "offline",
       "openWaiting": "Apache is not running, so the site will not answer yet."
     },
-    "reapplyAllTitle": "Regenerate configuration of all sites",
+    "reapplyAllTitle": "Apply configuration of all sites again",
     "reapplyAllConfirm": "The configuration of every site is created again and Apache restarts briefly. Sites do not respond during the restart. Continue?",
     "runtimeStaticSite": "Static site",
     "selectFolder": "Select the site folder",
@@ -3506,7 +3506,7 @@
     "notYet": "This site’s configuration has not been applied since the app started",
     "allOk": "Configuration applied",
     "someFailed": "{n} step failed | {n} steps failed",
-    "applyAgain": "Apply again",
+    "applyAgain": "Apply configuration again",
     "appliedOk": "Site configuration applied",
     "status": {
       "ok": "done",
