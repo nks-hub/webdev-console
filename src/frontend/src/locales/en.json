@@ -1737,7 +1737,7 @@
     "openUi": "Open Mailpit",
     "tabLogs": "Log",
     "notRunning": "Mailpit is not running. Start it to open it.",
-    "smtpHint": "To catch your site's e-mail here, set the SMTP server in your app to 127.0.0.1 and port {port}, with no encryption and no login."
+    "smtpHint": "PHP mail() sends e-mail here on its own. For an app with its own SMTP settings, use server 127.0.0.1 and port {port}, with no encryption and no login."
   },
   "redisPlugin": {
     "title": "Redis",

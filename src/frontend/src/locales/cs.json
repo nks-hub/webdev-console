@@ -1737,7 +1737,7 @@
     "openUi": "Otevřít Mailpit",
     "tabLogs": "Log",
     "notRunning": "Mailpit neběží. Po spuštění půjde otevřít.",
-    "smtpHint": "Aby se sem dostaly e-maily z vašeho webu, nastavte v aplikaci SMTP server 127.0.0.1 a port {port}, bez šifrování a bez přihlášení."
+    "smtpHint": "Funkce mail() v PHP posílá e-maily sem sama. Aplikaci s vlastním nastavením SMTP nasměrujte na server 127.0.0.1 a port {port}, bez šifrování a bez přihlášení."
   },
   "redisPlugin": {
     "title": "Redis",

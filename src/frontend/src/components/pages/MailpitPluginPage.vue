@@ -16,7 +16,7 @@
       </template>
     </ServicePageHead>
 
-    <!-- php.ini does not route mail() here, so the app needs these settings. -->
+    <!-- php.ini routes mail() here; apps with their own SMTP config need these settings. -->
     <p v-if="installed && smtpPort" class="smtp-hint">{{ t('mailpitPlugin.smtpHint', { port: smtpPort }) }}</p>
 
     <section v-if="installed" class="log-section">
