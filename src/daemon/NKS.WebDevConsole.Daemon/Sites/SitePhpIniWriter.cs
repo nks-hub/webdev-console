@@ -22,11 +22,24 @@ namespace NKS.WebDevConsole.Daemon.Sites;
 public sealed class SitePhpIniWriter
 {
     private readonly ILogger<SitePhpIniWriter> _logger;
+    private readonly string _sitesPhpRoot;
+    private readonly string _binariesRoot;
+    private readonly string _phpLogDir;
 
     public SitePhpIniWriter(ILogger<SitePhpIniWriter> logger)
+        : this(logger, Path.Combine(WdcPaths.Root, "sites-php"), WdcPaths.BinariesRoot, SitePhpErrorLog.LogDir)
+    {
+    }
+
+    internal SitePhpIniWriter(ILogger<SitePhpIniWriter> logger, string sitesPhpRoot, string binariesRoot, string phpLogDir)
     {
         _logger = logger;
+        _sitesPhpRoot = sitesPhpRoot;
+        _binariesRoot = binariesRoot;
+        _phpLogDir = phpLogDir;
     }
+
+    private string LogPath(string domain) => Path.Combine(_phpLogDir, $"{domain}-errors.log");
 
     /// <summary>
     /// Write the per-site override file and return its absolute path, or
@@ -39,7 +52,7 @@ public sealed class SitePhpIniWriter
         if (site.PhpSettings is null) return null;
         if (string.IsNullOrEmpty(site.PhpVersion) || site.PhpVersion == "none") return null;
 
-        var globalIni = ResolveGlobalPhpIni(site.PhpVersion);
+        var globalIni = ResolveGlobalPhpIni(site.PhpVersion, _binariesRoot);
         if (globalIni is null || !File.Exists(globalIni))
         {
             _logger.LogWarning("Global php.ini not found for {Version}; skipping per-site override for {Domain}",
@@ -47,18 +60,45 @@ public sealed class SitePhpIniWriter
             return null;
         }
 
-        var siteDir = Path.Combine(WdcPaths.Root, "sites-php", site.Domain);
+        var siteDir = Path.Combine(_sitesPhpRoot, site.Domain);
         Directory.CreateDirectory(siteDir);
         var sitePhpIni = Path.Combine(siteDir, "php.ini");
 
         var global = File.ReadAllText(globalIni);
         var overrides = BuildOverrideBlock(site.PhpSettings);
-        var combined = global + "\n\n; === Per-site overrides (NKS WDC) — do not edit manually ===\n" + overrides;
+        // This ini replaces the global one for the site, so it also has to carry the site's own error log.
+        Directory.CreateDirectory(_phpLogDir);
+        var combined = global + "\n\n; === Per-site overrides (NKS WDC) — do not edit manually ===\n" + overrides
+            + SitePhpErrorLog.IniBlock(LogPath(site.Domain));
 
         NKS.WebDevConsole.Daemon.Config.AtomicWriter.WriteAllTextAtomic(sitePhpIni, combined);
 
         _logger.LogInformation("Wrote per-site php.ini for {Domain} to {Path}", site.Domain, sitePhpIni);
         return sitePhpIni;
+    }
+
+    /// <summary>
+    /// Writes <c>{domain}/conf.d/10-wdc-site-log.ini</c>, a small ini that gives the site its own PHP error
+    /// log without copying the global php.ini. It takes effect when the site's vhost points PHP at the
+    /// directory with <c>FcgidInitialEnv PHP_INI_SCAN_DIR</c>; PHP then reads it after the global ini.
+    /// Returns its path, or null (and removes a stale file) for a site that does not run PHP.
+    /// </summary>
+    public string? WriteSiteLog(SiteConfig site)
+    {
+        var scanDir = Path.Combine(_sitesPhpRoot, site.Domain, "conf.d");
+        var runsPhp = site.NodeUpstreamPort == 0 && !string.IsNullOrEmpty(site.PhpVersion) && site.PhpVersion != "none";
+        if (!runsPhp)
+        {
+            if (Directory.Exists(scanDir)) Directory.Delete(scanDir, recursive: true);
+            return null;
+        }
+
+        Directory.CreateDirectory(_phpLogDir);
+        Directory.CreateDirectory(scanDir);
+        var file = Path.Combine(scanDir, SitePhpErrorLog.ScanFileName);
+        NKS.WebDevConsole.Daemon.Config.AtomicWriter.WriteAllTextAtomic(
+            file, "; NKS WDC: the PHP error log of this site — do not edit manually\n" + SitePhpErrorLog.IniBlock(LogPath(site.Domain)));
+        return file;
     }
 
     /// <summary>
@@ -69,7 +109,7 @@ public sealed class SitePhpIniWriter
     {
         try
         {
-            var siteDir = Path.Combine(WdcPaths.Root, "sites-php", domain);
+            var siteDir = Path.Combine(_sitesPhpRoot, domain);
             if (Directory.Exists(siteDir))
                 Directory.Delete(siteDir, recursive: true);
         }
@@ -79,9 +119,9 @@ public sealed class SitePhpIniWriter
         }
     }
 
-    private static string? ResolveGlobalPhpIni(string requestedVersion)
+    private static string? ResolveGlobalPhpIni(string requestedVersion, string binariesRoot)
     {
-        var phpRoot = Path.Combine(WdcPaths.BinariesRoot, "php");
+        var phpRoot = Path.Combine(binariesRoot, "php");
         if (!Directory.Exists(phpRoot)) return null;
 
         var requested = requestedVersion.TrimEnd('.');

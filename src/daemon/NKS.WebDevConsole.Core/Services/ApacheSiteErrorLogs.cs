@@ -57,8 +57,11 @@ public static class ApacheSiteErrorLogs
         return paths;
     }
 
-    // The Apache plugin writes `{domain}.conf` into conf/sites-enabled; localhost has its own file names.
-    private static string? ReadVhost(string domain, string installPath)
+    /// <summary>
+    /// The text of the vhost file of <paramref name="domain"/> in an Apache install, or null when there is none.
+    /// The Apache plugin writes <c>{domain}.conf</c> into <c>conf/sites-enabled</c>; localhost has its own file names.
+    /// </summary>
+    public static string? ReadVhost(string domain, string installPath)
     {
         var dir = Path.Combine(installPath, "conf", "sites-enabled");
         var names = domain.Equals("localhost", StringComparison.OrdinalIgnoreCase)

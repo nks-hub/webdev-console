@@ -502,6 +502,15 @@ public sealed class SiteManager : ISiteRegistry
         }
         catch { /* ignore */ }
 
+        // Directory of extra ini files (the site's own PHP error log), same lookup as ApacheModule.
+        string sitePhpScanDir = "";
+        try
+        {
+            var dir = Path.Combine(SitePhpErrorLog.IniDir(site.Domain), "conf.d");
+            if (File.Exists(Path.Combine(dir, SitePhpErrorLog.ScanFileName))) sitePhpScanDir = dir;
+        }
+        catch { /* ignore */ }
+
         var apacheSettings = site.ApacheSettings;
         var aliases = NormalizeAliases(site);
         var hostGuardExpr = BuildLocalhostHostGuardExpr(site.Domain, aliases);
@@ -518,6 +527,7 @@ public sealed class SiteManager : ISiteRegistry
                 root = site.DocumentRoot,
                 root_parent = rootParent,
                 php_ini_path = sitePhpIni,
+                php_scan_dir = sitePhpScanDir,
                 apache_timeout = apacheSettings?.Timeout,
                 fcgid_io_timeout = apacheSettings?.FcgidIOTimeout,
                 fcgid_busy_timeout = apacheSettings?.FcgidBusyTimeout,

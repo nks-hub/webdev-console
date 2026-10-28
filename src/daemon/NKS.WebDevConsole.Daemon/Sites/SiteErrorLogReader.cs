@@ -12,13 +12,17 @@ internal static class SiteErrorLogReader
     /// A site whose vhost writes to <c>{domain}-error.log</c> / <c>{domain}-ssl-error.log</c> gets an empty
     /// list until that file exists, never the global <c>error.log</c> (it holds the lines of every other
     /// site). The global log and <paramref name="globalApacheLog"/> are only for a vhost that defines no
-    /// log of its own. Newest first, at most <paramref name="limit"/> entries.
+    /// log of its own. Likewise PHP: when <paramref name="sitePhpLog"/> is set, the site's PHP writes there
+    /// (see <see cref="SitePhpErrorLog.Resolve(string, IEnumerable{string})"/>) and the logs of the PHP versions,
+    /// which hold the errors of every site on that version, are left out. Newest first, at most
+    /// <paramref name="limit"/> entries.
     /// </summary>
     public static IReadOnlyList<ErrorLogInspector.LogEntry> Read(
         string domain,
         IEnumerable<string> apacheInstallPaths,
         string globalApacheLog,
         string phpLogDir,
+        string? sitePhpLog,
         int limit,
         DateTimeOffset? since)
     {
@@ -33,8 +37,9 @@ internal static class SiteErrorLogReader
         if (Directory.Exists(phpLogDir))
         {
             phpFpm.AddRange(Directory.EnumerateFiles(phpLogDir, "*-fpm-error.log"));
-            phpWeb.AddRange(Directory.EnumerateFiles(phpLogDir, "php*-errors.log"));
+            if (sitePhpLog is null) phpWeb.AddRange(Directory.EnumerateFiles(phpLogDir, "php*-errors.log"));
         }
+        if (sitePhpLog is not null) phpWeb.Add(sitePhpLog);
 
         // One source per file: Tail reads only the first existing path of a source.
         var sources = apacheLogs
