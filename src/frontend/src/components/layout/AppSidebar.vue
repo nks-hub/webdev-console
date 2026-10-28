@@ -416,10 +416,11 @@ function navigate(path: string, query?: Record<string, string>) {
 
 /* Pinned to the bottom edge when the menu is taller than the window. Electron opens at
    960x640, where Settings and Help used to sit below the fold of the scrolling menu. */
+/* No z-index: the sticky footer already paints over the unpositioned menu rows, and
+   z-index: 1 lifted it above the mask of dialogs that render inside the page. */
 .nav-foot {
   position: sticky;
   bottom: 0;
-  z-index: 1;
   margin-top: auto;
   padding: var(--wdc-space-3) 0 var(--wdc-space-2);
   background: var(--wdc-chrome);

@@ -266,6 +266,8 @@ test.describe('Shell services contract', () => {
     expect(foot).toMatch(/bottom: 0/)
     // Opaque, or the rows scrolling underneath show through.
     expect(foot).toMatch(/background: var\(--wdc-chrome\)/)
+    // A z-index lifts the footer above the mask of dialogs rendered inside the page.
+    expect(foot).not.toMatch(/z-index/)
     expect(sidebar).toMatch(/@media \(max-height: 760px\)/)
     expect(sidebar).toMatch(/overflow-y: auto/)
   })
