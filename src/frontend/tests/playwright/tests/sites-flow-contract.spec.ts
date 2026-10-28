@@ -159,6 +159,22 @@ test.describe('Sites flow contract', () => {
     expect(endpoints).toMatch(/OutdatedHasNothingToCheck\(composerRoot, available\)/)
   })
 
+  test('Composer actions are refused with 409 composer_not_installed before they run; real failures stay 500', () => {
+    const endpoints = readFileSync(
+      resolve(srcRoot, '..', '..', 'daemon', 'NKS.WebDevConsole.Daemon', 'Sites', 'ComposerEndpoints.cs'), 'utf-8')
+    const handlerOf = (route: string) => endpoints.match(new RegExp(`composer/${route}"[\\s\\S]*?(?=app\\.Map)`))?.[0] ?? ''
+    for (const route of ['install', 'require', 'remove', 'init', 'diagnose']) {
+      expect(handlerOf(route), route).toMatch(/ComposerNotInstalled\(invoker\) is \{ \} notInstalled\) return notInstalled/)
+      expect(handlerOf(route), route).toMatch(/statusCode: 500/)
+    }
+    expect(endpoints).toMatch(/error = "composer_not_installed", code = "composer_not_installed" \}, statusCode: 409/)
+    // The site tab words the refusal itself instead of showing the daemon's text.
+    const tab = read('components', 'pages', 'SiteComposer.vue')
+    expect(tab).not.toMatch(/ElMessage\.error\(err instanceof Error/)
+    expect(tab).toMatch(/composerErrorMessage\(err, t\)/)
+    expect(read('utils', 'composerError.ts')).toMatch(/err\.status === 409/)
+  })
+
   test('i18n keys of the new states exist in both locales', () => {
     const get = (o: Record<string, unknown>, path: string) =>
       path.split('.').reduce<unknown>((a, k) => (a && typeof a === 'object' ? (a as Record<string, unknown>)[k] : undefined), o)
