@@ -561,21 +561,21 @@
                 </el-button>
               </el-form-item>
               <el-form-item :label="$t('settings.advanced.mysqlRoot')">
-                <div class="mysql-root-row">
-                  <el-input
-                    v-model="mysqlRootPassword"
-                    type="password"
-                    show-password
-                    :placeholder="mysqlRootExists ? $t('settings.advanced.mysqlRootPlaceholderStored') : $t('settings.advanced.mysqlRootPlaceholderEnter')"
-                    class="mono-input"
-                  />
-                  <el-button
-                    size="small"
-                    :loading="mysqlRootSaving"
-                    :disabled="!mysqlRootPassword"
-                    @click="saveMysqlRootPassword"
-                  >{{ $t('settings.advanced.save') }}</el-button>
-                </div>
+                <el-input
+                  v-model="mysqlRootPassword"
+                  type="password"
+                  show-password
+                  :placeholder="mysqlRootExists ? $t('settings.advanced.mysqlRootPlaceholderStored') : $t('settings.advanced.mysqlRootPlaceholderEnter')"
+                  class="mono-input"
+                >
+                  <template #append>
+                    <el-button
+                      :loading="mysqlRootSaving"
+                      :disabled="!mysqlRootPassword"
+                      @click="saveMysqlRootPassword"
+                    >{{ $t('settings.advanced.save') }}</el-button>
+                  </template>
+                </el-input>
                 <div class="hint">
                   {{ mysqlRootExists ? $t('settings.advanced.mysqlRootStored') : $t('settings.advanced.mysqlRootMissing') }}
                   {{ $t('settings.advanced.mysqlRootHint') }}
@@ -2347,7 +2347,7 @@ const lastSyncDisplay = computed(() => {
   if (!lastSyncTime.value) return ''
   const parsed = new Date(lastSyncTime.value)
   if (isNaN(parsed.getTime())) return lastSyncTime.value
-  return parsed.toLocaleString()
+  return parsed.toLocaleString(locale.value)
 })
 
 async function loadDeviceId() {
@@ -3164,18 +3164,18 @@ async function save() {
 
 .about-sso { display: flex; flex-direction: column; gap: 6px; padding: 8px 0 0; }
 
-.mysql-root-row {
-  display: flex;
-  align-items: stretch;
-  gap: var(--wdc-space-2);
-  width: 100%;
-}
-.mysql-root-row .el-input {
-  flex: 1 1 0;
-  min-width: 0;
-}
 .about-sso-status { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--el-text-color-secondary); }
 .about-sso-status .sys-label, .about-sso-status .sys-value { white-space: nowrap; }
+/* A sentence ("not synced yet"), not a number: the label's font, not mono. */
+.about-sso-status .sys-value { font-family: inherit; font-size: inherit; }
+
+.danger-collapse-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--wdc-space-1-5);
+  color: var(--el-color-danger);
+  font-weight: 600;
+}
 
 /* Wrapped action buttons line up on the left; the gap does the spacing. */
 .simple-settings-grid :deep(.settings-panel-actions .el-button + .el-button) { margin-left: 0; }
