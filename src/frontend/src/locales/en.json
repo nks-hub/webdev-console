@@ -1521,7 +1521,7 @@
     "noneLoaded": "No plugins loaded",
     "byAuthor": "By {author}",
     "noMatching": "No plugins matching ‘{q}’",
-    "marketplaceBuiltIn": "The online marketplace is not available right now. Showing the plugins that ship with WDC.",
+    "marketplaceBuiltIn": "The online plugin catalog is not available right now. Showing the plugins that ship with WDC.",
     "descriptions": {
       "apache": "Apache 2.4 web server. Runs httpd, creates virtual hosts for your sites and checks the configuration.",
       "caddy": "Caddy web server, an alternative to Apache with automatic HTTPS. Creates a Caddyfile for your sites.",

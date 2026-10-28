@@ -146,6 +146,52 @@ public sealed class PluginCatalogClientTests
         Assert.Empty(client.Cached);
     }
 
+    [Fact]
+    public void CatalogMarketplace_MapsCatalogAndKeepsBundledPluginsItLacks()
+    {
+        var catalog = new List<PluginCatalogEntry>
+        {
+            new() { Id = "nks.wdc.apache", Releases = new() { new() { Version = "nks.wdc.apache-v1.0.15", Downloads = new() {
+                new() { Url = "https://example/apache.zip", Os = "any", Arch = "any" } } } } },
+            new() { Id = "nks.wdc.postgresql", Releases = new() { new() { Version = "nks.wdc.postgresql-v1.0.0", Downloads = new() {
+                new() { Url = "https://example/pg.zip", Sha256 = new string('a', 64) } } } } },
+        };
+        var installed = new Dictionary<string, (string Name, string Description)>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["nks.wdc.apache"] = ("Apache HTTP Server", "httpd"),
+            ["nks.wdc.cloudflare"] = ("Cloudflare Tunnel", ""),
+        };
+
+        var rows = PluginEndpoints.CatalogMarketplace(catalog, installed);
+
+        var apache = rows.Single(r => r.Id == "nks.wdc.apache");
+        Assert.Equal("1.0.15", apache.Version);
+        Assert.True(apache.Installed);
+        Assert.True(apache.BuiltIn);
+        Assert.Null(apache.DownloadUrl); // no SHA-256, the install endpoint would refuse it
+
+        var pg = rows.Single(r => r.Id == "nks.wdc.postgresql");
+        Assert.False(pg.Installed);
+        Assert.False(pg.BuiltIn);
+        Assert.Equal("https://example/pg.zip", pg.DownloadUrl);
+        Assert.Equal(new string('a', 64), pg.Sha256);
+
+        // Bundled but not in the catalog: still listed, named after the loaded plugin.
+        var cf = rows.Single(r => r.Id == "nks.wdc.cloudflare");
+        Assert.Equal("Cloudflare Tunnel", cf.Name);
+        Assert.True(cf.Installed);
+        Assert.True(cf.BuiltIn);
+        Assert.Equal(PluginEndpoints.BundledPlugins.Length + 1, rows.Count);
+    }
+
+    [Theory]
+    [InlineData("nks.wdc.apache-v1.0.15", "1.0.15")]
+    [InlineData("nks.wdc.deploy.localrsync-v0.1.0", "0.1.0")]
+    [InlineData("1.2.0", "1.2.0")]
+    [InlineData(null, "")]
+    public void CatalogVersion_StripsTagPrefix(string? tag, string expected)
+        => Assert.Equal(expected, PluginEndpoints.CatalogVersion(tag));
+
     /// <summary>
     /// Regression: a transient HTTP failure (non-2xx, timeout, parse error)
     /// must NOT wipe the previous successful cache. Before the fix,

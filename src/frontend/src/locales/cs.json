@@ -1457,7 +1457,7 @@
     "installedTag": "Nainstalováno",
     "sourceUnavailable": "Zdroj není dostupný",
     "restore": "Vrátit plugin",
-    "marketplaceCount": "{count} ke stažení",
+    "marketplaceCount": "{count} v katalogu",
     "searchPlaceholder": "Hledat pluginy…",
     "copyUrl": "Kopírovat URL",
     "openPanel": "Otevřít panel",
@@ -1521,7 +1521,7 @@
     "noneLoaded": "Nejsou načtené žádné pluginy",
     "byAuthor": "Autor: {author}",
     "noMatching": "Žádný plugin neodpovídá „{q}“",
-    "marketplaceBuiltIn": "Online marketplace teď není dostupný. Zobrazuje se katalog pluginů dodaných s WDC.",
+    "marketplaceBuiltIn": "Online katalog pluginů teď není dostupný. Zobrazují se pluginy dodané s WDC.",
     "descriptions": {
       "apache": "Webový server Apache 2.4. Spouští httpd, vytváří virtuální hosty pro weby a kontroluje konfiguraci.",
       "caddy": "Webový server Caddy, alternativa k Apache s automatickým HTTPS. Pro weby vytváří Caddyfile.",

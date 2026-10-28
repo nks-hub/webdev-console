@@ -89,7 +89,7 @@
           <div class="pm-card-desc" :title="pluginDescription(mp)">{{ pluginDescription(mp) }}</div>
           <div class="pm-card-footer">
             <div class="pm-meta">
-              <span class="pm-version">v{{ installedVersion(mp.id) ?? mp.version }}</span>
+              <span v-if="installedVersion(mp.id) ?? mp.version" class="pm-version">v{{ installedVersion(mp.id) ?? mp.version }}</span>
               <span v-if="mp.author" class="pm-author">{{ $t('plugins.byAuthor', { author: mp.author }) }}</span>
               <span v-if="mp.license" class="pm-author">· {{ mp.license }}</span>
             </div>

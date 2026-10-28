@@ -28,6 +28,84 @@ namespace NKS.WebDevConsole.Daemon.Plugin;
 /// </summary>
 internal static class PluginEndpoints
 {
+    /// <summary>First-party plugins that ship with WDC; restorable after an uninstall.</summary>
+    internal static readonly (string Id, string Name, string Description, string Category)[] BundledPlugins =
+    {
+        ("nks.wdc.apache",  "Apache HTTP Server",  "Bundled httpd with Scriban-generated vhosts, SSL via mkcert, per-site PHP FastCGI.", "Web Servers"),
+        ("nks.wdc.caddy",   "Caddy",               "Modern HTTP/2 + automatic HTTPS alternative to Apache, drives sites via Caddyfile fragments.", "Web Servers"),
+        ("nks.wdc.nginx",   "Nginx",               "High-performance HTTP server and reverse proxy — Scriban server-block templates, reload via SIGHUP, shares mkcert for TLS.", "Web Servers"),
+        ("nks.wdc.php",     "PHP (Multi-version)", "Multi-version PHP manager with per-version php.ini + extensions + CLI alias shims.", "Runtimes"),
+        ("nks.wdc.node",    "Node.js",             "Multi-version Node.js manager — detected binaries under ~/.wdc/binaries/node/ with shims for npm/npx and active-version switching.", "Runtimes"),
+        ("nks.wdc.mysql",   "MySQL",               "Managed MySQL server with DPAPI-protected root password, my.ini templates, database tooling.", "Databases"),
+        ("nks.wdc.mariadb", "MariaDB",             "Drop-in MySQL-compatible RDBMS — bundled mariadbd with DPAPI-protected root password, my.cnf templates. Alternative to MySQL for new installs.", "Databases"),
+        ("nks.wdc.redis",   "Redis",               "Redis cache server with managed redis.conf, graceful shutdown via redis-cli SHUTDOWN.", "Caches"),
+        ("nks.wdc.mailpit", "Mailpit",             "Local SMTP sink with web UI for development email testing.", "Mail"),
+        ("nks.wdc.ssl",     "SSL (mkcert)",        "Per-site TLS certificates via mkcert, local root CA install.", "Security"),
+        ("nks.wdc.cloudflare", "Cloudflare (DNS + Tunnels)", "Cloudflare DNS + Tunnel API integration — provisioned via account token, not bound to a binary service.", "Networking"),
+        ("nks.wdc.hosts",   "Hosts Manager",       "Windows hosts file manager with 5-backup rotation and managed block delimiters.", "System"),
+        ("nks.wdc.composer", "Composer",           "PHP dependency manager — per-site composer.json/lock management, framework auto-install, runs under active PHP version.", "Runtimes"),
+    };
+
+    internal sealed record MarketplaceEntry(
+        string Id, string Name, string Version, string Description,
+        string? DownloadUrl, string? Sha256, string Author, string License,
+        string? Category, bool Installed, bool BuiltIn);
+
+    /// <summary>
+    /// Marketplace rows from the plugin catalog, plus bundled plugins the catalog
+    /// does not list so an uninstalled one can still be restored. Names come from
+    /// the loaded plugin first. A download without a SHA-256 gets no URL because
+    /// <c>POST /api/plugins/install</c> refuses it.
+    /// </summary>
+    internal static List<MarketplaceEntry> CatalogMarketplace(
+        IReadOnlyList<PluginCatalogEntry> catalog,
+        IReadOnlyDictionary<string, (string Name, string Description)> installed)
+    {
+        var bundled = BundledPlugins.ToDictionary(b => b.Id, StringComparer.OrdinalIgnoreCase);
+        var result = new List<MarketplaceEntry>();
+        foreach (var entry in catalog)
+        {
+            if (string.IsNullOrWhiteSpace(entry.Id)) continue;
+            var id = entry.Id;
+            var release = entry.Releases?.FirstOrDefault();
+            // Plugins are platform-neutral .NET assemblies; the catalog lists one "any" archive.
+            var download = release?.Downloads?.FirstOrDefault(d => !string.IsNullOrWhiteSpace(d.Url));
+            var hasSha = !string.IsNullOrWhiteSpace(download?.Sha256);
+            var isInstalled = installed.TryGetValue(id, out var loaded);
+            var isBundled = bundled.TryGetValue(id, out var b);
+            result.Add(new MarketplaceEntry(
+                Id: id,
+                Name: isInstalled && !string.IsNullOrWhiteSpace(loaded.Name) ? loaded.Name : isBundled ? b.Name : id,
+                Version: CatalogVersion(release?.Version),
+                Description: isInstalled && !string.IsNullOrWhiteSpace(loaded.Description) ? loaded.Description : isBundled ? b.Description : "",
+                DownloadUrl: hasSha ? download!.Url : null,
+                Sha256: hasSha ? download!.Sha256 : null,
+                Author: "NKS",
+                License: "MIT",
+                Category: isBundled ? b.Category : null,
+                Installed: isInstalled,
+                BuiltIn: isBundled));
+        }
+        foreach (var b in BundledPlugins)
+        {
+            if (result.Any(r => r.Id.Equals(b.Id, StringComparison.OrdinalIgnoreCase))) continue;
+            var isInstalled = installed.TryGetValue(b.Id, out var loaded);
+            result.Add(new MarketplaceEntry(
+                b.Id, isInstalled && !string.IsNullOrWhiteSpace(loaded.Name) ? loaded.Name : b.Name, "",
+                isInstalled && !string.IsNullOrWhiteSpace(loaded.Description) ? loaded.Description : b.Description,
+                null, null, "NKS", "MIT", b.Category, isInstalled, BuiltIn: true));
+        }
+        return result;
+    }
+
+    /// <summary>The catalog tags releases as "&lt;id&gt;-v1.2.3"; the UI wants "1.2.3".</summary>
+    internal static string CatalogVersion(string? tag)
+    {
+        if (string.IsNullOrWhiteSpace(tag)) return "";
+        var i = tag.LastIndexOf("-v", StringComparison.Ordinal);
+        return i >= 0 ? tag[(i + 2)..] : tag;
+    }
+
     public static void MapPluginEndpoints(this WebApplication app, PluginLoader pluginLoader, string pluginDir)
     {
         app.MapGet("/api/plugins", (IServiceProvider sp, PluginState pluginState) =>
@@ -213,48 +291,66 @@ internal static class PluginEndpoints
         // a real marketplace server comes online it takes precedence.
         static IEnumerable<object> BuiltInMarketplaceCatalogue(HashSet<string> installedIds)
         {
-            var entries = new (string id, string name, string version, string description, string category)[]
-            {
-                ("nks.wdc.apache",  "Apache HTTP Server",  "1.0.0", "Bundled httpd with Scriban-generated vhosts, SSL via mkcert, per-site PHP FastCGI.", "Web Servers"),
-                ("nks.wdc.caddy",   "Caddy",               "1.0.0", "Modern HTTP/2 + automatic HTTPS alternative to Apache, drives sites via Caddyfile fragments.", "Web Servers"),
-                ("nks.wdc.nginx",   "Nginx",               "1.0.0", "High-performance HTTP server and reverse proxy — Scriban server-block templates, reload via SIGHUP, shares mkcert for TLS.", "Web Servers"),
-                ("nks.wdc.php",     "PHP (Multi-version)", "1.0.0", "Multi-version PHP manager with per-version php.ini + extensions + CLI alias shims.", "Runtimes"),
-                ("nks.wdc.node",    "Node.js",             "1.0.0", "Multi-version Node.js manager — detected binaries under ~/.wdc/binaries/node/ with shims for npm/npx and active-version switching.", "Runtimes"),
-                ("nks.wdc.mysql",   "MySQL",               "1.0.0", "Managed MySQL server with DPAPI-protected root password, my.ini templates, database tooling.", "Databases"),
-                ("nks.wdc.mariadb", "MariaDB",             "1.0.0", "Drop-in MySQL-compatible RDBMS — bundled mariadbd with DPAPI-protected root password, my.cnf templates. Alternative to MySQL for new installs.", "Databases"),
-                ("nks.wdc.redis",   "Redis",               "1.0.0", "Redis cache server with managed redis.conf, graceful shutdown via redis-cli SHUTDOWN.", "Caches"),
-                ("nks.wdc.mailpit", "Mailpit",             "1.0.0", "Local SMTP sink with web UI for development email testing.", "Mail"),
-                ("nks.wdc.ssl",     "SSL (mkcert)",        "1.0.0", "Per-site TLS certificates via mkcert, local root CA install.", "Security"),
-                ("nks.wdc.cloudflare", "Cloudflare (DNS + Tunnels)", "1.0.0", "Cloudflare DNS + Tunnel API integration — provisioned via account token, not bound to a binary service.", "Networking"),
-                ("nks.wdc.hosts",   "Hosts Manager",       "1.0.0", "Windows hosts file manager with 5-backup rotation and managed block delimiters.", "System"),
-                ("nks.wdc.composer", "Composer",           "1.0.0", "PHP dependency manager — per-site composer.json/lock management, framework auto-install, runs under active PHP version.", "Runtimes"),
-            };
-            foreach (var e in entries)
+            foreach (var e in BundledPlugins)
             {
                 yield return new
                 {
-                    id = e.id,
-                    name = e.name,
-                    version = e.version,
-                    description = e.description,
+                    id = e.Id,
+                    name = e.Name,
+                    version = "1.0.0",
+                    description = e.Description,
                     downloadUrl = (string?)null,
                     author = "NKS",
                     license = "MIT",
-                    category = e.category,
-                    installed = installedIds.Contains(e.id),
+                    category = e.Category,
+                    installed = installedIds.Contains(e.Id),
                     builtIn = true,
                 };
             }
         }
 
-        app.MapGet("/api/plugins/marketplace", async (IHttpClientFactory httpFactory) =>
+        // Default source is the plugin catalog the daemon already uses for
+        // auto-sync (catalog-api /api/v1/plugins/catalog). NKS_WDC_MARKETPLACE_URL
+        // still points the tab at a custom plugins.json-style feed.
+        app.MapGet("/api/plugins/marketplace", async (IHttpClientFactory httpFactory, PluginCatalogClient pluginCatalog) =>
         {
-            var marketplaceUrl = Environment.GetEnvironmentVariable("NKS_WDC_MARKETPLACE_URL")
-                ?? "https://wdc.nks-hub.cz/plugins.json";
+            var marketplaceUrl = Environment.GetEnvironmentVariable("NKS_WDC_MARKETPLACE_URL");
 
             var installedIds = new HashSet<string>(
                 pluginLoader.Plugins.Select(p => p.Instance.Id),
                 StringComparer.OrdinalIgnoreCase);
+
+            if (string.IsNullOrWhiteSpace(marketplaceUrl))
+            {
+                if (DateTime.UtcNow - pluginCatalog.LastFetch > TimeSpan.FromHours(1))
+                {
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                    await pluginCatalog.RefreshAsync(cts.Token);
+                }
+                if (pluginCatalog.Cached.Count > 0)
+                {
+                    var installed = pluginLoader.Plugins
+                        .GroupBy(p => p.Instance.Id, StringComparer.OrdinalIgnoreCase)
+                        .ToDictionary(
+                            g => g.Key,
+                            g => (Name: g.First().Instance.DisplayName,
+                                  Description: string.IsNullOrEmpty(g.First().Instance.Description)
+                                      ? g.First().Manifest?.Description ?? ""
+                                      : g.First().Instance.Description),
+                            StringComparer.OrdinalIgnoreCase);
+                    var entries = CatalogMarketplace(pluginCatalog.Cached, installed);
+                    return Results.Ok(new { source = "catalog", reachable = true, plugins = entries, count = entries.Count });
+                }
+                var offline = BuiltInMarketplaceCatalogue(installedIds).ToList();
+                return Results.Ok(new
+                {
+                    source = "built-in",
+                    reachable = true,
+                    plugins = offline,
+                    count = offline.Count,
+                    error = "Plugin catalog unreachable, showing the plugins bundled with WDC"
+                });
+            }
 
             try
             {
