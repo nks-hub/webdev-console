@@ -3758,7 +3758,9 @@
       "serviceSubject": "{name}",
       "apacheMissing": "The Apache web server is not installed, so sites will not load.",
       "phpMissing": "PHP is not installed, so PHP sites will not run.",
-      "install": "Install {name}"
+      "install": "Install {name}",
+      "daemonOffline": "is not responding. The app reconnects on its own as soon as it answers.",
+      "retryConnection": "Retry now"
     },
     "stack": {
       "title": "Services",

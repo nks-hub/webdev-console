@@ -246,6 +246,30 @@ test.describe('Shell services contract', () => {
     }
   })
 
+  test('an unreachable daemon is never reported as "nothing to look at" or "0 of 0 running"', () => {
+    const attention = read('components', 'overview', 'AttentionList.vue')
+    expect(attention).toMatch(/if \(!daemonStore\.connected\) \{[\s\S]*?key: 'daemon-offline'[\s\S]*?daemonStore\.retryBoot\(\)/)
+    const bar = read('components', 'layout', 'AppStatusBar.vue')
+    expect(bar).toMatch(/<router-link v-if="daemonStore\.connected" class="status-item status-link" to="\/services">/)
+    expect(bar).toMatch(/<span v-else class="status-item status-alert" role="status">\{\{ t\('footer\.simpleOffline'\) \}\}<\/span>/)
+    for (const locale of ['cs', 'en']) {
+      const data = JSON.parse(read('locales', `${locale}.json`)) as { overview: { attention: Record<string, string> } }
+      expect(data.overview.attention.daemonOffline, locale).toBeTruthy()
+      expect(data.overview.attention.retryConnection, locale).toBeTruthy()
+    }
+  })
+
+  test('Settings and Help stay in view in a window shorter than the menu (Electron opens at 960x640)', () => {
+    const sidebar = read('components', 'layout', 'AppSidebar.vue')
+    const foot = sidebar.match(/\.nav-foot \{([^}]*)\}/)?.[1] ?? ''
+    expect(foot).toMatch(/position: sticky/)
+    expect(foot).toMatch(/bottom: 0/)
+    // Opaque, or the rows scrolling underneath show through.
+    expect(foot).toMatch(/background: var\(--wdc-chrome\)/)
+    expect(sidebar).toMatch(/@media \(max-height: 760px\)/)
+    expect(sidebar).toMatch(/overflow-y: auto/)
+  })
+
   test('mode names are lower case inside a sentence', () => {
     const cs = JSON.parse(read('locales', 'cs.json')) as { app: { advancedPageNote: string } }
     expect(cs.app.advancedPageNote).toBe('Tato stránka patří do pokročilého režimu, proto ji menu v jednoduchém režimu neukazuje.')

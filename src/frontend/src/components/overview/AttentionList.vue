@@ -100,6 +100,19 @@ function installAction(app: string, label: string): Pick<AttentionItem, 'action'
 const items = computed<AttentionItem[]>(() => {
   const out: AttentionItem[] = []
 
+  // The services list is emptied while the daemon is away, so without this the
+  // page would say there is nothing to look at.
+  if (!daemonStore.connected) {
+    out.push({
+      key: 'daemon-offline',
+      tone: 'err',
+      subject: t('footer.daemon'),
+      text: t('overview.attention.daemonOffline'),
+      action: t('overview.attention.retryConnection'),
+      run: () => daemonStore.retryBoot(),
+    })
+  }
+
   for (const svc of daemonStore.problemServices) {
     const name = shortServiceName(svc)
     out.push({
