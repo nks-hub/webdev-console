@@ -165,6 +165,7 @@ const groups: Group[] = [
     topics: [
       { key: 'plugins' },
       { key: 'mcp' },
+      { key: 'cli' },
       { key: 'shortcuts' },
       { key: 'binaries' },
       { key: 'metrics' },

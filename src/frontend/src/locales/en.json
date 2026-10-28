@@ -812,7 +812,9 @@
       "source": {
         "mcp": "MCP",
         "cli": "command line",
-        "api": "API"
+        "api": "API",
+        "migration": "migration",
+        "import": "import"
       }
     }
   },
@@ -3384,6 +3386,10 @@
       "mcp": {
         "title": "AI clients (MCP)",
         "body": "<p>WDC includes an MCP (Model Context Protocol) server through which AI clients (Claude Code, Cursor and others) create and manage sites. Switch it on in Settings → AI clients (MCP), where you also find how to connect a client. Activity, requests and rules are in the menu under <strong>AI clients (MCP)</strong>.</p><h3 id='tools'>Example tools</h3><ul><li><code>wdc_create_site</code></li><li><code>wdc_list_databases</code></li><li><code>wdc_generate_cert</code></li><li><code>wdc_get_cloudflare_config</code></li><li><code>wdc_save_cloudflare_config</code></li></ul><p>The AI runs irreversible actions only after you approve them, unless a rule covers them.</p>"
+      },
+      "cli": {
+        "title": "Command line (wdc)",
+        "body": "<p>The installer includes the <code>wdc</code> tool for controlling WDC from a terminal. The Windows installer adds it to PATH (open a new terminal); elsewhere it is in the <code>resources/cli</code> folder of the app directory. The app, and with it the daemon, has to be running.</p><h3 id='commands'>Examples</h3><ul><li><code>wdc status</code>: daemon and service status</li><li><code>wdc sites</code>: list of sites</li><li><code>wdc new myapp.loc</code>: a new site, the site folder is optional through <code>--docroot</code></li><li><code>wdc services start apache</code>: starts a service, <code>stop</code> and <code>restart</code> work the same way</li><li><code>wdc databases</code>: list of databases</li><li><code>wdc ssl generate myapp.loc</code>: a certificate for a domain</li><li><code>wdc doctor</code>: checks that everything works</li></ul><p><code>--json</code> prints machine-readable output and <code>wdc --help</code> lists every command.</p>"
       },
       "shortcuts": {
         "title": "Keyboard shortcuts",

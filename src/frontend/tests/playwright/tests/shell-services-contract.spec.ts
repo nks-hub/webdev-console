@@ -190,6 +190,32 @@ test.describe('Shell services contract', () => {
     expect(helper).toMatch(/ERROR_SEVERITIES/)
   })
 
+  test('help documents the wdc CLI with commands that exist', () => {
+    expect(read('components', 'pages', 'Help.vue')).toContain("{ key: 'cli' }")
+    const cliSource = readFileSync(
+      resolve(srcRoot, '..', '..', 'daemon', 'NKS.WebDevConsole.Cli', 'Program.cs'), 'utf-8')
+    for (const locale of ['cs', 'en']) {
+      const data = JSON.parse(read('locales', `${locale}.json`)) as { help: { topics: { cli: { body: string } } } }
+      const commands = [...data.help.topics.cli.body.matchAll(/<code>wdc ([a-z]+)(?: ([a-z]+))?/g)]
+      expect(commands.length, locale).toBeGreaterThan(3)
+      for (const [, command, sub] of commands) {
+        expect(cliSource, `${locale} wdc ${command}`).toContain(`new Command("${command}"`)
+        if (sub && /^(start|generate)$/.test(sub)) expect(cliSource, `${locale} wdc ${command} ${sub}`).toMatch(new RegExp(`"${sub}"|\\("${sub}"`))
+      }
+    }
+  })
+
+  test('activity feed hides the database trigger as a source and labels the other sources', () => {
+    const dashboard = read('components', 'pages', 'Dashboard.vue')
+    expect(dashboard).toMatch(/SILENT_SOURCES = new Set\(\['app', 'trigger'\]\)/)
+    for (const locale of ['cs', 'en']) {
+      const data = JSON.parse(read('locales', `${locale}.json`)) as { dashboard: { activity: { source: Record<string, string> } } }
+      for (const key of ['mcp', 'cli', 'api', 'migration', 'import']) {
+        expect(data.dashboard.activity.source[key], `${locale} ${key}`).toBeTruthy()
+      }
+    }
+  })
+
   test('mode names are lower case inside a sentence', () => {
     const cs = JSON.parse(read('locales', 'cs.json')) as { app: { advancedPageNote: string } }
     expect(cs.app.advancedPageNote).toBe('Tato stránka patří do pokročilého režimu, proto ji menu v jednoduchém režimu neukazuje.')

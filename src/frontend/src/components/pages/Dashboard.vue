@@ -109,7 +109,7 @@
             <span class="activity-op">{{ activityLabel('op', row.operation) }}</span>
             <span class="activity-entity">{{ activityLabel('entity', row.entityType) }}</span>
             <span class="activity-name mono" v-if="row.entityName">{{ row.entityName }}</span>
-            <span class="activity-source" v-if="row.source && row.source !== 'app'">{{ $t('dashboard.activity.via', { source: activityLabel('source', row.source) }) }}</span>
+            <span class="activity-source" v-if="row.source && !SILENT_SOURCES.has(row.source)">{{ $t('dashboard.activity.via', { source: activityLabel('source', row.source) }) }}</span>
             <time class="activity-time mono" :datetime="row.createdAt">{{ formatWhen(row.createdAt) }}</time>
           </li>
         </ol>
@@ -259,6 +259,10 @@ function activityLabel(kind: 'op' | 'entity' | 'source', code: string): string {
   const key = `dashboard.activity.${kind}.${(code || '').toLowerCase()}`
   return te(key) ? t(key) : code
 }
+
+// "app" is the default and "trigger" is the database's own audit trigger (every row of the
+// settings table); neither tells the reader who made the change.
+const SILENT_SOURCES = new Set(['app', 'trigger'])
 
 const activityLoading = ref(false)
 async function loadActivity() {
