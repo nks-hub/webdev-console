@@ -3316,15 +3316,15 @@
       },
       "firstSite": {
         "title": "Vytvoření prvního webu",
-        "body": "<p>V menu vlevo otevřete <strong>Weby</strong> a klikněte na <strong>Nový web</strong> (nebo stiskněte <code>Ctrl+N</code>). Zadejte lokální doménu, například <code>mojeapp.loc</code>, a vyberte složku webu. WDC doménu zapíše do souboru hosts samo.</p><h3 id='simple'>Jednoduchý režim</h3><p>Krátký formulář: doména, složka webu, verze PHP a volitelně HTTPS a tunel Cloudflare.</p><h3 id='advanced'>Pokročilý režim</h3><p>Tabulka webů a stránka každého webu se záložkami Přehled, Nastavení, Logy a Metriky, v Pokročilém režimu i Deploy a Historie. Další záložky přidávají pluginy, třeba SSL, Cloudflare a Composer.</p>"
+        "body": "<p>V menu vlevo otevřete <strong>Weby</strong> a klikněte na <strong>Nový web</strong> (nebo stiskněte <code>Ctrl+N</code>). Zadejte lokální doménu, například <code>mojeapp.loc</code>, a vyberte složku webu. WDC doménu zapíše do souboru hosts samo.</p><h3 id='simple'>Jednoduchý režim</h3><p>Krátký formulář: doména, složka webu, verze PHP a volitelně HTTPS a tunel Cloudflare.</p><h3 id='advanced'>Pokročilý režim</h3><p>Tabulka webů a stránka každého webu se záložkami Přehled, Nastavení, Logy a Metriky, v Pokročilém režimu i Deploy a Historie. Další záložky přidávají pluginy, třeba Cloudflare a Composer.</p>"
       },
       "sitesSimple": {
         "title": "Weby v Jednoduchém režimu",
-        "body": "<p>Jednoduchý režim ukazuje pro každý web kartu se spuštěním a zastavením, otevřením v prohlížeči a rychlým nastavením. Nový web vytvoříte tlačítkem <strong>Nový web</strong>.</p><h3 id='setup'>Nastavení</h3><p>Doména, složka webu (navrhne se automaticky), verze PHP, přepínač tunelu Cloudflare a přepínač SSL.</p>"
+        "body": "<p>Jednoduchý režim ukazuje seznam webů se stavem a tlačítky pro otevření v prohlížeči a ve složce. Nový web vytvoříte tlačítkem <strong>Nový web</strong>.</p><h3 id='setup'>Nastavení</h3><p>Doména, složka webu (navrhne se automaticky), verze PHP, přepínač tunelu Cloudflare a přepínač HTTPS.</p>"
       },
       "sitesAdvanced": {
         "title": "Weby v Pokročilém režimu",
-        "body": "<p>Tabulkový pohled. Hlavní akce řádku je <strong>Upravit</strong>, která otevře stránku úpravy webu se záložkami. Další akce, například otevření v prohlížeči nebo smazání, jsou v menu na konci řádku.</p><h3 id='tabs'>Záložky stránky webu</h3><ul><li><strong>Přehled</strong>: stav webu a jeho hlavní nastavení</li><li><strong>Nastavení</strong>: doména a aliasy, složka webu, PHP nebo Node.js, HTTPS, síť a porty, veřejný přístup, framework a Docker, dole smazání webu</li><li><strong>Logy</strong>: chyby a přístupy z Apache</li><li><strong>Metriky</strong>: počet požadavků a historický graf provozu</li><li><strong>Deploy</strong>: nasazení na server, jen v Pokročilém režimu</li><li><strong>Historie</strong>: zálohy konfigurace, ke kterým se lze vrátit</li><li><strong>SSL</strong>, <strong>Cloudflare</strong>, <strong>Composer</strong>: záložky z pluginů</li></ul>"
+        "body": "<p>Tabulkový pohled. Klik na řádek otevře stránku webu se záložkami. Otevření v prohlížeči a ve složce mají na řádku vlastní tlačítka, ostatní akce, například duplikování nebo smazání, jsou v menu na konci řádku.</p><h3 id='tabs'>Záložky stránky webu</h3><ul><li><strong>Přehled</strong>: stav webu a jeho hlavní nastavení</li><li><strong>Nastavení</strong>: doména a aliasy, složka webu, PHP nebo Node.js, HTTPS, síť a porty, veřejný přístup, framework a Docker, dole smazání webu</li><li><strong>Logy</strong>: chyby a přístupy z Apache</li><li><strong>Metriky</strong>: počet požadavků a historický graf provozu</li><li><strong>Deploy</strong>: nasazení na server, jen v Pokročilém režimu</li><li><strong>Historie</strong>: zálohy konfigurace, ke kterým se lze vrátit</li><li><strong>Cloudflare</strong> a <strong>Composer</strong>: tunel a balíčky jednoho webu, záložky se objeví, když je zapnutý příslušný plugin</li></ul>"
       },
       "databases": {
         "title": "Databáze",
@@ -3387,7 +3387,7 @@
         },
         "ssl": {
           "title": "Zapněte HTTPS",
-          "desc": "V úpravě webu otevřete záložku <strong>SSL</strong> (v Jednoduchém režimu stačí přepínač SSL). Poprvé nejdřív nainstalujte lokální certifikační autoritu na stránce <strong>SSL</strong>, aby prohlížeč certifikátům důvěřoval.",
+          "desc": "V úpravě webu otevřete záložku <strong>Nastavení</strong> a zapněte <strong>HTTPS</strong> (v Jednoduchém režimu je přepínač i v dialogu Nový web). Poprvé nejdřív nainstalujte lokální certifikační autoritu na stránce <strong>SSL</strong>, aby prohlížeč certifikátům důvěřoval.",
           "tip": "Tip: odznak u certifikátu zežloutne, když do vypršení zbývá 14 dnů nebo méně."
         },
         "browser": {

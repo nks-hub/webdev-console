@@ -3316,15 +3316,15 @@
       },
       "firstSite": {
         "title": "Create your first site",
-        "body": "<p>Open <strong>Sites</strong> in the left menu and click <strong>New site</strong> (or press <code>Ctrl+N</code>). Enter a local domain (e.g. <code>myapp.loc</code>) and choose the site folder. WDC adds the domain to the hosts file for you.</p><h3 id='simple'>Simple mode</h3><p>A short form: domain, site folder, PHP version and optional HTTPS and Cloudflare Tunnel.</p><h3 id='advanced'>Advanced mode</h3><p>A table of sites and the full configuration of each site in tabs: General, Runtime, Cloudflare, SSL, Composer, Metrics, Errors, History and Danger.</p>"
+        "body": "<p>Open <strong>Sites</strong> in the left menu and click <strong>New site</strong> (or press <code>Ctrl+N</code>). Enter a local domain (e.g. <code>myapp.loc</code>) and choose the site folder. WDC adds the domain to the hosts file for you.</p><h3 id='simple'>Simple mode</h3><p>A short form: domain, site folder, PHP version and optional HTTPS and Cloudflare Tunnel.</p><h3 id='advanced'>Advanced mode</h3><p>A table of sites and a page for each site with the tabs Overview, Settings, Logs and Metrics, plus Deploy and History in Advanced mode. Plugins add more tabs, such as Cloudflare and Composer.</p>"
       },
       "sitesSimple": {
         "title": "Sites — Simple Mode",
-        "body": "<p>Simple mode shows a card for each site with start/stop, open-in-browser and quick settings. Create a site with the <strong>+ New Site</strong> button.</p><h3 id='setup'>Setup</h3><p>Domain + document root (auto-suggested from <code>C:\\work\\sites\\&lt;domain&gt;</code>), PHP version picker, Cloudflare Tunnel toggle, SSL toggle.</p>"
+        "body": "<p>Simple mode shows a list of sites with their status and buttons to open a site in the browser or its folder. Create a site with the <strong>New site</strong> button.</p><h3 id='setup'>Setup</h3><p>Domain and site folder (suggested automatically under <code>Sites</code> in your home folder), PHP version, Cloudflare Tunnel toggle and HTTPS toggle.</p>"
       },
       "sitesAdvanced": {
         "title": "Sites — Advanced Mode",
-        "body": "<p>Table view. Primary row action is <strong>Edit</strong> (opens SiteEdit with full 9-tab configuration); Open-in-browser, Detect framework, Delete live in the row overflow menu.</p><h3 id='tabs'>SiteEdit tabs</h3><ul><li><strong>General</strong> — domain, aliases, document root, PHP version</li><li><strong>Runtime</strong> — PHP-FPM pool tuning, environment variables</li><li><strong>Cloudflare</strong> — per-site tunnel config</li><li><strong>SSL</strong> — per-site cert switch + path overrides</li><li><strong>Composer</strong> — package manager</li><li><strong>Metrics</strong> — request rate, historical traffic chart</li><li><strong>Errors</strong> — aggregated Apache + PHP-FPM error tail</li><li><strong>History</strong> — config rollback points</li><li><strong>Danger</strong> — rename domain / delete</li></ul>"
+        "body": "<p>Table view. Clicking a row opens the site page with its tabs. Open in browser and Open folder are buttons on the row; other actions, such as Duplicate or Delete, are in the menu at the end of the row.</p><h3 id='tabs'>Site page tabs</h3><ul><li><strong>Overview</strong>: the status of the site and its main settings</li><li><strong>Settings</strong>: domain and aliases, site folder, PHP or Node.js, HTTPS, network and ports, public access, framework and Docker, deleting the site at the bottom</li><li><strong>Logs</strong>: errors and requests from Apache</li><li><strong>Metrics</strong>: request count and a historical traffic chart</li><li><strong>Deploy</strong>: deployment to a server, Advanced mode only</li><li><strong>History</strong>: configuration backups you can go back to</li><li><strong>Cloudflare</strong> and <strong>Composer</strong>: the tunnel and the packages of one site, the tabs appear when the matching plugin is on</li></ul>"
       },
       "databases": {
         "title": "Databases",
@@ -3387,7 +3387,7 @@
         },
         "ssl": {
           "title": "Enable HTTPS",
-          "desc": "Open your site in <strong>SiteEdit → SSL</strong> tab (or toggle SSL directly in Simple mode). First-time: install the local CA once via <strong>SSL → Install CA</strong> so the browser trusts your certs.",
+          "desc": "Open your site, go to the <strong>Settings</strong> tab and turn on <strong>HTTPS</strong> (in Simple mode the switch is also in the New site dialog). First-time: install the local CA once via <strong>SSL → Install CA</strong> so the browser trusts your certs.",
           "tip": "Tip: the SSL badge on each cert card turns amber when it expires in ≤ 14 days."
         },
         "browser": {
