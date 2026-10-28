@@ -742,30 +742,12 @@ foreach (var p in pluginLoader.Plugins)
             var config = configField?.GetValue(module);
             if (config is null) continue;
 
-            // Key → property name map. Must match the table in the
-            // PUT /api/settings hook so boot hydration and live settings
-            // reload converge on the same behaviour.
-            (string settingsKey, string propName)[] mapping = moduleId switch
+            // Same key → property table as the PUT /api/settings hook.
+            ServicePortSettings.Apply(config, moduleId, key =>
             {
-                "apache" or "caddy" or "nginx" =>
-                    new[] { ("ports.http", "HttpPort"), ("ports.https", "HttpsPort") },
-                "mysql"      => new[] { ("ports.mysql",      "Port") },
-                "mariadb"    => new[] { ("ports.mariadb",    "Port") },
-                "postgresql" => new[] { ("ports.postgresql", "Port") },
-                "redis"      => new[] { ("ports.redis",      "Port") },
-                "mailpit"    => new[] { ("ports.mailpitSmtp", "SmtpPort"),
-                                        ("ports.mailpitHttp", "WebPort") },
-                _ => Array.Empty<(string, string)>(),
-            };
-            foreach (var (k, propName) in mapping)
-            {
-                var parts = k.Split('.', 2);
-                var raw = startupSettings.GetString(parts[0], parts[1]);
-                if (string.IsNullOrWhiteSpace(raw)) continue;
-                if (!int.TryParse(raw, out var port) || port <= 0) continue;
-                var prop = config.GetType().GetProperty(propName);
-                if (prop?.CanWrite == true) prop.SetValue(config, port);
-            }
+                var parts = key.Split('.', 2);
+                return startupSettings.GetString(parts[0], parts[1]);
+            });
 
             // Reload so the plugin rewrites its on-disk config with the
             // hydrated values before any site orchestration kicks in.

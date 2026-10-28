@@ -2987,7 +2987,7 @@
       "mailpitSmtp": "Mailpit SMTP",
       "mailpitHttp": "Mailpit HTTP",
       "phpFpmBase": "Základní port PHP-FPM",
-      "phpFpmFormula": "Port každé verze PHP se spočítá jako základ + hlavní verze × 10 + vedlejší verze. Například základ 9000 a PHP 8.4 dají port 9084.",
+      "phpFpmFormula": "Port každé verze PHP se spočítá jako základ + hlavní verze × 10 + vedlejší verze. Například základ 9000 a PHP 8.4 dají port 9084. Platí jen pro PHP-FPM na macOS a Linuxu. Ve Windows spouští Apache PHP přes mod_fcgid a weby tento port nepoužívají.",
       "postgresqlPort": "Port PostgreSQL",
       "inUseTitle": "Port je obsazený",
       "inUseConfirm": "Tyto porty už používá jiný program: {ports}. Služba se na nich nespustí, dokud se neuvolní. Přesto uložit?",
