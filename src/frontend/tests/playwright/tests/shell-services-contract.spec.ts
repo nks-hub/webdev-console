@@ -270,6 +270,14 @@ test.describe('Shell services contract', () => {
     expect(sidebar).toMatch(/overflow-y: auto/)
   })
 
+  test('the page fade leaves no effect behind, so dialogs cover the sticky menu footer', () => {
+    // `both` keeps the opacity effect, hence a stacking context, on the page for good; a dialog
+    // inside it then ranks below the footer's z-index and shows the footer undimmed.
+    const fade = read('assets', 'tokens.css').match(/\.content-area > \* \{\s*animation: wdc-page-enter ([^;]*);/)?.[1] ?? ''
+    expect(fade).toMatch(/\bbackwards$/)
+    expect(fade).not.toMatch(/\b(both|forwards)\b/)
+  })
+
   test('mode names are lower case inside a sentence', () => {
     const cs = JSON.parse(read('locales', 'cs.json')) as { app: { advancedPageNote: string } }
     expect(cs.app.advancedPageNote).toBe('Tato stránka patří do pokročilého režimu, proto ji menu v jednoduchém režimu neukazuje.')
