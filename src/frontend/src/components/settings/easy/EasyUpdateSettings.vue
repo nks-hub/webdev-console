@@ -13,6 +13,9 @@
           <el-tag v-if="hasUpdate" type="warning" size="small" style="margin-left:var(--wdc-space-2)">
             {{ t('settings.update.available') }}
           </el-tag>
+          <el-tag v-else-if="newerBuild" type="info" size="small" style="margin-left:var(--wdc-space-2)">
+            {{ t('settings.update.newerBuild') }}
+          </el-tag>
           <el-tag v-else type="success" size="small" style="margin-left:var(--wdc-space-2)">
             {{ t('settings.update.upToDate') }}
           </el-tag>
@@ -110,6 +113,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatBytes } from '../../../utils/format'
+import { compareSemver, versionCore } from '../../../utils/semver'
 import SettingsCard from '../shared/SettingsCard.vue'
 
 /** GitHub release data: the version on offer and its notes. */
@@ -143,6 +147,11 @@ const emit = defineEmits<{
 }>()
 
 const manualOnly = computed(() => !props.updater || props.updater.status === 'disabled' || props.updater.status === 'error')
+
+// A test or pre-release build ahead of the newest published release: "latest
+// v0.5.3, up to date" next to "current v0.5.4" read as a contradiction.
+const newerBuild = computed(() => !!props.latestVersion
+  && compareSemver(versionCore(props.latestVersion), versionCore(props.currentVersion)) < 0)
 
 const updaterLabel = computed(() => {
   const u = props.updater

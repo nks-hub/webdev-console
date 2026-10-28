@@ -2799,7 +2799,7 @@
         "crashed": "Spadlo"
       },
       "switchToAdvanced": "Přepnout do pokročilého režimu",
-      "hiddenTab": "Tato nastavení jsou jen v pokročilém režimu."
+      "hiddenTab": "Sekce „{name}“ je jen v pokročilém režimu."
     },
     "account": {
       "simpleSubtitle": "Přihlášení a synchronizace mezi zařízeními",
@@ -3022,6 +3022,7 @@
       "latest": "Nejnovější verze",
       "available": "K dispozici",
       "upToDate": "Aktuální",
+      "newerBuild": "Máte novější sestavení",
       "notChecked": "Zatím nezkontrolováno",
       "lastChecked": "Naposledy zkontrolováno",
       "check": "Zkontrolovat aktualizace",

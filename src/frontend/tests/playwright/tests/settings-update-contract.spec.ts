@@ -56,4 +56,25 @@ test.describe('Settings update contract', () => {
       expect(update.errorDetail).toBeTruthy()
     }
   })
+
+  // v0.5.4 test build: "current v0.5.4" next to "latest v0.5.3, up to date".
+  test('a build ahead of the newest release says so instead of "up to date"', () => {
+    expect(compareSemver(versionCore('0.5.3'), versionCore('0.5.4-a5b25f8c'))).toBe(-1)
+    const card = read('src', 'components', 'settings', 'easy', 'EasyUpdateSettings.vue')
+    expect(card).toMatch(/compareSemver\(versionCore\(props\.latestVersion\), versionCore\(props\.currentVersion\)\) < 0/)
+    expect(card).toMatch(/<el-tag v-else-if="newerBuild" type="info"[\s\S]*?settings\.update\.newerBuild/)
+    for (const lang of ['cs', 'en'])
+      expect(JSON.parse(read('src', 'locales', `${lang}.json`)).settings.update.newerBuild).toBeTruthy()
+  })
+
+  // Simple mode: a link to an Advanced-only section showed "These settings are
+  // only in Advanced mode" above the General panel, as if General were meant.
+  test('the advanced-only banner names the section and first-row panels do not scroll the title away', () => {
+    const settings = read('src', 'components', 'pages', 'Settings.vue')
+    expect(settings).toMatch(/\$t\('settings\.simple\.hiddenTab', \{ name: hiddenTabLabel \}\)/)
+    expect(settings).toMatch(/if \(panel\) setTimeout\(\(\) => revealPanel\(panel\), 100\)/)
+    expect(settings).toMatch(/if \(top < 0 \|\| top > window\.innerHeight \* 0\.6\) el\.scrollIntoView/)
+    for (const lang of ['cs', 'en'])
+      expect(JSON.parse(read('src', 'locales', `${lang}.json`)).settings.simple.hiddenTab).toContain('{name}')
+  })
 })
