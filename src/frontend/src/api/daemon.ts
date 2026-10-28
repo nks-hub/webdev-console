@@ -710,7 +710,13 @@ export const fetchBackups = () =>
   json<{ count: number; backups: BackupEntry[] }>('/api/backup/list')
 
 export const createBackup = () =>
-  json<{ path: string; files: number; size: number }>('/api/backup', { method: 'POST' })
+  json<{
+    path: string
+    files: number
+    size: number
+    /** Asked-for content left out, e.g. Databases while MySQL is stopped. */
+    skipped?: Array<{ content: string; detail: string }>
+  }>('/api/backup', { method: 'POST' })
 
 /**
  * Downloads a backup archive through an authenticated fetch and saves it

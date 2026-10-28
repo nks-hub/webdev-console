@@ -87,7 +87,7 @@ public sealed class BackupScheduler : IDisposable
 
             var flags = ReadContentFlags();
             _logger.LogInformation("Scheduled backup triggered (every {Hours}h, flags={Flags})", scheduleHours, flags);
-            (string Path, int FileCount, long SizeBytes, BackupContentFlags Flags) result;
+            (string Path, int FileCount, long SizeBytes, BackupContentFlags Flags, IReadOnlyList<BackupSkip> Skipped) result;
             try
             {
                 result = _backupManager.CreateBackup(_backupManager.ScheduledBackupPath(), flags);
@@ -107,6 +107,7 @@ public sealed class BackupScheduler : IDisposable
                 files = result.FileCount,
                 size = result.SizeBytes,
                 contentFlags = result.Flags.ToString(),
+                skipped = result.Skipped.Select(s => new { content = s.Content.ToString(), detail = s.Detail }).ToList(),
             });
 
             // Prune: keep only the most recent N where N = backup.retainCount

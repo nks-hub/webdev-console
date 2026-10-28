@@ -213,7 +213,7 @@
     "subtitle": "Správa záloh konfigurace a dat",
     "tabs": {
       "overview": "Přehled",
-      "snapshots": "Snímky",
+      "snapshots": "Seznam záloh",
       "schedule": "Plánování",
       "content": "Obsah"
     },
@@ -227,10 +227,13 @@
       "soon": "Brzy",
       "inHours": "za {h} h {m} min",
       "inMinutes": "za {m} min",
+      "ago": "před {d}",
+      "justNow": "právě teď",
       "backupNow": "Zálohovat nyní",
       "openFolder": "Otevřít složku záloh",
       "refresh": "Načíst znovu",
-      "createdToast": "Záloha vytvořena: {files} souborů, {size}",
+      "createdToast": "Záloha vytvořena: {files} soubor, {size} | Záloha vytvořena: {files} soubory, {size} | Záloha vytvořena: {files} souborů, {size}",
+      "createdIncomplete": "Záloha vytvořena, ale není úplná",
       "noBackupsYet": "Zatím tu není žádná záloha. Nejdřív nějakou vytvořte."
     },
     "snapshots": {
@@ -241,7 +244,7 @@
       "restore": "Obnovit",
       "delete": "Smazat",
       "restoreConfirmTitle": "Obnovit zálohu",
-      "restoreConfirmMessage": "Obnovit zálohu z {date}? Přepíše se konfigurace webů, SSL certifikáty, konfigurace pluginů a interní databáze aplikace (nastavení a seznam webů). Databáze MySQL a soubory webů se z této zálohy neobnovují. Aktuální stav se nejdřív uloží jako bezpečnostní záloha. Po obnovení se aplikace restartuje a okno se znovu načte.",
+      "restoreConfirmMessage": "Obnovit zálohu z {date}? Přepíše se konfigurace webů, SSL certifikáty, konfigurace pluginů a interní databáze aplikace (nastavení a seznam webů). Databáze MySQL a soubory webů se neobnovují; pokud je záloha obsahuje, najdete je v archivu ve složkách databases a docroots. Aktuální stav se nejdřív uloží jako bezpečnostní záloha. Po obnovení se aplikace restartuje a okno se znovu načte.",
       "deleteConfirmTitle": "Smazat zálohu",
       "deleteConfirmMessage": "Smazat zálohu {name}?",
       "backupFailed": "Záloha selhala",
@@ -250,13 +253,16 @@
       "downloadFailed": "Stažení selhalo: {error}"
     },
     "toast": {
-      "completed": "Záloha dokončena",
-      "restored": "Obnoveno {files} souborů. Bezpečnostní záloha: {safety}. Aplikace se restartuje…",
+      "restored": "Obnoven {files} soubor. Bezpečnostní záloha: {safety}. Aplikace se restartuje… | Obnoveny {files} soubory. Bezpečnostní záloha: {safety}. Aplikace se restartuje… | Obnoveno {files} souborů. Bezpečnostní záloha: {safety}. Aplikace se restartuje…",
       "deleted": "Záloha smazána",
       "scheduleSaved": "Plánování uloženo",
       "contentSaved": "Výběr obsahu uložen",
       "loadError": "Chyba načítání: {err}",
       "settingsSaveFailed": "Nastavení záloh se nepodařilo uložit: {err}"
+    },
+    "skipped": {
+      "databases": "Některé databáze MySQL v záloze nejsou. Zkontrolujte, že MySQL běží.",
+      "docroots": "Soubory některých webů v záloze nejsou. Složka webu chybí nebo nejde přečíst."
     },
     "schedule": {
       "cardTitle": "Interval automatické zálohy",
@@ -279,9 +285,9 @@
         "sslLabel": "SSL certifikáty",
         "sslDesc": "Certifikáty webů včetně soukromých klíčů",
         "databasesLabel": "Databáze MySQL",
-        "databasesDesc": "Export všech databází MySQL, záloha může být velká",
+        "databasesDesc": "Export všech databází MySQL (MySQL musí běžet), záloha může být velká",
         "docrootsLabel": "Soubory webů",
-        "docrootsDesc": "Celé složky webů, záloha může být velmi velká"
+        "docrootsDesc": "Obsah kořenové složky každého webu, záloha může být velmi velká"
       },
       "short": {
         "vhosts": "weby",
@@ -2689,7 +2695,8 @@
   },
   "settingsToast": {
     "ssoFailed": "Přihlášení přes SSO selhalo: {err}",
-    "backupCreated": "Záloha vytvořena: {files} souborů, {size}",
+    "backupCreated": "Záloha vytvořena: {files} soubor, {size} | Záloha vytvořena: {files} soubory, {size} | Záloha vytvořena: {files} souborů, {size}",
+    "backupIncomplete": "Záloha vytvořena, ale chybí v ní: {missing}.",
     "backupFailed": "Záloha selhala: {err}",
     "resetFailed": "Reset selhal: {err}",
     "mysqlRootSaved": "Heslo uživatele root uloženo",
@@ -2702,7 +2709,7 @@
     "dnsFlushed": "DNS cache vyprázdněna",
     "dnsFlushUnavailable": "Vyprázdnění DNS teď nejde, démon neodpovídá.",
     "noMampSites": "Žádné MAMP PRO weby nebyly nalezeny",
-    "mampImported": "Importováno {count} webů z MAMP",
+    "mampImported": "Z MAMP importován {count} web | Z MAMP importovány {count} weby | Z MAMP importováno {count} webů",
     "mampFailed": "Import z MAMP selhal: {err}",
     "pluginSyncFailed": "Synchronizace pluginů selhala: {err}",
     "catalogRefreshed": "Katalog obnoven, verzí ke stažení: {count}",
@@ -3911,6 +3918,8 @@
       "mcpConfirmBody": "AI klient chce spustit nevratnou akci. Otevřete NKS WebDev Console a akci schvalte, nebo odmítněte.",
       "backupCompletedTitle": "Záloha dokončena",
       "backupCompletedBody": "{trigger} záloha uložena (souborů: {files}, {size}).",
+      "backupIncompleteTitle": "Záloha není úplná",
+      "backupIncompleteBody": "{trigger} záloha uložena, ale chybí v ní: {missing}.",
       "backupFailedTitle": "Záloha selhala",
       "backupFailedBody": "{trigger} záloha selhala: {error}",
       "backupTriggerScheduled": "Plánovaná",

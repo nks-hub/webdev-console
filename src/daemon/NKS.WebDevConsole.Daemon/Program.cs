@@ -189,6 +189,7 @@ builder.Services.AddHostedService<NKS.WebDevConsole.Daemon.Mcp.GrantSweeperServi
 builder.Services.AddSingleton<SiteOrchestrator>();
 builder.Services.AddSingleton<MampMigrator>();
 builder.Services.AddSingleton<SitePhpIniWriter>();
+builder.Services.AddSingleton<IMysqlBackupDumper, MysqlBackupDumper>();
 builder.Services.AddSingleton<BackupManager>();
 builder.Services.AddSingleton<BackupScheduler>();
 

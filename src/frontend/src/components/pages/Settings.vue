@@ -561,21 +561,21 @@
                 </el-button>
               </el-form-item>
               <el-form-item :label="$t('settings.advanced.mysqlRoot')">
-                <div class="mysql-root-row">
-                  <el-input
-                    v-model="mysqlRootPassword"
-                    type="password"
-                    show-password
-                    :placeholder="mysqlRootExists ? $t('settings.advanced.mysqlRootPlaceholderStored') : $t('settings.advanced.mysqlRootPlaceholderEnter')"
-                    class="mono-input"
-                  />
-                  <el-button
-                    size="small"
-                    :loading="mysqlRootSaving"
-                    :disabled="!mysqlRootPassword"
-                    @click="saveMysqlRootPassword"
-                  >{{ $t('settings.advanced.save') }}</el-button>
-                </div>
+                <el-input
+                  v-model="mysqlRootPassword"
+                  type="password"
+                  show-password
+                  :placeholder="mysqlRootExists ? $t('settings.advanced.mysqlRootPlaceholderStored') : $t('settings.advanced.mysqlRootPlaceholderEnter')"
+                  class="mono-input"
+                >
+                  <template #append>
+                    <el-button
+                      :loading="mysqlRootSaving"
+                      :disabled="!mysqlRootPassword"
+                      @click="saveMysqlRootPassword"
+                    >{{ $t('settings.advanced.save') }}</el-button>
+                  </template>
+                </el-input>
                 <div class="hint">
                   {{ mysqlRootExists ? $t('settings.advanced.mysqlRootStored') : $t('settings.advanced.mysqlRootMissing') }}
                   {{ $t('settings.advanced.mysqlRootHint') }}
@@ -1082,6 +1082,7 @@ import {
 } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import { formatBytes } from '../../utils/format'
+import { backupContentLabel } from '../../utils/backupContent'
 import HealthStatusDot from '../shared/HealthStatusDot.vue'
 import SettingsPanel from '../shared/SettingsPanel.vue'
 import SettingsCard from '../settings/shared/SettingsCard.vue'
@@ -1500,7 +1501,9 @@ async function manualBackup() {
   backupCreating.value = true
   try {
     const result = await createBackup()
-    ElMessage.success(t('settingsToast.backupCreated', { files: result.files, size: formatBytes(result.size, locale.value) }))
+    const missing = [...new Set((result.skipped ?? []).map(s => backupContentLabel(s.content)))]
+    if (missing.length) ElMessage.warning(t('settingsToast.backupIncomplete', { missing: missing.join(', ') }))
+    else ElMessage.success(t('settingsToast.backupCreated', { files: result.files, size: formatBytes(result.size, locale.value) }, result.files))
   } catch (e) {
     ElMessage.error(t('settingsToast.backupFailed', { err: errorMessage(e) }))
   } finally {
@@ -1795,7 +1798,7 @@ async function discoverMamp() {
       const ir = await fetch(`${daemonBaseUrl()}/api/sites/migrate-mamp`, { method: 'POST', headers: authHeaders() })
       if (!ir.ok) throw new Error((await ir.text().catch(() => '')) || `HTTP ${ir.status}`)
       const result = await ir.json()
-      ElMessage.success(t('settingsToast.mampImported', { count: result.count }))
+      ElMessage.success(t('settingsToast.mampImported', { count: result.count }, result.count))
     }
   } catch (e) {
     if (e !== 'cancel') ElMessage.error(t('settingsToast.mampFailed', { err: errorMessage(e) }))
@@ -2344,7 +2347,7 @@ const lastSyncDisplay = computed(() => {
   if (!lastSyncTime.value) return ''
   const parsed = new Date(lastSyncTime.value)
   if (isNaN(parsed.getTime())) return lastSyncTime.value
-  return parsed.toLocaleString()
+  return parsed.toLocaleString(locale.value)
 })
 
 async function loadDeviceId() {
@@ -3161,18 +3164,18 @@ async function save() {
 
 .about-sso { display: flex; flex-direction: column; gap: 6px; padding: 8px 0 0; }
 
-.mysql-root-row {
-  display: flex;
-  align-items: stretch;
-  gap: var(--wdc-space-2);
-  width: 100%;
-}
-.mysql-root-row .el-input {
-  flex: 1 1 0;
-  min-width: 0;
-}
 .about-sso-status { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--el-text-color-secondary); }
 .about-sso-status .sys-label, .about-sso-status .sys-value { white-space: nowrap; }
+/* A sentence ("not synced yet"), not a number: the label's font, not mono. */
+.about-sso-status .sys-value { font-family: inherit; font-size: inherit; }
+
+.danger-collapse-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--wdc-space-1-5);
+  color: var(--el-color-danger);
+  font-weight: 600;
+}
 
 /* Wrapped action buttons line up on the left; the gap does the spacing. */
 .simple-settings-grid :deep(.settings-panel-actions .el-button + .el-button) { margin-left: 0; }

@@ -31,7 +31,9 @@
               </div>
               <div class="stat-card">
                 <div class="stat-label">{{ $t('backupsPage.overview.lastCreated') }}</div>
-                <div class="stat-value">{{ stats.lastCreatedUtc ? formatDate(stats.lastCreatedUtc) : $t('backupsPage.overview.none') }}</div>
+                <div class="stat-value" :title="stats.lastCreatedUtc ? formatDate(stats.lastCreatedUtc) : undefined">
+                  {{ lastCreatedLabel }}
+                </div>
               </div>
               <div class="stat-card">
                 <div class="stat-label">{{ $t('backupsPage.overview.next') }}</div>
@@ -58,14 +60,21 @@
 
             <el-alert
               v-if="backupResult"
-              type="success"
-              :title="$t('backupsPage.overview.createdToast', { files: backupResult.files, size: formatSize(backupResult.size) })"
-              :description="backupResult.path"
+              :type="skippedGroups.length ? 'warning' : 'success'"
+              :title="skippedGroups.length
+                ? $t('backupsPage.overview.createdIncomplete')
+                : $t('backupsPage.overview.createdToast', { files: backupResult.files, size: formatSize(backupResult.size) }, backupResult.files)"
               closable
               show-icon
               style="margin-top: var(--wdc-space-4)"
               @close="backupResult = null"
-            />
+            >
+              <div class="backup-result-path mono">{{ backupResult.path }}</div>
+              <div v-for="group in skippedGroups" :key="group.key" class="backup-skip">
+                <div>{{ $t(`backupsPage.skipped.${group.key}`) }}</div>
+                <div v-for="(detail, i) in group.details" :key="i" class="backup-skip-detail mono">{{ detail }}</div>
+              </div>
+            </el-alert>
             <el-alert
               v-if="errorMsg"
               type="error"
@@ -199,7 +208,8 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { errorMessage } from '../../utils/errors'
-import { formatBytes } from '../../utils/format'
+import { formatBytes, formatDuration } from '../../utils/format'
+import { backupContentKeys, backupContentLabel as contentLabel } from '../../utils/backupContent'
 import { Loading } from '@element-plus/icons-vue'
 import {
   daemonBaseUrl, daemonAuthHeaders, downloadBackup as downloadBackupFile,
@@ -237,6 +247,7 @@ interface BackupResult {
   files: number
   size: number
   contentFlags: string
+  skipped?: Array<{ content: string; detail: string }>
 }
 
 // ── state ─────────────────────────────────────────────────────────────────
@@ -253,6 +264,11 @@ const stats = ref<BackupStats>({ count: 0, totalSize: 0, lastCreatedUtc: null })
 
 const scheduleHours = ref(24)
 const retainCount = ref(10)
+// The overview shows the schedule the daemon runs, not unsaved edits.
+const savedScheduleHours = ref(24)
+// Ticks so "next backup in…" counts down while the page stays open.
+const now = ref(Date.now())
+let nowTimer: ReturnType<typeof setInterval> | null = null
 
 const contentFlagDefs = [
   { key: 'vhosts',        labelKey: 'backupsPage.content.flags.vhostsLabel',        descKey: 'backupsPage.content.flags.vhostsDesc',        default: true },
@@ -274,12 +290,20 @@ const contentFlags = ref<Record<string, boolean>>({
 
 const noContentSelected = computed(() => !Object.values(contentFlags.value).some(Boolean))
 
+// Relative, like "next backup", so it fits the card; the date is in the title.
+const lastCreatedLabel = computed(() => {
+  if (!stats.value.lastCreatedUtc) return t('backupsPage.overview.none')
+  const seconds = (now.value - new Date(stats.value.lastCreatedUtc).getTime()) / 1000
+  if (seconds < 60) return t('backupsPage.overview.justNow')
+  return t('backupsPage.overview.ago', { d: formatDuration(seconds, locale.value) })
+})
+
 const nextScheduledLabel = computed(() => {
-  if (scheduleHours.value === 0) return t('backupsPage.overview.off')
+  if (savedScheduleHours.value <= 0) return t('backupsPage.overview.off')
   if (!stats.value.lastCreatedUtc) return t('backupsPage.overview.soon')
   const last = new Date(stats.value.lastCreatedUtc).getTime()
-  const nextMs = last + scheduleHours.value * 3600 * 1000
-  const diff = nextMs - Date.now()
+  const nextMs = last + savedScheduleHours.value * 3600 * 1000
+  const diff = nextMs - now.value
   if (diff <= 0) return t('backupsPage.overview.soon')
   const hours = Math.floor(diff / 3600000)
   const mins = Math.floor((diff % 3600000) / 60000)
@@ -298,11 +322,14 @@ onMounted(() => {
   unsubscribeBackupEvents = subscribeEventsMap({
     'backup:completed': () => { void loadAll() },
   })
+  nowTimer = setInterval(() => { now.value = Date.now() }, 30_000)
 })
 
 onBeforeUnmount(() => {
   unsubscribeBackupEvents?.()
   unsubscribeBackupEvents = null
+  if (nowTimer) clearInterval(nowTimer)
+  nowTimer = null
 })
 
 // ── data loading ───────────────────────────────────────────────────────────
@@ -315,13 +342,11 @@ async function loadAll() {
       fetch(`${daemonBaseUrl()}/api/backup/list`, { headers: daemonAuthHeaders() }),
       fetch(`${daemonBaseUrl()}/api/backup/stats`, { headers: daemonAuthHeaders() }),
     ])
-    if (listRes.ok) {
-      const data = await listRes.json()
-      backups.value = data.backups ?? []
-    }
-    if (statsRes.ok) {
-      stats.value = await statsRes.json()
-    }
+    for (const res of [listRes, statsRes])
+      if (!res.ok) throw new Error(await responseError(res, `HTTP ${res.status}`))
+    backups.value = (await listRes.json()).backups ?? []
+    stats.value = await statsRes.json()
+    now.value = Date.now()
   } catch (e) {
     errorMsg.value = t('backupsPage.toast.loadError', { err: e instanceof Error ? e.message : String(e) })
   } finally {
@@ -332,10 +357,12 @@ async function loadAll() {
 async function loadSettings() {
   try {
     const s = await fetchSettings()
-    if (s['backup.scheduleHours'] !== undefined)
-      scheduleHours.value = parseInt(s['backup.scheduleHours']) || 24
-    if (s['backup.retainCount'] !== undefined)
-      retainCount.value = parseInt(s['backup.retainCount']) || 10
+    // 0 means "off" to the daemon; `parseInt(…) || 24` turned it back into 24.
+    const hours = parseInt(s['backup.scheduleHours'] ?? '')
+    if (Number.isFinite(hours)) scheduleHours.value = Math.min(Math.max(hours, 0), 168)
+    savedScheduleHours.value = scheduleHours.value
+    const retain = parseInt(s['backup.retainCount'] ?? '')
+    if (Number.isFinite(retain)) retainCount.value = Math.min(Math.max(retain, 1), 100)
     for (const flag of contentFlagDefs) {
       const key = `backup.content.${flag.key}`
       if (s[key] !== undefined)
@@ -361,9 +388,9 @@ async function runBackupNow() {
       body: JSON.stringify({ contentFlags: { ...contentFlags.value } }),
     })
     if (!res.ok) throw new Error(await responseError(res, t('backupsPage.snapshots.backupFailed')))
+    // The alert under the buttons reports the result; a toast said it twice.
     backupResult.value = await res.json()
     await loadAll()
-    ElMessage.success(t('backupsPage.toast.completed'))
   } catch (e) {
     errorMsg.value = e instanceof Error ? e.message : String(e)
     ElMessage.error(errorMsg.value)
@@ -417,7 +444,7 @@ async function restoreBackup(b: BackupEntry) {
     if (!res.ok) throw new Error(await responseError(res, t('backupsPage.snapshots.restoreFailed')))
     const data = await res.json()
     ElMessage.success({
-      message: t('backupsPage.toast.restored', { files: data.restored, safety: fileName(data.safetyBackup) }),
+      message: t('backupsPage.toast.restored', { files: data.restored, safety: fileName(data.safetyBackup) }, data.restored),
       duration: 3500,
     })
   } catch (e) {
@@ -457,10 +484,12 @@ async function deleteBackup(b: BackupEntry) {
 }
 
 async function saveSchedule() {
-  await persist({
-    'backup.scheduleHours': String(scheduleHours.value),
+  const hours = scheduleHours.value
+  const saved = await persist({
+    'backup.scheduleHours': String(hours),
     'backup.retainCount': String(retainCount.value),
   }, t('backupsPage.toast.scheduleSaved'))
+  if (saved) savedScheduleHours.value = hours
 }
 
 async function saveContent() {
@@ -471,13 +500,15 @@ async function saveContent() {
 
 // One PUT with flat "category.key" names — the only body shape the
 // settings endpoint accepts.
-async function persist(patch: Record<string, string>, successText: string) {
+async function persist(patch: Record<string, string>, successText: string): Promise<boolean> {
   saving.value = true
   try {
     await saveSettings(patch)
     ElMessage.success(successText)
+    return true
   } catch (e) {
     ElMessage.error(t('backupsPage.toast.settingsSaveFailed', { err: errorMessage(e) }))
+    return false
   } finally {
     saving.value = false
   }
@@ -496,23 +527,16 @@ function fileName(path: string): string {
   return path.replace(/\\/g, '/').split('/').pop() ?? path
 }
 
-// BackupContentFlags.ToString() on the daemon: "Vhosts, Ssl", "Default", "All, Binaries"…
-const FLAG_KEYS: Record<string, string[]> = {
-  Vhosts: ['vhosts'],
-  PluginConfigs: ['pluginConfigs'],
-  Ssl: ['ssl'],
-  Databases: ['databases'],
-  Docroots: ['docroots'],
-  Default: ['vhosts', 'pluginConfigs', 'ssl'],
-  All: ['vhosts', 'pluginConfigs', 'ssl', 'databases', 'docroots'],
-}
-
-function contentLabel(flags: string): string {
-  return flags.split(',')
-    .flatMap(f => FLAG_KEYS[f.trim()] ?? [])
-    .map(k => t(`backupsPage.content.short.${k}`))
-    .join(', ')
-}
+// Content asked for but left out (MySQL stopped, a site folder missing),
+// grouped per category: one plain-language line, then the daemon's details.
+const skippedGroups = computed(() => {
+  const groups = new Map<string, string[]>()
+  for (const s of backupResult.value?.skipped ?? []) {
+    const key = backupContentKeys(s.content)[0] ?? s.content
+    groups.set(key, [...(groups.get(key) ?? []), s.detail])
+  }
+  return [...groups].map(([key, details]) => ({ key, details }))
+})
 
 function formatSize(bytes: number): string {
   return formatBytes(bytes, locale.value)
@@ -599,6 +623,13 @@ function formatDate(iso: string): string {
   display: flex;
   gap: var(--wdc-space-2-5);
   flex-wrap: wrap;
+}
+.backup-result-path { font-size: 0.8rem; overflow-wrap: anywhere; }
+.backup-skip { margin-top: var(--wdc-space-2); }
+.backup-skip-detail {
+  font-size: 0.76rem;
+  color: var(--wdc-text-3);
+  overflow-wrap: anywhere;
 }
 
 /* ── Snapshots ── */
@@ -701,6 +732,8 @@ function formatDate(iso: string): string {
   flex-direction: column;
   gap: var(--wdc-space-1);
 }
+/* Without this the tag stretched to the width of the description. */
+.flag-copy .el-tag { align-self: flex-start; }
 .flag-name {
   font-size: 0.9rem;
   font-weight: 600;
