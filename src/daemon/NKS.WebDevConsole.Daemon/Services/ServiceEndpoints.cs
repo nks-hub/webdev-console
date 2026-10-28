@@ -31,25 +31,25 @@ internal static class ServiceEndpoints
     public static void MapServiceEndpoints(this WebApplication app)
     {
         // Service management endpoints — query real plugin modules
-        app.MapGet("/api/services", async (IServiceProvider sp, BinaryManager bm, ServiceRunTracker tracker) =>
+        app.MapGet("/api/services", async (IServiceProvider sp, ILoggerFactory lf, BinaryManager bm, ServiceRunTracker tracker) =>
         {
             // Fan out status probes concurrently — same rationale as /api/system
             // (commit 9cf5d53). This endpoint is hit by every AppSidebar poll (5s
             // cadence) so the sequential foreach was the per-poll floor for the
             // whole services pane.
             var modules = sp.GetServices<IServiceModule>().ToArray();
-            var statuses = await Task.WhenAll(
-                modules.Select(m => m.GetStatusAsync(CancellationToken.None)));
+            var log = lf.CreateLogger("ServiceStatus");
+            var statuses = await Task.WhenAll(modules.Select(m => tracker.StatusAsync(m, log)));
             return Results.Ok(ServiceInfoProjection.BuildAll(statuses, bm.ListInstalled(), tracker, modules));
         });
 
-        app.MapGet("/api/services/{id}", async (string id, IServiceProvider sp, BinaryManager bm, ServiceRunTracker tracker) =>
+        app.MapGet("/api/services/{id}", async (string id, IServiceProvider sp, ILoggerFactory lf, BinaryManager bm, ServiceRunTracker tracker) =>
         {
             var modules = sp.GetServices<IServiceModule>();
             var module = modules.FirstOrDefault(m => m.ServiceId.Equals(id, StringComparison.OrdinalIgnoreCase)
                 || m.Type.ToString().Equals(id, StringComparison.OrdinalIgnoreCase));
             if (module == null) return Results.NotFound();
-            var status = await module.GetStatusAsync(CancellationToken.None);
+            var status = await tracker.StatusAsync(module, lf.CreateLogger("ServiceStatus"));
             return Results.Ok(ServiceInfoProjection.Build(status, bm.ListInstalled(), tracker, module));
         });
 

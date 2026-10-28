@@ -1,3 +1,6 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
+using NKS.WebDevConsole.Core.Interfaces;
 using NKS.WebDevConsole.Core.Models;
 using NKS.WebDevConsole.Daemon.Binaries;
 using NKS.WebDevConsole.Daemon.Services;
@@ -107,6 +110,40 @@ public class ServiceInfoProjectionTests
         var dto = ServiceInfoProjection.Build(Status("apache", ServiceState.Crashed), [], tracker);
 
         Assert.Equal(ServiceRunTracker.Exited, dto.CrashKind);
+    }
+
+    private static Mock<IServiceModule> Module(string id)
+    {
+        var module = new Mock<IServiceModule>();
+        module.SetupGet(m => m.ServiceId).Returns(id);
+        module.SetupGet(m => m.DisplayName).Returns(id);
+        return module;
+    }
+
+    [Fact]
+    public async Task StatusAsync_ReportsTheLastKnownState_WhenTheProbeThrows()
+    {
+        // Apache's probe throws between new Process() and Start().
+        var tracker = new ServiceRunTracker();
+        var module = Module("apache");
+        module.SetupSequence(m => m.GetStatusAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Status("apache", ServiceState.Running))
+            .ThrowsAsync(new InvalidOperationException("No process is associated with this object."));
+
+        Assert.Equal(ServiceState.Running, (await tracker.StatusAsync(module.Object, NullLogger.Instance)).State);
+        Assert.Equal(ServiceState.Running, (await tracker.StatusAsync(module.Object, NullLogger.Instance)).State);
+    }
+
+    [Fact]
+    public async Task StatusAsync_ReportsStopped_WhenTheFirstProbeThrows()
+    {
+        var module = Module("apache");
+        module.Setup(m => m.GetStatusAsync(It.IsAny<CancellationToken>())).ThrowsAsync(new InvalidOperationException());
+
+        var status = await new ServiceRunTracker().StatusAsync(module.Object, NullLogger.Instance);
+
+        Assert.Equal(ServiceState.Stopped, status.State);
+        Assert.Equal("apache", status.Id);
     }
 
     [Fact]

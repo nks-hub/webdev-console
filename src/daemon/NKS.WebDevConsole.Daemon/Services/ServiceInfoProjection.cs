@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 using NKS.WebDevConsole.Core.Interfaces;
 using NKS.WebDevConsole.Core.Models;
 using NKS.WebDevConsole.Daemon.Binaries;
@@ -40,6 +41,30 @@ public sealed class ServiceRunTracker
 
     private readonly ConcurrentDictionary<string, bool> _sawRunning = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, string> _startErrors = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, ServiceStatus> _lastStatus = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The module's status, or the last one it reported when the probe throws.
+    /// A plugin can throw while its process object is half set up (Apache
+    /// between <c>new Process()</c> and <c>Start()</c>), and one module must
+    /// not fail the whole service list. Stopped when nothing was seen yet.
+    /// </summary>
+    public async Task<ServiceStatus> StatusAsync(IServiceModule module, ILogger logger)
+    {
+        try
+        {
+            var status = await module.GetStatusAsync(CancellationToken.None);
+            _lastStatus[module.ServiceId] = status;
+            return status;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Status probe for {Service} failed; reporting its last known state", module.ServiceId);
+            return _lastStatus.TryGetValue(module.ServiceId, out var last)
+                ? last
+                : new ServiceStatus(module.ServiceId, module.DisplayName, ServiceState.Stopped, null, 0, 0, null);
+        }
+    }
 
     /// <summary>Call right before a start or restart is issued.</summary>
     public void MarkStartRequested(string serviceId)
