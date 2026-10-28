@@ -124,6 +124,15 @@ test.describe('Sites flow contract', () => {
     expect(reset).not.toMatch(/clearValidate/)
   })
 
+  test('logs/errors reads a site\'s own Apache error log and falls back to the global one only for a vhost without a log of its own', () => {
+    const endpoints = readFileSync(
+      resolve(srcRoot, '..', '..', 'daemon', 'NKS.WebDevConsole.Daemon', 'Sites', 'SiteEndpoints.cs'), 'utf-8')
+    const handler = endpoints.match(/"\/api\/sites\/\{domain\}\/logs\/errors"[\s\S]*?"\/api\/sites\/\{domain\}\/logs\/access"/)?.[0] ?? ''
+    expect(handler).toMatch(/ApacheSiteErrorLogs\.Resolve\(/)
+    // The global log is chosen inside ApacheSiteErrorLogs, not added for every site here.
+    expect(handler).not.toMatch(/Path\.Combine\(logsDir, "error\.log"\)/)
+  })
+
   test('i18n keys of the new states exist in both locales', () => {
     const get = (o: Record<string, unknown>, path: string) =>
       path.split('.').reduce<unknown>((a, k) => (a && typeof a === 'object' ? (a as Record<string, unknown>)[k] : undefined), o)
