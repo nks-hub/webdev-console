@@ -3,7 +3,7 @@
        SiteComposer.vue component; this wrapper just registers it as a
        plugin contribution so disabling the Composer plugin removes the
        tab from SiteEdit without a template change. -->
-  <el-tab-pane v-if="site?.phpVersion" :name="name">
+  <el-tab-pane v-if="site?.phpVersion" :name="name" lazy>
     <template #label>
       <span class="tab-label"><el-icon><Grid /></el-icon> {{ label }}</span>
     </template>
@@ -23,6 +23,8 @@ defineProps<{
   label: string
   domain?: string
   site?: SiteInfo | null
+  /** Part of the context every plugin tab gets; this one loads when its pane is first shown. */
+  activeTab?: string
 }>()
 </script>
 

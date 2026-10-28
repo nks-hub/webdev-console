@@ -305,7 +305,7 @@
         <PluginSlot
           v-if="uiMode.isAdvanced"
           name="site-edit-tabs"
-          :context="{ domain, site, redirectHttps }"
+          :context="{ domain, site, redirectHttps, activeTab }"
           @update:site="onPluginSiteUpdate"
           @update:redirectHttps="(v: boolean) => redirectHttps = v"
           @dirty="markDirty"

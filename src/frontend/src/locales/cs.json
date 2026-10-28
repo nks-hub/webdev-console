@@ -947,6 +947,7 @@
     "composer": {
       "tabLabel": "Composer",
       "noProject": "Projekt Composeru nenalezen",
+      "openComposerPage": "Otevřít stránku Composer",
       "init": "Inicializovat Composer",
       "initHint": "Pro začátek spusťte ve složce webu composer init",
       "install": "Spustit composer install",

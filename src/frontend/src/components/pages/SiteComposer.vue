@@ -27,7 +27,7 @@
     <!-- No composer.json detected -->
     <div v-else-if="status && !status.hasComposerJson" class="composer-empty">
       <el-empty :description="$t('sites.composer.noProject')">
-        <template #extra>
+        <template #default>
           <p class="composer-empty-hint">{{ $t('sites.composer.initHint') }}</p>
           <el-button type="primary" @click="openInitDialog">
             {{ $t('sites.composer.initTitle') }}
@@ -38,6 +38,18 @@
 
     <!-- Main composer panel -->
     <div v-else-if="status" class="composer-panel">
+      <el-alert
+        v-if="composerMissing"
+        :title="$t('composer.notInstalledTitle')"
+        type="warning"
+        show-icon
+        :closable="false"
+        class="composer-alert"
+      >
+        <p class="banner-description">{{ $t('composer.notInstalledHint') }}</p>
+        <el-button size="small" type="primary" @click="router.push('/composer')">{{ $t('sites.composer.openComposerPage') }}</el-button>
+      </el-alert>
+
       <!-- Framework auto-install suggestion banner -->
       <el-alert
         v-if="status.installSuggestion && !isBannerDismissed"
@@ -410,12 +422,14 @@ import { ref, computed, onMounted } from 'vue'
 import { Check, Warning, Refresh, WarningFilled, Delete, Loading } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { composerStatus, composerInstall, composerRequire, composerRemove, composerOutdated, composerInit, composerDiagnose } from '../../api/daemon'
 import type { ComposerStatus, ComposerCommandResult } from '../../api/types'
 
 const props = defineProps<{ domain: string }>()
 
 const { t } = useI18n()
+const router = useRouter()
 
 const loading = ref(false)
 const loadError = ref<string | null>(null)
@@ -441,6 +455,9 @@ const diagnoseResult = ref<{ warnings: string[]; errors: string[] } | null>(null
 
 const DISMISS_KEY = computed(() => `wdc-composer-dismiss-${props.domain}`)
 const isBannerDismissed = ref(false)
+
+// The daemon answers "outdated" without running anything when composer.phar is not installed.
+const composerMissing = ref(false)
 
 // Outdated map keyed by package name
 const outdatedMap = ref<Record<string, { version?: string; latest: string; status: string }>>({})
@@ -496,6 +513,7 @@ async function loadOutdated(): Promise<void> {
       }
     }
     outdatedMap.value = map
+    composerMissing.value = result.composerAvailable === false
   } catch {
     // Non-critical — silently ignore
   }
@@ -507,8 +525,11 @@ async function loadStatus(): Promise<void> {
   currentOperation.value = 'Loading composer status from composer.json…'
   try {
     status.value = await composerStatus(props.domain)
-    currentOperation.value = 'Checking for outdated packages…'
-    await loadOutdated()
+    // Nothing to compare in a folder without composer.json.
+    if (status.value.hasComposerJson) {
+      currentOperation.value = 'Checking for outdated packages…'
+      await loadOutdated()
+    }
   } catch (err: unknown) {
     loadError.value = err instanceof Error ? err.message : String(err)
   } finally {
