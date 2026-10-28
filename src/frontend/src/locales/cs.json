@@ -849,15 +849,15 @@
     "bindIpHint": "* znamená, že web odpovídá na všech adresách počítače (výchozí). Chcete-li web omezit, vyberte jednu nebo více konkrétních IP adres. Localhost funguje vždy přes localhost a 127.0.0.1.",
     "create": "Nový web",
     "openHosts": "Otevřít soubor hosts",
-    "runtimeStatic": "Statický",
+    "runtimeStatic": "Statický web",
     "composeBadge": "Compose",
     "noMatching": "Žádný web neodpovídá „{q}“",
-    "reapplyAll": "Přegenerovat konfiguraci všech webů…",
+    "reapplyAll": "Použít konfiguraci všech webů znovu…",
     "saveAndApply": "Uložit a použít",
     "history": {
       "emptyDescription": "Žádná historie konfigurace"
     },
-    "detect": "Rozpoznat",
+    "detect": "Rozpoznat framework",
     "delete": "Smazat web",
     "backToSites": "Zpět na Weby",
     "notFound": "Web „{domain}“ nebyl nalezen",
@@ -883,7 +883,7 @@
           },
           "traffic": {
             "last24h": "Provoz (24 h)",
-            "hits": "{count} požadavků"
+            "hits": "{count} požadavek | {count} požadavky | {count} požadavků"
           },
           "fullLogs": "Zobrazit plné logy"
         }
@@ -1021,7 +1021,7 @@
       "tunnelOffline": "nedostupný",
       "openWaiting": "Apache neběží, web zatím neodpoví."
     },
-    "reapplyAllTitle": "Přegenerovat konfiguraci všech webů",
+    "reapplyAllTitle": "Použít konfiguraci všech webů znovu",
     "reapplyAllConfirm": "Konfigurace všech webů se vytvoří znovu a Apache se krátce restartuje. Během restartu weby neodpovídají. Pokračovat?",
     "runtimeStaticSite": "Statický web",
     "selectFolder": "Vyberte složku webu",
@@ -1117,7 +1117,7 @@
       "dbName": "Název databáze",
       "more": "Další nastavení",
       "aliasesEmpty": "Zadejte alias a stiskněte Enter",
-      "aliasesHint": "Další domény, na kterých web odpovídá. Hvězdička zastupuje libovolnou subdoménu: *.myapp.loc.",
+      "aliasesHint": "Další domény, na kterých web odpovídá. Hvězdička zastupuje libovolnou subdoménu: *.{example}.",
       "template": {
         "php-generic": {
           "label": "PHP (obecný web)",
@@ -1963,7 +1963,7 @@
     "leaveText": "Máte neuložené změny. Opravdu chcete stránku opustit?",
     "leaveConfirm": "Odejít bez uložení",
     "stay": "Zůstat",
-    "historyBanner": "Záloha konfigurace se vytvoří před každým uložením. Obnovou se vrátí jen konfigurační soubory webu (virtuální host a nastavení pluginů). Složka s weby se nemění.",
+    "historyBanner": "Záloha konfigurace se vytvoří před každým uložením. Obnovou se vrátí jen konfigurační soubory webu (virtuální host a nastavení pluginů). Složka webu se nemění.",
     "snapshot": "Záloha konfigurace",
     "ov": {
       "state": "Stav",
@@ -2593,7 +2593,7 @@
   "metrics": {
     "historical": {
       "dateLabel": "Datum",
-      "granularityLabel": "Granularita",
+      "granularityLabel": "Interval",
       "refresh": "Obnovit",
       "loading": "Načítání…",
       "emptyDay": "Žádný provoz v tento den",
@@ -3518,7 +3518,7 @@
     "notYet": "Od spuštění aplikace nebyla konfigurace tohoto webu použita",
     "allOk": "Konfigurace je použita",
     "someFailed": "Selhal {n} krok | Selhaly {n} kroky | Selhalo {n} kroků",
-    "applyAgain": "Použít znovu",
+    "applyAgain": "Použít konfiguraci znovu",
     "appliedOk": "Konfigurace webu je použita",
     "status": {
       "ok": "hotovo",

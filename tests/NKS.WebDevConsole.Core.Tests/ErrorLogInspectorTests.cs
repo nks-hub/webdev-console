@@ -138,6 +138,20 @@ public sealed class ErrorLogInspectorTests : IDisposable
     }
 
     [Fact]
+    public void Timestamps_WithoutOffset_AreLocalTime_ExceptPhpLinesMarkedUtc()
+    {
+        var apache = ErrorLogInspector.ParseApacheLine(
+            "[Tue Apr 14 15:30:45.987654 2026] [core:error] [pid 999] AH00124: some error");
+        var fpm = ErrorLogInspector.ParsePhpLine("[14-Apr-2026 15:30:45] NOTICE: fpm is running");
+        var utc = ErrorLogInspector.ParsePhpLine("[14-Apr-2026 15:30:45 UTC] PHP Notice: x");
+
+        var localOffset = TimeZoneInfo.Local.GetUtcOffset(new DateTime(2026, 4, 14, 15, 30, 45));
+        Assert.Equal(localOffset, apache!.Timestamp.Offset);
+        Assert.Equal(localOffset, fpm!.Timestamp.Offset);
+        Assert.Equal(TimeSpan.Zero, utc!.Timestamp.Offset);
+    }
+
+    [Fact]
     public void ParsePhpLine_InvalidLine_ReturnsNull()
     {
         Assert.Null(ErrorLogInspector.ParsePhpLine("No timestamp prefix here"));
@@ -212,7 +226,8 @@ public sealed class ErrorLogInspectorTests : IDisposable
             "[Sun Apr 13 11:00:00.000000 2026] [core:warn] [pid 3] After cutoff",
         });
 
-        var cutoff = new DateTimeOffset(2026, 4, 13, 10, 0, 0, TimeSpan.Zero);
+        // Apache logs local time, so the cutoff is a local time too.
+        var cutoff = new DateTimeOffset(new DateTime(2026, 4, 13, 10, 0, 0, DateTimeKind.Local));
         var entries = ErrorLogInspector.Tail(new[] { path }, "apache-error", since: cutoff);
 
         // Entries at or after the cutoff: 10:00:00 and 11:00:00

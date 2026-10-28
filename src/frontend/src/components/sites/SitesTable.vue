@@ -139,7 +139,7 @@
                   :aria-label="$t('sites.list.folderAria', { domain: row.site.domain })"
                   @click.stop="emit('action', 'folder', row.site)"
                 >
-                  <el-icon aria-hidden="true"><Folder /></el-icon>
+                  <el-icon aria-hidden="true"><Folder /></el-icon><span class="act-text">{{ $t('sites.list.folder') }}</span>
                 </el-button>
                 <el-dropdown
                   trigger="click"
@@ -332,6 +332,8 @@ td {
   border-bottom: 1px solid var(--wdc-border);
   vertical-align: middle;
 }
+/* The default checkbox outline is about 1.3:1 against the page in both themes; a box has to be seen to be ticked. */
+.sites-table :deep(.el-checkbox) { --el-checkbox-input-border: 1px solid var(--wdc-text-3); }
 .site-row { cursor: pointer; }
 @media (hover: hover) { .site-row:hover { background: var(--wdc-hover); } }
 .site-row:focus-within { background: var(--wdc-hover); }

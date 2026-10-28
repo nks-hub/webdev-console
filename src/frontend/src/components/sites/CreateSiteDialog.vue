@@ -182,7 +182,7 @@
           <div v-if="form.template" class="field-note">{{ $t(`sites.new.template.${form.template}.hint`) }}</div>
         </el-form-item>
 
-        <el-form-item :label="$t('sites.aliases')">
+        <el-form-item v-if="uiMode.isAdvanced" :label="$t('sites.aliases')">
           <el-select
             v-model="form.aliases"
             multiple
@@ -191,12 +191,12 @@
             default-first-option
             :reserve-keyword="false"
             :no-data-text="$t('sites.new.aliasesEmpty')"
-            placeholder="www.myapp.loc"
+            :placeholder="`www.${exampleDomain}`"
           />
-          <div class="field-note">{{ $t('sites.new.aliasesHint') }}</div>
+          <div class="field-note">{{ $t('sites.new.aliasesHint', { example: exampleDomain }) }}</div>
         </el-form-item>
 
-        <el-form-item :label="$t('sites.bindIp')" prop="bindAddresses">
+        <el-form-item v-if="uiMode.isAdvanced" :label="$t('sites.bindIp')" prop="bindAddresses">
           <el-select
             v-model="form.bindAddresses"
             multiple
@@ -244,8 +244,10 @@ import type { SiteInfo } from '../../api/types'
 import { useSitesStore } from '../../stores/sites'
 import { useSiteApplyStore } from '../../stores/siteApply'
 import { useSiteStateStore, type InstalledPhp } from '../../stores/siteState'
+import { useUiModeStore } from '../../stores/uiMode'
 import { errorMessage } from '../../utils/errors'
 import { pickNativeFolder } from '../../utils/pickFolder'
+import { DOMAIN_LABEL_RE, domainProblem } from '../../utils/siteDomain'
 import { pathSeparator, siteUrl } from '../../utils/siteUrl'
 import { useFolderOwner, useFolderState } from './folderCheck'
 
@@ -264,6 +266,7 @@ const { t } = useI18n()
 const sitesStore = useSitesStore()
 const siteApplyStore = useSiteApplyStore()
 const siteState = useSiteStateStore()
+const uiMode = useUiModeStore()
 
 const formRef = ref<FormInstance>()
 const domainInput = ref<{ focus?: () => void } | null>(null)
@@ -288,33 +291,33 @@ const emptyForm = () => ({
 const form = reactive(emptyForm())
 
 // ── Folder: suggestion from the domain, existence check ─────────────
-const docRootPlaceholder = ref('C:\\work\\htdocs\\myapp')
+// A new site's folder goes under <home>/Sites. Until the daemon has said where home is, nothing is suggested.
+const docRootBase = ref('')
 const docRootTouched = ref(false)
 
-async function resolveDocRootPlaceholder() {
+const exampleDomain = computed(() => t('sites.new.domainExample'))
+const docRootPlaceholder = computed(() =>
+  docRootBase.value ? `${docRootBase.value}${pathSeparator(docRootBase.value)}${exampleDomain.value}` : '')
+
+async function resolveDocRootBase() {
+  if (docRootBase.value) return
   try {
-    const sys = await fetchSystem()
-    if (sys.os.tag === 'windows') return
-    const home = sys.os.platform?.match(/(?:Users|home)\/([^/]+)/)?.[1]
-    docRootPlaceholder.value = sys.os.tag === 'linux'
-      ? (home ? `/home/${home}/Sites/myapp` : '/srv/www/myapp')
-      : (home ? `/Users/${home}/Sites/myapp` : '/Sites/myapp')
-  } catch { /* keep the Windows example */ }
+    const home = (await fetchSystem()).os.homeDir?.replace(/[\\/]+$/, '')
+    if (home) docRootBase.value = `${home}${pathSeparator(home)}Sites`
+  } catch { /* nothing is suggested, the user picks a folder */ }
 }
 
 const templateFields = computed(() => templates.find(tpl => tpl.id === form.template)?.fields)
 
 function suggestedFolder(): string {
   const domain = form.domain.trim().toLowerCase()
-  if (!domain) return ''
-  const sep = pathSeparator(docRootPlaceholder.value)
-  const base = docRootPlaceholder.value.slice(0, Math.max(docRootPlaceholder.value.lastIndexOf(sep), 0))
-  if (!base) return ''
+  if (!domain || !docRootBase.value) return ''
+  const sep = pathSeparator(docRootBase.value)
   const suffix = templateFields.value?.docRootSuffix
-  return `${base}${sep}${domain}${suffix ? sep + suffix : ''}`
+  return `${docRootBase.value}${sep}${domain}${suffix ? sep + suffix : ''}`
 }
 
-watch([() => form.domain, () => form.template], () => {
+watch([() => form.domain, () => form.template, docRootBase], () => {
   if (!docRootTouched.value) form.documentRoot = suggestedFolder()
 })
 
@@ -392,7 +395,7 @@ watch(() => siteState.cloudflareReady, (ready) => { if (!ready) form.cloudflareT
 
 const dbNameSuggestion = computed(() => {
   const stem = form.domain.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
-  return stem ? `${stem}_db` : 'myapp_db'
+  return `${stem || exampleDomain.value.split('.')[0]}_db`
 })
 
 // ── Bind addresses ──────────────────────────────────────────────────
@@ -415,18 +418,11 @@ async function loadBindOptions() {
 }
 
 // ── Validation ──────────────────────────────────────────────────────
-const LABEL_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/
 const rules = computed<FormRules>(() => ({
   domain: [{
     validator: (_r, value: string, cb: (e?: Error) => void) => {
-      const d = (value ?? '').trim().toLowerCase()
-      const labels = d.split('.')
-      if (!d) return cb(new Error(t('sites.new.err.domainRequired')))
-      if (/\s/.test(d)) return cb(new Error(t('sites.new.err.domainSpaces')))
-      if (d.length > 253 || !labels.every(l => LABEL_RE.test(l) && l.length <= 63)) return cb(new Error(t('sites.new.err.domainInvalid')))
-      if (d !== 'localhost' && labels.length < 2) return cb(new Error(t('sites.new.err.domainNoTld')))
-      if (sitesStore.sites.some(s => s.domain.toLowerCase() === d)) return cb(new Error(t('sites.new.err.domainExists')))
-      cb()
+      const problem = domainProblem(value, sitesStore.sites.map(s => s.domain))
+      cb(problem ? new Error(t(`sites.new.err.${problem}`)) : undefined)
     },
     trigger: ['blur', 'change'],
   }],
@@ -441,7 +437,7 @@ const rules = computed<FormRules>(() => ({
 const previewUrl = computed(() => {
   const d = form.domain.trim().toLowerCase()
   const labels = d.split('.')
-  if (!d || !labels.every(l => LABEL_RE.test(l))) return ''
+  if (!d || !labels.every(l => DOMAIN_LABEL_RE.test(l))) return ''
   return siteUrl({ domain: d, sslEnabled: form.sslEnabled, httpPort: 80, httpsPort: 443 })
 })
 
@@ -450,7 +446,7 @@ watch(open, (isOpen) => {
   if (!isOpen) return
   void siteState.refresh().then(ensurePhpVersion)
   void loadBindOptions()
-  void resolveDocRootPlaceholder()
+  void resolveDocRootBase()
 })
 
 function onOpened() {
@@ -467,6 +463,13 @@ function reset() {
 }
 
 // ── Submit ──────────────────────────────────────────────────────────
+// The daemon words its one hint in English; the dialog says it in the language of the app.
+const FRAMEWORK_HINT = /^Framework '(.+)' detected\./
+function hintText(hint: string): string {
+  const framework = FRAMEWORK_HINT.exec(hint)?.[1]
+  return framework ? `${t('sites.composer.frameworkDetected', { framework })}. ${t('sites.composer.installPrompt')}.` : hint
+}
+
 async function createDatabase(domain: string): Promise<boolean> {
   const name = form.dbName.trim() || dbNameSuggestion.value
   try {
@@ -510,7 +513,7 @@ async function submit() {
     const created = await siteApplyStore.track(domain, () => sitesStore.create(payload))
 
     for (const w of sitesStore.lastCreateWarnings) ElMessage.warning({ message: w, duration: 8000, showClose: true })
-    for (const h of sitesStore.lastCreateHints) ElMessage.info({ message: h, duration: 6000, showClose: true })
+    for (const h of sitesStore.lastCreateHints) ElMessage.info({ message: hintText(h), duration: 6000, showClose: true })
     // The daemon creates the site without HTTPS when no certificate could be issued.
     if (form.sslEnabled && created?.sslEnabled === false) {
       ElMessage.warning({ message: t('sitesToast.createdSslMissing'), duration: 8000, showClose: true })

@@ -70,6 +70,44 @@ test.describe('Sites flow contract', () => {
     expect(read('components', 'pages', 'SiteEdit.vue')).toMatch(/\$t\('siteEdit\.folderMissing'\)/)
   })
 
+  test('the overview activity card reads the real log and metrics endpoints, not fields they never return', () => {
+    const card = read('components', 'sites', 'SiteActivity.vue')
+    expect(card).toMatch(/fetchRecentErrors/)
+    expect(card).toMatch(/fetchHourlyRequests/)
+    expect(card).not.toMatch(/metrics\/history/)
+    const util = read('utils', 'siteActivity.ts')
+    expect(util).toMatch(/getErrorLogs\(domain, \{ lines: 1000, since:/)
+    expect(util).toMatch(/granularity: '1h'/)
+  })
+
+  test('metric series toggles are buttons that expose their state', () => {
+    const source = read('components', 'sites', 'SiteMetrics.vue')
+    expect(source).toMatch(/<button[\s\S]*?:aria-pressed="activeSeries\.includes\(s\.key\)"/)
+    expect(source).not.toMatch(/el-check-tag/)
+  })
+
+  test('New site dialog suggests a folder under the home folder the daemon reports; aliases and IP binding are Advanced only', () => {
+    const dialog = read('components', 'sites', 'CreateSiteDialog.vue')
+    expect(dialog).toMatch(/os\.homeDir/)
+    expect(dialog).not.toMatch(/htdocs/)
+    expect(dialog).toMatch(/v-if="uiMode\.isAdvanced" :label="\$t\('sites\.aliases'\)"/)
+    expect(dialog).toMatch(/v-if="uiMode\.isAdvanced" :label="\$t\('sites\.bindIp'\)"/)
+    const system = readFileSync(
+      resolve(srcRoot, '..', '..', 'daemon', 'NKS.WebDevConsole.Daemon', 'Services', 'SystemEndpoints.cs'), 'utf-8')
+    expect(system).toMatch(/homeDir = Environment\.GetFolderPath\(Environment\.SpecialFolder\.UserProfile\)/)
+  })
+
+  test('failed apply steps are not toasted in English, the site page shows every one of them translated', () => {
+    const store = read('stores', 'sites.ts')
+    const cs = JSON.parse(readFileSync(join(srcRoot, 'locales', 'cs.json'), 'utf-8')) as { siteApply: { steps: Record<string, string> } }
+    for (const step of Object.keys(cs.siteApply.steps)) expect(store, step).toMatch(new RegExp(`APPLY_STEP_WARNING = .*\\b${step}\\b`))
+  })
+
+  test('the duplicate dialog checks the new domain with the same rules as the new site dialog', () => {
+    expect(read('components', 'sites', 'CreateSiteDialog.vue')).toMatch(/domainProblem\(/)
+    expect(read('components', 'sites', 'DuplicateSiteDialog.vue')).toMatch(/domainProblem\(/)
+  })
+
   test('i18n keys of the new states exist in both locales', () => {
     const get = (o: Record<string, unknown>, path: string) =>
       path.split('.').reduce<unknown>((a, k) => (a && typeof a === 'object' ? (a as Record<string, unknown>)[k] : undefined), o)

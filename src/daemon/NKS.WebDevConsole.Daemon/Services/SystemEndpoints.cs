@@ -84,6 +84,8 @@ internal static class SystemEndpoints
                     version = Environment.OSVersion.VersionString,
                     name = FriendlyOsName(),
                     machine = Environment.MachineName,
+                    // Where the new-site dialog suggests a folder for a site.
+                    homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
                     tag = osTag,
                     arch = archTag,
                 },

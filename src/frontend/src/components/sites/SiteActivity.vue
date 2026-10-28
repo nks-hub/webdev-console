@@ -45,7 +45,7 @@
       <div class="sd-traffic-row">
         <MiniSparkline :values="hourlyHits" :width="200" :height="32" />
         <span class="sd-traffic-count mono">
-          {{ t('sites.detail.simple.activity.traffic.hits', { count: totalHits }) }}
+          {{ t('sites.detail.simple.activity.traffic.hits', { count: totalHits }, totalHits) }}
         </span>
       </div>
     </div>
@@ -58,19 +58,16 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ArrowRight } from '@element-plus/icons-vue'
 import MiniSparkline from '../common/MiniSparkline.vue'
-import { daemonBaseUrl } from '../../api/daemon'
-import { useSitesStore } from '../../stores/sites'
+import type { SiteErrorLogEntry } from '../../api/types'
+import { fetchHourlyRequests, fetchRecentErrors } from '../../utils/siteActivity'
 
 defineOptions({ name: 'SiteActivity' })
 
 // The "Recent activity" pane is a
-// self-contained read-only widget (last-5 errors + hourly hits sparkline)
+// self-contained read-only widget (errors of the last 24 h + hourly hits sparkline)
 // that doesn't share state with the editable site-config rows. Pulling
 // it out keeps the parent component focused on edit flows and lets future
 // dashboards reuse the same activity card without copying fetch logic.
-
-interface ErrorLine { timestamp: string; message: string }
-interface MetricSample { timestamp: string; requests: number }
 
 const props = defineProps<{
   /** Domain whose error log + metrics history should be displayed. */
@@ -82,9 +79,8 @@ const props = defineProps<{
 
 const { t } = useI18n()
 const router = useRouter()
-const sitesStore = useSitesStore()
 
-const errorLines = ref<ErrorLine[]>([])
+const errorLines = ref<SiteErrorLogEntry[]>([])
 const hourlyHits = ref<number[]>([])
 const showAllErrors = ref(false)
 
@@ -103,33 +99,14 @@ function openFullLogs() {
   router.push(`/sites/${encodeURIComponent(props.domain)}/edit?tab=logs`)
 }
 
+// Both reads are silent on failure: a rotated or locked log file is no reason for a toast on a
+// summary card; the Logs and Metrics tabs report their own errors.
 async function load() {
-  const domain = encodeURIComponent(props.domain)
-  // Errors — silent on failure: a stale or rotated log file shouldn't
-  // surface as an error toast on a "simple" view. The empty state in
-  // the template makes "no errors" indistinguishable from "couldn't
-  // read errors" intentionally — operators with privileged needs use
-  // the full Errors tab linked from the bottom.
-  try {
-    const r = await fetch(`${daemonBaseUrl()}/api/sites/${domain}/logs/errors?limit=5`, {
-      headers: sitesStore.authHeaders(),
-    })
-    if (r.ok) {
-      const data = await r.json() as { entries?: Array<{ timestamp: string; message: string }> }
-      errorLines.value = (data.entries ?? []).slice(0, 5)
-    }
-  } catch { /* silent */ }
-  // Metrics — same silence policy. Empty array → sparkline renders flat.
-  try {
-    const r = await fetch(`${daemonBaseUrl()}/api/sites/${domain}/metrics/history?minutes=1440&limit=24`, {
-      headers: sitesStore.authHeaders(),
-    })
-    if (r.ok) {
-      const data = await r.json() as MetricSample[] | { samples?: MetricSample[] }
-      const samples = Array.isArray(data) ? data : (data.samples ?? [])
-      hourlyHits.value = samples.map(s => s.requests ?? 0)
-    }
-  } catch { /* silent */ }
+  const domain = props.domain
+  await Promise.all([
+    fetchRecentErrors(domain).then((e) => { errorLines.value = e }).catch(() => {}),
+    fetchHourlyRequests(domain).then((h) => { hourlyHits.value = h }).catch(() => {}),
+  ])
 }
 
 watch(() => [props.domain, props.refreshKey], () => { void load() }, { immediate: true })

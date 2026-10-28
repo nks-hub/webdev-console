@@ -574,6 +574,8 @@ export interface SystemInfo {
     /** "Windows 11 (build 26100)"; raw OS description elsewhere. */
     name?: string
     machine: string
+    /** The user's home folder, where the new-site dialog suggests a site folder. */
+    homeDir?: string
     tag: 'windows' | 'linux' | 'macos' | 'unknown'
     arch: 'x64' | 'x86' | 'arm64' | 'arm' | 'unknown'
   }

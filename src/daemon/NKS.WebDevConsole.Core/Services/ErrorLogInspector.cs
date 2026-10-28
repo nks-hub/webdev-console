@@ -37,7 +37,7 @@ public static class ErrorLogInspector
     //                 [DD-Mon-YYYY HH:MM:SS] PHP Fatal error: message in /file.php on line N
     // Covers both with/without timezone suffix.
     private static readonly Regex PhpErrorRegex = new(
-        @"^\[(?<date>\d{2}-\w{3}-\d{4}\s+\d{2}:\d{2}:\d{2})(?:\s+[A-Za-z/_]+)?\]\s+(?<msg>.+)$",
+        @"^\[(?<date>\d{2}-\w{3}-\d{4}\s+\d{2}:\d{2}:\d{2})(?:\s+(?<tz>[A-Za-z/_]+))?\]\s+(?<msg>.+)$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     // Months used by Apache and PHP date strings
@@ -153,14 +153,13 @@ public static class ErrorLogInspector
         var m = ApacheErrorRegex.Match(line);
         if (!m.Success) return null;
 
-        // Build "13 Apr 2026 10:00:00 +0000" — Apache logs local time;
-        // we treat it as UTC for simplicity since WDC is a local dev tool.
+        // Apache writes local time without an offset, and the daemon runs on the machine Apache runs on.
         var dateStr = $"{m.Groups["dd"].Value} {m.Groups["month"].Value} {m.Groups["year"].Value} {m.Groups["time"].Value}";
         if (!DateTimeOffset.TryParseExact(
                 dateStr,
                 "dd MMM yyyy HH:mm:ss",
                 System.Globalization.CultureInfo.InvariantCulture,
-                System.Globalization.DateTimeStyles.AssumeUniversal,
+                System.Globalization.DateTimeStyles.AssumeLocal,
                 out var ts))
             return null;
 
@@ -189,12 +188,17 @@ public static class ErrorLogInspector
         var m = PhpErrorRegex.Match(line);
         if (!m.Success) return null;
 
-        // PHP date: "13-Apr-2026 10:00:00"
+        // PHP date: "13-Apr-2026 10:00:00", with the zone name PHP is set to ("UTC", "Europe/Prague") when it
+        // is a web error. A line without a zone is PHP-FPM's own, written in local time.
+        var tz = m.Groups["tz"].Value;
+        var style = tz is "UTC" or "GMT"
+            ? System.Globalization.DateTimeStyles.AssumeUniversal
+            : System.Globalization.DateTimeStyles.AssumeLocal;
         if (!DateTimeOffset.TryParseExact(
                 m.Groups["date"].Value,
                 "dd-MMM-yyyy HH:mm:ss",
                 System.Globalization.CultureInfo.InvariantCulture,
-                System.Globalization.DateTimeStyles.AssumeUniversal,
+                style,
                 out var ts))
             return null;
 

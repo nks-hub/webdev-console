@@ -1,7 +1,7 @@
 <template>
   <el-dialog v-model="open" :title="$t('sites.card.duplicateTitle')" width="480px" @opened="focusInput" @closed="busy = false">
-    <el-form label-position="top" @submit.prevent="submit">
-      <el-form-item :label="$t('sites.card.duplicateNewDomain')">
+    <el-form label-position="top" class="duplicate-form" @submit.prevent="submit">
+      <el-form-item :label="$t('sites.card.duplicateNewDomain')" :error="problem ? $t(`sites.new.err.${problem}`) : ''">
         <el-input ref="input" v-model="newDomain" spellcheck="false" />
       </el-form-item>
       <el-form-item :label="$t('sites.card.duplicateCopyFiles')">
@@ -14,18 +14,19 @@
     </el-form>
     <template #footer>
       <el-button :disabled="busy" @click="open = false">{{ $t('common.cancel') }}</el-button>
-      <el-button type="primary" :loading="busy" :disabled="!newDomain.trim()" @click="submit">{{ $t('sites.card.duplicate') }}</el-button>
+      <el-button type="primary" :loading="busy" :disabled="!!problem" @click="submit">{{ $t('sites.card.duplicate') }}</el-button>
     </template>
   </el-dialog>
 </template>
 
 <script setup lang="ts">
-import { nextTick, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { duplicateSite } from '../../api/daemon'
 import { useSitesStore } from '../../stores/sites'
 import { errorMessage } from '../../utils/errors'
+import { domainProblem } from '../../utils/siteDomain'
 
 const props = defineProps<{ source: string }>()
 const open = defineModel<boolean>({ required: true })
@@ -37,6 +38,7 @@ const input = ref<{ focus?: () => void } | null>(null)
 const newDomain = ref('')
 const copyFiles = ref<'all' | 'top' | 'empty'>('all')
 const busy = ref(false)
+const problem = computed(() => domainProblem(newDomain.value, sitesStore.sites.map(s => s.domain)))
 
 watch(open, (isOpen) => {
   if (!isOpen) return
@@ -48,7 +50,7 @@ function focusInput() { void nextTick(() => input.value?.focus?.()) }
 
 async function submit() {
   const domain = newDomain.value.trim().toLowerCase()
-  if (!domain || busy.value) return
+  if (problem.value || busy.value) return
   busy.value = true
   try {
     await duplicateSite(props.source, domain, copyFiles.value)
@@ -63,3 +65,8 @@ async function submit() {
   }
 }
 </script>
+
+<style scoped>
+/* Element Plus floats the error into the item margin, which is too small to hold it. */
+.duplicate-form :deep(.el-form-item__error) { position: static; padding-top: var(--wdc-space-1-5); }
+</style>
