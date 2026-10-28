@@ -213,7 +213,7 @@
     "subtitle": "Manage configuration and data backups",
     "tabs": {
       "overview": "Overview",
-      "snapshots": "Snapshots",
+      "snapshots": "Backup list",
       "schedule": "Schedule",
       "content": "Content"
     },
@@ -227,10 +227,13 @@
       "soon": "Soon",
       "inHours": "in {h} h {m} min",
       "inMinutes": "in {m} min",
+      "ago": "{d} ago",
+      "justNow": "just now",
       "backupNow": "Back up now",
       "openFolder": "Open backup folder",
       "refresh": "Reload",
-      "createdToast": "Backup created: {files} files, {size}",
+      "createdToast": "Backup created: {files} file, {size} | Backup created: {files} files, {size}",
+      "createdIncomplete": "Backup created, but it is incomplete",
       "noBackupsYet": "No backup yet. Create one first."
     },
     "snapshots": {
@@ -241,7 +244,7 @@
       "restore": "Restore",
       "delete": "Delete",
       "restoreConfirmTitle": "Restore backup",
-      "restoreConfirmMessage": "Restore the backup from {date}? This overwrites site configs, SSL certificates, plugin configs and the app's internal database (settings and the site list). MySQL databases and site files are not restored from it. The current state is saved as a safety backup first. The app restarts and the window reloads afterwards.",
+      "restoreConfirmMessage": "Restore the backup from {date}? This overwrites site configs, SSL certificates, plugin configs and the app's internal database (settings and the site list). MySQL databases and site files are not restored; if the backup holds them, they are in the archive's databases and docroots folders. The current state is saved as a safety backup first. The app restarts and the window reloads afterwards.",
       "deleteConfirmTitle": "Delete backup",
       "deleteConfirmMessage": "Delete backup {name}?",
       "backupFailed": "Backup failed",
@@ -250,13 +253,16 @@
       "downloadFailed": "Download failed: {error}"
     },
     "toast": {
-      "completed": "Backup completed",
-      "restored": "Restored {files} files. Safety backup: {safety}. The app is restarting…",
+      "restored": "Restored {files} file. Safety backup: {safety}. The app is restarting… | Restored {files} files. Safety backup: {safety}. The app is restarting…",
       "deleted": "Backup deleted",
       "scheduleSaved": "Schedule saved",
       "contentSaved": "Content selection saved",
       "loadError": "Load error: {err}",
       "settingsSaveFailed": "Could not save the backup settings: {err}"
+    },
+    "skipped": {
+      "databases": "Some MySQL databases are not in the backup. Check that MySQL is running.",
+      "docroots": "Some site files are not in the backup. A site folder is missing or cannot be read."
     },
     "schedule": {
       "cardTitle": "Auto-backup interval",
@@ -279,9 +285,9 @@
         "sslLabel": "SSL certificates",
         "sslDesc": "Site certificates including private keys",
         "databasesLabel": "MySQL databases",
-        "databasesDesc": "An export of every MySQL database, the backup may be large",
+        "databasesDesc": "An export of every MySQL database (MySQL must be running), the backup may be large",
         "docrootsLabel": "Site files",
-        "docrootsDesc": "Whole site folders, the backup may be very large"
+        "docrootsDesc": "The contents of each site's document root, the backup may be very large"
       },
       "short": {
         "vhosts": "sites",
@@ -2684,7 +2690,8 @@
   },
   "settingsToast": {
     "ssoFailed": "SSO sign-in failed: {err}",
-    "backupCreated": "Backup created: {files} files, {size}",
+    "backupCreated": "Backup created: {files} file, {size} | Backup created: {files} files, {size}",
+    "backupIncomplete": "Backup created, but it is missing: {missing}.",
     "backupFailed": "Backup failed: {err}",
     "resetFailed": "Reset failed: {err}",
     "mysqlRootSaved": "Root password saved",
@@ -2697,7 +2704,7 @@
     "dnsFlushed": "DNS cache flushed",
     "dnsFlushUnavailable": "Cannot flush DNS now, the daemon does not respond.",
     "noMampSites": "No MAMP PRO sites found on this machine",
-    "mampImported": "Imported {count} site(s) from MAMP",
+    "mampImported": "Imported {count} site from MAMP | Imported {count} sites from MAMP",
     "mampFailed": "MAMP import failed: {err}",
     "pluginSyncFailed": "Plugin sync failed: {err}",
     "catalogRefreshed": "Catalog refreshed, versions available: {count}",
@@ -3906,6 +3913,8 @@
       "mcpConfirmBody": "An AI assistant wants to run a destructive operation. Open NKS WebDev Console to approve or reject it.",
       "backupCompletedTitle": "Backup finished",
       "backupCompletedBody": "{trigger} backup saved ({files} files, {size}).",
+      "backupIncompleteTitle": "Backup is incomplete",
+      "backupIncompleteBody": "{trigger} backup saved, but it is missing: {missing}.",
       "backupFailedTitle": "Backup failed",
       "backupFailedBody": "{trigger} backup failed: {error}",
       "backupTriggerScheduled": "Scheduled",

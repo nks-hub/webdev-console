@@ -7,6 +7,8 @@
  */
 import { i18n } from '../i18n'
 import { osNotify } from './osNotifications'
+import { formatBytes } from '../utils/format'
+import { backupContentLabel } from '../utils/backupContent'
 import type { SiteApplyResultDto } from '../api/daemon'
 
 const t = (key: string, params: Record<string, unknown> = {}): string =>
@@ -17,11 +19,7 @@ function shortId(id: string | undefined): string {
 }
 
 function formatSize(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B'
-  const units = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)))
-  const value = bytes / 1024 ** i
-  return `${value.toFixed(i === 0 ? 0 : 1)} ${units[i]}`
+  return formatBytes(Number.isFinite(bytes) ? Math.max(bytes, 0) : 0, i18n.global.locale.value)
 }
 
 /** `service:state` from the daemon HealthMonitor. Only crashes notify. */
@@ -126,6 +124,8 @@ export interface BackupEvent {
   files?: number
   size?: number
   error?: string
+  /** Asked-for content the daemon left out, e.g. Databases while MySQL is stopped. */
+  skipped?: Array<{ content: string; detail: string }>
 }
 
 function backupTrigger(evt: BackupEvent): string {
@@ -133,15 +133,18 @@ function backupTrigger(evt: BackupEvent): string {
 }
 
 export function notifyBackupCompleted(evt: BackupEvent): void {
+  const missing = [...new Set((evt.skipped ?? []).map(s => backupContentLabel(s.content)))]
   void osNotify({
     channel: 'backup',
-    title: t('backupCompletedTitle'),
-    body: t('backupCompletedBody', {
-      trigger: backupTrigger(evt),
-      files: evt.files ?? 0,
-      size: formatSize(evt.size ?? 0),
-    }),
-    urgency: 'low',
+    title: t(missing.length ? 'backupIncompleteTitle' : 'backupCompletedTitle'),
+    body: missing.length
+      ? t('backupIncompleteBody', { trigger: backupTrigger(evt), missing: missing.join(', ') })
+      : t('backupCompletedBody', {
+        trigger: backupTrigger(evt),
+        files: evt.files ?? 0,
+        size: formatSize(evt.size ?? 0),
+      }),
+    urgency: missing.length ? 'normal' : 'low',
     route: '/backups',
     key: `backup:completed:${evt.path ?? ''}`,
   })
