@@ -178,7 +178,7 @@
     "serviceStarted": "{name} started",
     "serviceStopped": "{name} stopped",
     "signedInAsTitle": "Signed in as {name}. Click to open account settings.",
-    "signInTitle": "Sign in with SSO",
+    "signInTitle": "Sign in with your NKS account",
     "system": "System",
     "mainNavigation": "Main navigation",
     "brandHome": "WebDev Console, overview",
@@ -3321,43 +3321,43 @@
       },
       "firstSite": {
         "title": "Create your first site",
-        "body": "<p>Open <strong>Sites</strong> in the left menu and click <strong>New site</strong> (or press <code>Ctrl+N</code>). Enter a local domain (e.g. <code>myapp.loc</code>) and choose the site folder. WDC adds the domain to the hosts file for you.</p><h3 id='simple'>Simple mode</h3><p>A short form: domain, site folder, PHP version and optional HTTPS and Cloudflare Tunnel.</p><h3 id='advanced'>Advanced mode</h3><p>A table of sites and the full configuration of each site in tabs: General, Runtime, Cloudflare, SSL, Composer, Metrics, Errors, History and Danger.</p>"
+        "body": "<p>Open <strong>Sites</strong> in the left menu and click <strong>New Site</strong> (or press <code>Ctrl+N</code>). Enter a local domain, for example <code>myapp.loc</code>, and choose the site folder. WDC adds the domain to the hosts file for you.</p><h3 id='form'>The form</h3><p>Domain, site folder, what the site runs on (PHP, static site or Node.js), PHP version, and switches for HTTPS, Cloudflare Tunnel and creating a database. It is the same in both modes.</p><h3 id='page'>The site page</h3><p>After creating, the site page opens with the tabs Overview, Settings, Logs and Metrics. Advanced mode adds Deploy and History. Plugins add more tabs, such as SSL, Cloudflare and Composer.</p>"
       },
       "sitesSimple": {
-        "title": "Sites — Simple Mode",
-        "body": "<p>Simple mode shows a card for each site with start/stop, open-in-browser and quick settings. Create a site with the <strong>+ New Site</strong> button.</p><h3 id='setup'>Setup</h3><p>Domain + document root (auto-suggested from <code>C:\\work\\sites\\&lt;domain&gt;</code>), PHP version picker, Cloudflare Tunnel toggle, SSL toggle.</p>"
+        "title": "Sites in Simple mode",
+        "body": "<p>Sites are listed in a table: name with address, status, PHP version and folder. <strong>Open</strong> opens the site in the browser, the next button opens its folder, and the <strong>…</strong> menu offers edit, duplicate, enable or disable, and delete. Clicking a row opens the site page. Create a site with the <strong>New Site</strong> button.</p><h3 id='setup'>New site</h3><p>Domain, site folder (suggested from the domain), what the site runs on, PHP version, and switches for HTTPS, Cloudflare Tunnel and creating a database.</p>"
       },
       "sitesAdvanced": {
-        "title": "Sites — Advanced Mode",
-        "body": "<p>Table view. Primary row action is <strong>Edit</strong> (opens SiteEdit with full 9-tab configuration); Open-in-browser, Detect framework, Delete live in the row overflow menu.</p><h3 id='tabs'>SiteEdit tabs</h3><ul><li><strong>General</strong> — domain, aliases, document root, PHP version</li><li><strong>Runtime</strong> — PHP-FPM pool tuning, environment variables</li><li><strong>Cloudflare</strong> — per-site tunnel config</li><li><strong>SSL</strong> — per-site cert switch + path overrides</li><li><strong>Composer</strong> — package manager</li><li><strong>Metrics</strong> — request rate, historical traffic chart</li><li><strong>Errors</strong> — aggregated Apache + PHP-FPM error tail</li><li><strong>History</strong> — config rollback points</li><li><strong>Danger</strong> — rename domain / delete</li></ul>"
+        "title": "Sites in Advanced mode",
+        "body": "<p>The same table, plus checkboxes, sorting by name, status and PHP version, and Network and Tunnel columns when a site uses them. Selected sites can be enabled, disabled, applied again and deleted in one go.</p><h3 id='tabs'>Site page tabs</h3><ul><li><strong>Overview</strong>: site status and its main settings</li><li><strong>Settings</strong>: domain and aliases, site folder, PHP or Node.js, HTTPS, network and ports, public access, framework and Docker, with deleting the site at the bottom</li><li><strong>Logs</strong>: Apache errors and access</li><li><strong>Metrics</strong>: request count and a historical traffic chart</li><li><strong>Deploy</strong>: deploying to a server, Advanced mode only</li><li><strong>History</strong>: configuration backups you can go back to</li><li><strong>SSL</strong>, <strong>Cloudflare</strong>, <strong>Composer</strong>: tabs added by plugins</li></ul>"
       },
       "databases": {
         "title": "Databases",
-        "body": "<p>Manage MySQL / MariaDB databases at <code>/databases</code>. List, create, drop; run ad-hoc SQL queries; import / export SQL dumps.</p><h3 id='troubleshoot'>Troubleshooting</h3><p>If the page shows <strong>\"ERROR 1045 Access denied\"</strong> the WDC-managed MySQL port (3306 by default) is occupied by MAMP / XAMPP. Fix: Settings → Ports → change MySQL port, or stop the external service.</p>"
+        "body": "<p>The <strong>Databases</strong> page manages MySQL and MariaDB databases: viewing, creating and deleting them, ad-hoc SQL queries, and importing and exporting SQL dumps.</p><h3 id='troubleshoot'>Troubleshooting</h3><p>If the page shows <strong>\"ERROR 1045 Access denied\"</strong>, the MySQL port (3306 by default) is probably occupied by MAMP or XAMPP. Change the MySQL port in Settings → Ports, or stop the external service.</p>"
       },
       "ssl": {
         "title": "SSL certificates",
-        "body": "<p><code>/ssl</code> manages locally-trusted TLS certs via mkcert.</p><h3 id='setup'>Setup</h3><ul><li><strong>Install CA</strong> — mkcert root into the system trust store. Runs once per machine.</li><li><strong>Generate</strong> — issue a cert for a domain + optional aliases.</li></ul><h3 id='status'>Cert status</h3><p>Each cert card shows expiry countdown (badge turns amber &le; 14 days), issuer DN, SHA1 fingerprint. Orphan certs (no matching site) are dimmed with an <em>Orphan</em> badge.</p>"
+        "body": "<p>The <strong>SSL</strong> page manages locally trusted TLS certificates through mkcert.</p><h3 id='setup'>Setup</h3><ul><li><strong>Install the certificate authority</strong>: the mkcert root certificate is added to the system trust store. Once per computer is enough.</li><li><strong>Generate certificate</strong>: issues a certificate for a domain and optional aliases.</li></ul><h3 id='status'>Certificate status</h3><p>Each certificate card shows a countdown to expiry (the badge turns yellow at 14 days or less), the issuer and the SHA-1 fingerprint. Certificates without a matching site are dimmed with a <em>No site</em> badge.</p>"
       },
       "composer": {
         "title": "Composer",
-        "body": "<p>Per-site Composer management lives on SiteEdit → Composer tab and globally on <code>/composer</code>.</p><ul><li>Auto-discovers <code>composer.phar</code> under <code>~/.wdc/binaries/composer/</code>.</li><li>Install / Require / Remove / Diagnose / Outdated run through the plugin invoker (no shell interpolation).</li><li>Hover a package name to see Packagist metadata popover.</li></ul>"
+        "body": "<p>You manage Composer for one site under Edit site → Composer, and globally on the <strong>Composer</strong> page.</p><ul><li>The <code>composer.phar</code> file is found automatically in <code>~/.wdc/binaries/composer/</code>.</li><li>Installing, adding and removing packages, diagnostics and the outdated-packages check run through the plugin, without passing commands to a shell.</li><li>Hovering over a package name shows information from Packagist.</li></ul>"
       },
       "cloudflare": {
         "title": "Cloudflare Tunnel",
-        "body": "<p><code>/cloudflare</code> exposes WDC sites to a public URL via Cloudflare Tunnel — no firewall port opening needed.</p><h3 id='setup'>Setup</h3><p>Paste your Cloudflare API token + pick a zone. Per-site: enable the Tunnel switch on SiteEdit → Cloudflare.</p><p><strong>Note:</strong> <code>cloudflared</code> is a single process routing ALL tunneled sites. Restarting it affects the entire tunnel fleet.</p>"
+        "body": "<p>The <strong>Cloudflare</strong> page makes WDC sites reachable at a public address through Cloudflare Tunnel, without opening firewall ports.</p><h3 id='setup'>Setup</h3><p>Paste a Cloudflare API token and pick a zone. Then turn the tunnel on for a site under Edit site → Cloudflare.</p><p><strong>Note:</strong> <code>cloudflared</code> is a single process for all sites in the tunnel. Restarting it affects every tunneled site.</p>"
       },
       "hosts": {
         "title": "Hosts file",
-        "body": "<p><code>/hosts</code> is a safer editor for the system hosts file. WDC-managed entries live inside a <code>BEGIN NKS WebDev Console</code> / <code>END NKS WebDev Console</code> marker block — anything outside is preserved verbatim.</p><h3 id='safety'>Safety</h3><p>Requires administrator privileges on Windows. Apply creates a timestamped <code>.bak</code> backup before each write.</p>"
+        "body": "<p>The <strong>Hosts file</strong> page edits the system hosts file. WDC entries sit inside a <code>BEGIN NKS WebDev Console</code> / <code>END NKS WebDev Console</code> block, and everything outside it stays unchanged.</p><h3 id='safety'>Safety</h3><p>Windows needs administrator rights. A timestamped <code>.bak</code> backup is made before every write.</p>"
       },
       "plugins": {
         "title": "Plugins",
-        "body": "<p>WDC is plugin-driven. The daemon loads <code>IWdcPlugin</code> assemblies from the plugin dir (Apache, MySQL, PHP, Redis, Composer, SSL, Cloudflare…). Each plugin is independently versioned.</p><p>Writing a plugin: see <a href='https://github.com/nks-hub/webdev-console-plugins/blob/main/docs/PLUGIN-API.md' target='_blank'>PLUGIN-API.md</a> and the <a href='https://github.com/nks-hub/webdev-console-plugins/blob/main/docs/WRITING-A-PLUGIN.md' target='_blank'>WRITING-A-PLUGIN walkthrough</a>.</p>"
+        "body": "<p>WDC is built from plugins. The daemon loads plugins from the plugin folder (Apache, MySQL, PHP, Redis, Composer, SSL, Cloudflare…) and each has its own version. You can turn them on or off on the <strong>Plugins</strong> page; a disabled plugin disappears from the menu and from the services overview.</p><p>To write your own plugin, see <a href='https://github.com/nks-hub/webdev-console-plugins/blob/main/docs/PLUGIN-API.md' target='_blank'>PLUGIN-API.md</a> and the <a href='https://github.com/nks-hub/webdev-console-plugins/blob/main/docs/WRITING-A-PLUGIN.md' target='_blank'>plugin writing guide</a>.</p>"
       },
       "mcp": {
-        "title": "MCP dev API",
-        "body": "<p>WDC ships an MCP (Model Context Protocol) server so AI dev tools (Claude Code, Cursor, etc.) can automate site creation and management.</p><h3 id='tools'>Available tools</h3><ul><li><code>wdc_create_site</code></li><li><code>wdc_list_databases</code></li><li><code>wdc_generate_cert</code></li><li><code>wdc_cloudflare_config</code></li></ul><p>The MCP server runs as a separate service in the daemon process. Point your MCP-compatible tool at the nks-wdc transport.</p>"
+        "title": "AI clients (MCP)",
+        "body": "<p>WDC includes an MCP (Model Context Protocol) server through which AI clients (Claude Code, Cursor and others) create and manage sites. Switch it on in Settings → AI clients (MCP), where you also find how to connect a client. Activity, requests and rules are in the menu under <strong>AI clients (MCP)</strong>.</p><h3 id='tools'>Example tools</h3><ul><li><code>wdc_create_site</code></li><li><code>wdc_list_databases</code></li><li><code>wdc_generate_cert</code></li><li><code>wdc_get_cloudflare_config</code></li><li><code>wdc_save_cloudflare_config</code></li></ul><p>The AI runs irreversible actions only after you approve them, unless a rule covers them.</p>"
       },
       "shortcuts": {
         "title": "Keyboard shortcuts",
@@ -3365,15 +3365,15 @@
       },
       "settings": {
         "title": "Settings",
-        "body": "<p><code>/settings</code> covers:</p><ul><li><strong>General</strong> — language, theme, UI mode, run on startup, auto-start services, default PHP version, telemetry.</li><li><strong>Ports</strong> — override ports for each managed service.</li><li><strong>Paths</strong> — override binary paths + hosts file path.</li><li><strong>Databases</strong> — default MySQL admin credentials.</li><li><strong>Advanced</strong> — plugin toggles, service auto-restart, catalog URL override.</li><li><strong>Account</strong> — optional sync to wdc-catalog-api.</li><li><strong>Update</strong> — check for new WDC releases.</li><li><strong>About</strong> — version, sources, runtime info.</li></ul>"
+        "body": "<p><strong>Settings</strong> is split into tabs, for example:</p><ul><li><strong>General</strong>: language, theme, interface mode, run at startup, auto-start services, default PHP version, telemetry</li><li><strong>Ports</strong>: ports of the individual services</li><li><strong>Paths</strong>: where the app stores data and backups</li><li><strong>Advanced</strong>: catalog connection, MySQL root password, plugin sync and deploy</li><li><strong>Account</strong>: optional sign-in to the NKS catalog</li><li><strong>Sync</strong>: moving settings through the cloud or a file</li><li><strong>AI clients (MCP)</strong>: what AI clients may do</li><li><strong>Notifications</strong>: system notifications</li><li><strong>Update</strong>: checking for new WDC versions</li><li><strong>About</strong>: version, sources and runtime information</li></ul>"
       },
       "binaries": {
         "title": "Binaries",
-        "body": "<p><code>/binaries</code> manages runtime binaries (Apache, Nginx, PHP, MySQL, MariaDB, Redis, Caddy, Mailpit, cloudflared, mkcert, Node, Composer). Each is downloaded on-demand from GitHub releases matching your OS + arch. SHA-256 is verified before unpacking.</p><h3 id='upgrade'>Upgrading</h3><p>Upgrade in-place keeps older versions on disk as a rollback target.</p>"
+        "body": "<p>The <strong>Binaries</strong> page manages the programs WDC runs (Apache, Nginx, PHP, MySQL, MariaDB, Redis, Caddy, Mailpit, cloudflared, mkcert, Node, Composer). Each is downloaded on request from a GitHub release for your system and architecture, and its SHA-256 is verified before unpacking.</p><h3 id='upgrade'>Upgrading</h3><p>When you upgrade, older versions stay on disk so you can go back to them.</p>"
       },
       "metrics": {
         "title": "Metrics + logs",
-        "body": "<p>Each site has request metrics from the Apache access log and an error summary from Apache and PHP-FPM. Find them under Edit site → Metrics and Errors.</p><h3 id='dashboard'>Overview</h3><p>The <strong>Overview</strong> page sums up the state in one sentence, then lists <em>Needs attention</em> (a crashed service, missing Apache, an old backup, a new version), a table of services with status, port, version and CPU and memory use, and recent activity. Advanced mode adds CPU and memory charts for the last 5 minutes.</p><p>A service that is not installed is marked <em>Not installed</em> and has an <strong>Install</strong> button that opens the Binaries page.</p>"
+        "body": "<p>Each site has request metrics from the Apache access log and an error summary from Apache and PHP-FPM. Find them on the site page under the Metrics and Logs tabs.</p><h3 id='dashboard'>Overview</h3><p>The <strong>Overview</strong> page sums up the state in one sentence, then lists <em>Needs attention</em> (a crashed service, missing Apache, an old backup, a new version) and a table of services with their status. In Advanced mode the table also shows port, version and CPU and memory use, and below it come the figures, CPU and memory charts for the last 5 minutes and recent activity. In Simple mode the page shows requests and errors for the last 24 hours, shortcuts and recent sites below the table.</p><p>A service that is not installed is marked <em>Not installed</em> and has an <strong>Install</strong> button that opens the Binaries page.</p>"
       }
     },
     "wizard": {
@@ -3392,23 +3392,23 @@
         },
         "ssl": {
           "title": "Enable HTTPS",
-          "desc": "Open your site in <strong>SiteEdit → SSL</strong> tab (or toggle SSL directly in Simple mode). First-time: install the local CA once via <strong>SSL → Install CA</strong> so the browser trusts your certs.",
+          "desc": "When you create a site, switch on <strong>HTTPS</strong>. If the local certificate authority is missing, click <strong>Install and turn on</strong> so the browser trusts the certificates. Certificates of existing sites are managed on the <strong>SSL</strong> page (in the menu in Advanced mode).",
           "tip": "Tip: the SSL badge on each cert card turns amber when it expires in ≤ 14 days."
         },
         "browser": {
           "title": "Open site in browser",
-          "desc": "Click <strong>Open in browser</strong> on a site card or on the edit-site page. The site opens in your system default browser.",
+          "desc": "Click <strong>Open</strong> next to a site in the list or on the site page. The site opens in your system default browser.",
           "tip": "Tip: the site must be running (green status) for the URL to resolve."
         },
         "database": {
           "title": "Manage databases",
-          "desc": "Open <strong>Databases</strong> in the left menu to create databases, run SQL queries, or import and export dumps. Per-site Composer dependencies are under <strong>Edit site → Composer</strong>.",
+          "desc": "In Advanced mode, open <strong>Databases</strong> in the left menu to create databases, run SQL queries, or import and export dumps. You can also create a database right when you create a site.",
           "tip": "Tip: if MySQL shows \"Access denied\", check Settings → Ports for a port conflict."
         },
-        "cli": {
-          "title": "Use the CLI",
-          "desc": "WDC ships a <code>wdc</code> CLI for scripting and AI tool integration via MCP. Common commands:",
-          "tip": "Tip: integrate with Claude Code via the MCP server — see Help → MCP dev API."
+        "mcp": {
+          "title": "Connect an AI client",
+          "desc": "Open <strong>AI clients (MCP)</strong> in the left menu, switch on <strong>Allow AI clients (MCP)</strong> and copy the snippet for Claude Code, Claude Desktop or Cursor. The client can then create sites and manage services.",
+          "tip": "Tip: the AI runs irreversible actions only after you approve them, unless a rule covers them."
         }
       }
     },

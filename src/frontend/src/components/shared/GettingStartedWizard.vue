@@ -29,14 +29,6 @@
           v-html="t(`help.wizard.steps.${currentStep.key}.desc`)"
         />
 
-        <!-- CLI step: show example commands -->
-        <div v-if="currentStep.key === 'cli'" class="gsw-codeblock">
-          <code>wdc sites list</code>
-          <code>wdc sites create --domain myapp.loc --root {{ exampleRoot }}</code>
-          <code>wdc db list</code>
-          <code>wdc ssl generate myapp.loc</code>
-        </div>
-
         <div class="gsw-tip">
           <span class="gsw-tip-icon">i</span>
           <span v-html="t(`help.wizard.steps.${currentStep.key}.tip`)" />
@@ -78,13 +70,10 @@ const steps = [
   { key: 'ssl' },
   { key: 'browser' },
   { key: 'database' },
-  { key: 'cli' },
+  { key: 'mcp' },
 ] as const
 
 const currentStep = computed(() => steps[activeStep.value])
-
-// A path that looks like the user's own system, not a Linux server path.
-const exampleRoot = /win/i.test(navigator.platform) ? 'C:\\work\\sites\\myapp' : '~/sites/myapp'
 
 function open() {
   activeStep.value = 0
@@ -195,22 +184,6 @@ defineExpose({ open, close, hasSeen })
   font-size: 0.8rem;
   color: var(--wdc-text);
   box-shadow: 0 1px 0 var(--wdc-border-strong);
-}
-
-.gsw-codeblock {
-  display: flex;
-  flex-direction: column;
-  gap: var(--wdc-space-1-5);
-  background: var(--wdc-surface-2);
-  border: 1px solid var(--wdc-border);
-  border-radius: var(--wdc-radius-sm);
-  padding: var(--wdc-space-3) var(--wdc-space-3-5);
-}
-
-.gsw-codeblock code {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.8rem;
-  color: var(--wdc-accent);
 }
 
 .gsw-tip {

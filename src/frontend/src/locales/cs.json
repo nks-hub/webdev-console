@@ -178,7 +178,7 @@
     "serviceStarted": "{name} spuštěno",
     "serviceStopped": "{name} zastaveno",
     "signedInAsTitle": "Přihlášeno jako {name}. Kliknutím otevřete nastavení účtu.",
-    "signInTitle": "Přihlásit se přes SSO",
+    "signInTitle": "Přihlásit se účtem NKS",
     "system": "Systém",
     "mainNavigation": "Hlavní navigace",
     "brandHome": "WebDev Console, přehled",
@@ -3321,15 +3321,15 @@
       },
       "firstSite": {
         "title": "Vytvoření prvního webu",
-        "body": "<p>V menu vlevo otevřete <strong>Weby</strong> a klikněte na <strong>Nový web</strong> (nebo stiskněte <code>Ctrl+N</code>). Zadejte lokální doménu, například <code>mojeapp.loc</code>, a vyberte složku webu. WDC doménu zapíše do souboru hosts samo.</p><h3 id='simple'>Jednoduchý režim</h3><p>Krátký formulář: doména, složka webu, verze PHP a volitelně HTTPS a tunel Cloudflare.</p><h3 id='advanced'>Pokročilý režim</h3><p>Tabulka webů a stránka každého webu se záložkami Přehled, Nastavení, Logy a Metriky, v Pokročilém režimu i Deploy a Historie. Další záložky přidávají pluginy, třeba SSL, Cloudflare a Composer.</p>"
+        "body": "<p>V menu vlevo otevřete <strong>Weby</strong> a klikněte na <strong>Nový web</strong> (nebo stiskněte <code>Ctrl+N</code>). Zadejte lokální doménu, například <code>mojeapp.loc</code>, a vyberte složku webu. WDC doménu zapíše do souboru hosts samo.</p><h3 id='form'>Formulář</h3><p>Doména, složka webu, na čem web běží (PHP, statický web nebo Node.js), verze PHP a přepínače HTTPS, tunel Cloudflare a vytvoření databáze. V obou režimech je stejný.</p><h3 id='page'>Stránka webu</h3><p>Po vytvoření se otevře stránka webu se záložkami Přehled, Nastavení, Logy a Metriky. Pokročilý režim přidává Deploy a Historii. Další záložky přidávají pluginy, třeba SSL, Cloudflare a Composer.</p>"
       },
       "sitesSimple": {
         "title": "Weby v Jednoduchém režimu",
-        "body": "<p>Jednoduchý režim ukazuje pro každý web kartu se spuštěním a zastavením, otevřením v prohlížeči a rychlým nastavením. Nový web vytvoříte tlačítkem <strong>Nový web</strong>.</p><h3 id='setup'>Nastavení</h3><p>Doména, složka webu (navrhne se automaticky), verze PHP, přepínač tunelu Cloudflare a přepínač SSL.</p>"
+        "body": "<p>Weby jsou v tabulce: název s adresou, stav, verze PHP a složka. Tlačítko <strong>Otevřít</strong> otevře web v prohlížeči, vedlejší tlačítko jeho složku a menu <strong>…</strong> nabízí úpravu, duplikování, zapnutí nebo vypnutí a smazání. Kliknutím na řádek se otevře stránka webu. Nový web vytvoříte tlačítkem <strong>Nový web</strong>.</p><h3 id='setup'>Nový web</h3><p>Doména, složka webu (navrhne se podle domény), na čem web běží, verze PHP a přepínače HTTPS, tunel Cloudflare a vytvoření databáze.</p>"
       },
       "sitesAdvanced": {
         "title": "Weby v Pokročilém režimu",
-        "body": "<p>Tabulkový pohled. Hlavní akce řádku je <strong>Upravit</strong>, která otevře stránku úpravy webu se záložkami. Další akce, například otevření v prohlížeči nebo smazání, jsou v menu na konci řádku.</p><h3 id='tabs'>Záložky stránky webu</h3><ul><li><strong>Přehled</strong>: stav webu a jeho hlavní nastavení</li><li><strong>Nastavení</strong>: doména a aliasy, složka webu, PHP nebo Node.js, HTTPS, síť a porty, veřejný přístup, framework a Docker, dole smazání webu</li><li><strong>Logy</strong>: chyby a přístupy z Apache</li><li><strong>Metriky</strong>: počet požadavků a historický graf provozu</li><li><strong>Deploy</strong>: nasazení na server, jen v Pokročilém režimu</li><li><strong>Historie</strong>: zálohy konfigurace, ke kterým se lze vrátit</li><li><strong>SSL</strong>, <strong>Cloudflare</strong>, <strong>Composer</strong>: záložky z pluginů</li></ul>"
+        "body": "<p>Stejná tabulka, navíc s výběrovými políčky, řazením podle názvu, stavu a verze PHP a sloupci Síť a Tunel, když je web používá. Označené weby můžete hromadně zapnout, vypnout, použít znovu a smazat.</p><h3 id='tabs'>Záložky stránky webu</h3><ul><li><strong>Přehled</strong>: stav webu a jeho hlavní nastavení</li><li><strong>Nastavení</strong>: doména a aliasy, složka webu, PHP nebo Node.js, HTTPS, síť a porty, veřejný přístup, framework a Docker, dole smazání webu</li><li><strong>Logy</strong>: chyby a přístupy z Apache</li><li><strong>Metriky</strong>: počet požadavků a historický graf provozu</li><li><strong>Deploy</strong>: nasazení na server, jen v Pokročilém režimu</li><li><strong>Historie</strong>: zálohy konfigurace, ke kterým se lze vrátit</li><li><strong>SSL</strong>, <strong>Cloudflare</strong>, <strong>Composer</strong>: záložky z pluginů</li></ul>"
       },
       "databases": {
         "title": "Databáze",
@@ -3357,7 +3357,7 @@
       },
       "mcp": {
         "title": "AI klienti (MCP)",
-        "body": "<p>WDC obsahuje server MCP (Model Context Protocol), přes který AI klienti (Claude Code, Cursor a další) vytvářejí a spravují weby. Zapnete ho v Nastavení → AI klienti (MCP), kde je i návod na připojení klienta. Aktivitu, žádosti a pravidla najdete v menu pod položkou <strong>AI klienti (MCP)</strong>.</p><h3 id='tools'>Dostupné nástroje</h3><ul><li><code>wdc_create_site</code></li><li><code>wdc_list_databases</code></li><li><code>wdc_generate_cert</code></li><li><code>wdc_cloudflare_config</code></li></ul><p>Nevratné akce AI provede až po vašem schválení, pokud je nepokryje pravidlo.</p>"
+        "body": "<p>WDC obsahuje server MCP (Model Context Protocol), přes který AI klienti (Claude Code, Cursor a další) vytvářejí a spravují weby. Zapnete ho v Nastavení → AI klienti (MCP), kde je i návod na připojení klienta. Aktivitu, žádosti a pravidla najdete v menu pod položkou <strong>AI klienti (MCP)</strong>.</p><h3 id='tools'>Příklady nástrojů</h3><ul><li><code>wdc_create_site</code></li><li><code>wdc_list_databases</code></li><li><code>wdc_generate_cert</code></li><li><code>wdc_get_cloudflare_config</code></li><li><code>wdc_save_cloudflare_config</code></li></ul><p>Nevratné akce AI provede až po vašem schválení, pokud je nepokryje pravidlo.</p>"
       },
       "shortcuts": {
         "title": "Klávesové zkratky",
@@ -3373,7 +3373,7 @@
       },
       "metrics": {
         "title": "Metriky a logy",
-        "body": "<p>Každý web má metriky požadavků z přístupového logu Apache a souhrn chyb z Apache a PHP-FPM. Najdete je na stránce webu v záložkách Metriky a Logy.</p><h3 id='dashboard'>Přehled</h3><p>Úvodní stránka <strong>Přehled</strong> shrnuje stav jednou větou a pod ní ukazuje seznam <em>Vyžaduje pozornost</em> (spadlá služba, chybějící Apache, stará záloha, nová verze), tabulku služeb se stavem, portem, verzí a využitím CPU a paměti a nedávnou aktivitu. V Pokročilém režimu jsou navíc grafy CPU a paměti za posledních 5 minut.</p><p>Nenainstalovaná služba je označená jako <em>Nenainstalováno</em> a má tlačítko <strong>Instalovat</strong>, které otevře stránku Binárky.</p>"
+        "body": "<p>Každý web má metriky požadavků z přístupového logu Apache a souhrn chyb z Apache a PHP-FPM. Najdete je na stránce webu v záložkách Metriky a Logy.</p><h3 id='dashboard'>Přehled</h3><p>Úvodní stránka <strong>Přehled</strong> shrnuje stav jednou větou a pod ní ukazuje seznam <em>Vyžaduje pozornost</em> (spadlá služba, chybějící Apache, stará záloha, nová verze) a tabulku služeb se stavem. V Pokročilém režimu v tabulce přibývá port, verze a využití CPU a paměti a pod ní čísla, grafy CPU a paměti za posledních 5 minut a nedávná aktivita. V Jednoduchém režimu je pod tabulkou počet požadavků a chyb za 24 hodin, zkratky a poslední weby.</p><p>Nenainstalovaná služba je označená jako <em>Nenainstalováno</em> a má tlačítko <strong>Instalovat</strong>, které otevře stránku Binárky.</p>"
       }
     },
     "wizard": {
@@ -3392,23 +3392,23 @@
         },
         "ssl": {
           "title": "Zapněte HTTPS",
-          "desc": "V úpravě webu otevřete záložku <strong>SSL</strong> (v Jednoduchém režimu stačí přepínač SSL). Poprvé nejdřív nainstalujte lokální certifikační autoritu na stránce <strong>SSL</strong>, aby prohlížeč certifikátům důvěřoval.",
+          "desc": "Při zakládání webu zapněte přepínač <strong>HTTPS</strong>. Když ještě chybí lokální certifikační autorita, klikněte na <strong>Nainstalovat a zapnout</strong>, aby prohlížeč certifikátům důvěřoval. Certifikáty existujících webů spravuje stránka <strong>SSL</strong> (v Pokročilém režimu je v menu).",
           "tip": "Tip: odznak u certifikátu zežloutne, když do vypršení zbývá 14 dnů nebo méně."
         },
         "browser": {
           "title": "Otevřete web v prohlížeči",
-          "desc": "Klikněte na <strong>Otevřít v prohlížeči</strong> na kartě webu nebo na stránce úpravy webu. Web se otevře ve výchozím prohlížeči systému.",
+          "desc": "Klikněte na <strong>Otevřít</strong> u webu v seznamu nebo na stránce webu. Web se otevře ve výchozím prohlížeči systému.",
           "tip": "Tip: web musí běžet, jinak se adresa nenačte."
         },
         "database": {
           "title": "Spravujte databáze",
-          "desc": "V menu vlevo otevřete <strong>Databáze</strong>: vytvoříte databázi, spustíte SQL dotaz nebo naimportujete a exportujete dump. Závislosti Composeru jednoho webu najdete v <strong>Úprava webu → Composer</strong>.",
+          "desc": "V Pokročilém režimu otevřete v menu vlevo <strong>Databáze</strong>: vytvoříte databázi, spustíte SQL dotaz nebo naimportujete a exportujete dump. Databázi můžete vytvořit i rovnou při zakládání webu.",
           "tip": "Tip: když MySQL hlásí „Access denied“, zkontrolujte v Nastavení → Porty, jestli port neobsazuje jiný program."
         },
-        "cli": {
-          "title": "Použijte příkazový řádek",
-          "desc": "WDC obsahuje nástroj <code>wdc</code> pro skripty a pro napojení AI klientů přes MCP. Časté příkazy:",
-          "tip": "Tip: s Claude Code ho propojíte přes server MCP, viz Nápověda → AI klienti (MCP)."
+        "mcp": {
+          "title": "Připojte AI klienta",
+          "desc": "V menu vlevo otevřete <strong>AI klienti (MCP)</strong>, zapněte <strong>Povolit AI klienty (MCP)</strong> a zkopírujte ukázku pro Claude Code, Claude Desktop nebo Cursor. Klient pak může zakládat weby a spravovat služby.",
+          "tip": "Tip: nevratné akce AI provede až po vašem schválení, pokud je nepokryje pravidlo."
         }
       }
     },
