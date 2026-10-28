@@ -59,6 +59,18 @@ public sealed class ComposerOutdatedTests : IDisposable
     }
 
     [Fact]
+    public void ComposerAvailable_BareFallbackName_CountsOnlyWhenItIsOnPath()
+    {
+        // The plugin's fallback when no composer.phar is managed; a clean machine has nothing by this name.
+        Assert.False(ComposerEndpoints.ComposerAvailable(new FakeInvoker($"composer-{Guid.NewGuid():N}.bat")));
+
+        File.WriteAllText(Path.Combine(_dir, "composer.bat"), "@echo off");
+        Assert.True(ComposerEndpoints.OnPath("composer.bat", $"C:\\nowhere{Path.PathSeparator}{_dir}"));
+        Assert.False(ComposerEndpoints.OnPath("composer.bat", "C:\\nowhere"));
+        Assert.False(ComposerEndpoints.OnPath("composer.bat", null));
+    }
+
+    [Fact]
     public void ComposerAvailable_IsUnknownWhenTheInvokerHidesItsConfig()
     {
         Assert.Null(ComposerEndpoints.ComposerAvailable(new OldInvoker()));

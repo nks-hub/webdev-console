@@ -70,10 +70,24 @@ internal static class ComposerEndpoints
                 .GetField("_config", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
                 ?.GetValue(invoker);
             var path = config?.GetType().GetProperty("ExecutablePath");
-            return path is null ? null : !string.IsNullOrWhiteSpace(path.GetValue(config) as string);
+            if (path is null) return null;
+            var value = path.GetValue(config) as string;
+            if (string.IsNullOrWhiteSpace(value)) return false;
+            // Without a managed phar the plugin falls back to a bare "composer.bat",
+            // which only runs when something put Composer on PATH.
+            return Path.IsPathRooted(value) || OnPath(value, Environment.GetEnvironmentVariable("PATH"));
         }
         catch { return null; }
     }
+
+    /// <summary>Whether <paramref name="file"/> exists in one of the folders of a PATH value.</summary>
+    internal static bool OnPath(string file, string? pathVariable) =>
+        (pathVariable ?? "").Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Any(dir =>
+            {
+                try { return File.Exists(Path.Combine(dir, file)); }
+                catch { return false; }
+            });
 
     /// <summary>
     /// <c>409 { error: "composer_not_installed" }</c> when the Composer plugin has no composer.phar. An action then
