@@ -2,6 +2,27 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { fetchPlugins, fetchPluginUi, fetchPluginNavEntries, enablePlugin, disablePlugin, type PluginNavEntry } from '../api/daemon'
 import type { PluginManifest, PluginUiDefinition, PluginContribution } from '../api/types'
+import { i18n } from '../i18n'
+
+/**
+ * What the host shows for a plugin that declares nothing for a slot itself. The released plugins no
+ * longer declare their site tab and sites-list badge (the copies that used to live in this repo did),
+ * but the components for them are still here and the Composer page links to the tab. A plugin that
+ * declares anything for a slot keeps that slot to itself.
+ */
+function hostContributions(pluginId: string): PluginContribution[] {
+  switch (pluginId) {
+    case 'nks.wdc.cloudflare':
+      return [
+        { slot: 'site-edit-tabs', componentType: 'cloudflare-site-tab', props: { name: 'cloudflare', label: 'Cloudflare' }, order: 40 },
+        { slot: 'sites-row-badges', componentType: 'cloudflare-tunnel-badge', props: {}, order: 10 },
+      ]
+    case 'nks.wdc.composer':
+      return [{ slot: 'site-edit-tabs', componentType: 'composer-site-tab', props: { name: 'composer', label: i18n.global.t('sites.composer.tabLabel') }, order: 60 }]
+    default:
+      return []
+  }
+}
 
 export const usePluginsStore = defineStore('plugins', () => {
   const manifests = ref<PluginManifest[]>([])
@@ -197,7 +218,8 @@ export const usePluginsStore = defineStore('plugins', () => {
     const out: Array<PluginContribution & { pluginId: string }> = []
     for (const m of manifests.value) {
       if (!m.enabled) continue
-      for (const c of m.contributions ?? []) {
+      const declared = m.contributions ?? []
+      for (const c of declared.some(d => d.slot === slot) ? declared : hostContributions(m.id)) {
         if (c.slot === slot) out.push({ ...c, pluginId: m.id })
       }
     }

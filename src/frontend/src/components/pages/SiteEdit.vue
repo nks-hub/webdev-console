@@ -303,6 +303,7 @@
         <!-- Plugin-contributed tabs (SSL, Cloudflare, Composer, …); they edit the
              same site copy and save with the same bar. -->
         <PluginSlot
+          v-if="uiMode.isAdvanced"
           name="site-edit-tabs"
           :context="{ domain, site, redirectHttps }"
           @update:site="onPluginSiteUpdate"
@@ -451,8 +452,8 @@ watch(activeTab, (tab) => {
   void router.replace({ query })
 })
 
-// Fall back to Overview when the active tab has no pane to show: an Advanced-only tab
-// in Simple mode, Deploy with the deploy surface off, or an unknown ?tab= value.
+// Fall back to Overview when the active tab has no pane to show: an Advanced-only tab (plugin tabs
+// included) in Simple mode, Deploy with the deploy surface off, or an unknown ?tab= value.
 const BASE_TABS: readonly string[] = ['overview', 'settings', 'logs', 'metrics']
 const ADVANCED_TABS: readonly string[] = ['deploy', 'history']
 const pluginTabNames = computed(() =>
@@ -470,7 +471,10 @@ watch(
       if (uiMode.isSimple || deployHidden) activeTab.value = 'overview'
       return
     }
-    if (pluginTabNames.value.includes(tab)) return
+    if (pluginTabNames.value.includes(tab)) {
+      if (uiMode.isSimple) activeTab.value = 'overview'
+      return
+    }
     // Plugin manifests not loaded yet: the tab may still be contributed.
     if (pluginsStore.manifests.length === 0) return
     activeTab.value = 'overview'
