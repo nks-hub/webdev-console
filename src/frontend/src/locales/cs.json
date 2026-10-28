@@ -440,7 +440,7 @@
       "catalog": "seznam akcí, u kterých se AI musí zeptat."
     },
     "simpleOnly": "Pravidla a Schvalované akce jsou jen v pokročilém režimu.",
-    "switchToAdvanced": "Přepnout na pokročilý režim"
+    "switchToAdvanced": "Přepnout do pokročilého režimu"
   },
   "mcpOnboarding": {
     "title": "Kolik toho smí AI udělat bez ptaní?",

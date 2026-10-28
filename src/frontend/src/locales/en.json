@@ -440,7 +440,7 @@
       "catalog": "the actions an AI has to ask about."
     },
     "simpleOnly": "Rules and Actions to approve are in advanced mode only.",
-    "switchToAdvanced": "Switch to advanced mode"
+    "switchToAdvanced": "Switch to Advanced mode"
   },
   "mcpOnboarding": {
     "title": "How much may an AI do without asking?",
