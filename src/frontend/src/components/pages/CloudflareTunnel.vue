@@ -92,7 +92,7 @@
         <el-icon class="status-icon"><Location /></el-icon>
         <div class="status-body">
           <div class="status-title">{{ $t('cloudflare.status.zoneCount', { n: zones.length }) }}</div>
-          <div class="status-meta">{{ config.defaultZoneId ? $t('cloudflare.status.defaultSelected') : $t('cloudflare.status.pickDefaultZone') }}</div>
+          <div class="status-meta">{{ config.defaultZoneId ? $t('cloudflare.status.defaultSelected') : config.apiToken ? $t('cloudflare.status.pickDefaultZone') : $t('cloudflare.status.zonesNeedToken') }}</div>
         </div>
       </div>
     </div>
