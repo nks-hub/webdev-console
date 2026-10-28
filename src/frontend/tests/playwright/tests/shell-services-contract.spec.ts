@@ -153,6 +153,23 @@ test.describe('Shell services contract', () => {
     }
   })
 
+  test('a new page opens at the top of the shared scroll container', () => {
+    const app = read('App.vue')
+    expect(app).toMatch(/watch\(\(\) => route\.path, \(\) => \{[\s\S]*?getElementById\('main'\)\?\.scrollTo\(0, 0\)/)
+  })
+
+  test('side form labels share the control height so they sit on its midline', () => {
+    const tokens = read('assets', 'tokens.css')
+    const rule = tokens.match(/\.el-form-item--label-left \.el-form-item__label,\s*\.el-form-item--label-right \.el-form-item__label \{([^}]*)\}/)?.[1] ?? ''
+    expect(rule).toMatch(/height: 36px/)
+    expect(rule).toMatch(/line-height: 36px/)
+  })
+
+  test('mode names are lower case inside a sentence', () => {
+    const cs = JSON.parse(read('locales', 'cs.json')) as { app: { advancedPageNote: string } }
+    expect(cs.app.advancedPageNote).toBe('Tato stránka patří do pokročilého režimu, proto ji menu v jednoduchém režimu neukazuje.')
+  })
+
   test('new shell copy exists in cs and en', () => {
     for (const locale of ['cs', 'en']) {
       const data = JSON.parse(read('locales', `${locale}.json`)) as {
