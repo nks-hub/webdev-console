@@ -129,6 +129,8 @@ test.describe('Sites flow contract', () => {
       resolve(srcRoot, '..', '..', 'daemon', 'NKS.WebDevConsole.Daemon', 'Sites', 'SiteEndpoints.cs'), 'utf-8')
     const handler = endpoints.match(/"\/api\/sites\/\{domain\}\/logs\/errors"[\s\S]*?"\/api\/sites\/\{domain\}\/logs\/access"/)?.[0] ?? ''
     expect(handler).toMatch(/SiteErrorLogReader\.Read\(/)
+    // PHP: the site's own log only when its vhost points PHP at an ini that writes there.
+    expect(handler).toMatch(/SitePhpErrorLog\.Resolve\(domain, apacheInstalls\)/)
     const reader = readFileSync(
       resolve(srcRoot, '..', '..', 'daemon', 'NKS.WebDevConsole.Daemon', 'Sites', 'SiteErrorLogReader.cs'), 'utf-8')
     expect(reader).toMatch(/ApacheSiteErrorLogs\.Resolve\(/)

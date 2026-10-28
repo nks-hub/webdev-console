@@ -313,11 +313,13 @@ internal static class SiteEndpoints
 
             try
             {
+                var apacheInstalls = bm.ListInstalled("apache").Select(apache => apache.InstallPath).ToList();
                 var entries = SiteErrorLogReader.Read(
                     domain,
-                    bm.ListInstalled("apache").Select(apache => apache.InstallPath),
+                    apacheInstalls,
                     Path.Combine(WdcPaths.LogsRoot, "apache", "error.log"),
-                    Path.Combine(WdcPaths.LogsRoot, "php"),
+                    SitePhpErrorLog.LogDir,
+                    SitePhpErrorLog.Resolve(domain, apacheInstalls),
                     limit,
                     since);
 

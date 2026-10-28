@@ -43,7 +43,7 @@ public sealed class SiteErrorLogReaderTests : IDisposable
         File.WriteAllLines(Path.Combine(_logs, name), messages.Select(Line));
 
     private IReadOnlyList<string> Messages(string domain) =>
-        SiteErrorLogReader.Read(domain, [_apache], _wdcApacheLog, _phpLogs, 100, null)
+        SiteErrorLogReader.Read(domain, [_apache], _wdcApacheLog, _phpLogs, null, 100, null)
             .Select(e => e.Message)
             .ToList();
 
@@ -118,7 +118,7 @@ public sealed class SiteErrorLogReaderTests : IDisposable
         File.WriteAllLines(Path.Combine(_phpLogs, "php85-errors.log"),
             ["[13-Apr-2026 10:00:00 UTC] PHP Fatal error: Uncaught Error in /srv/new.loc/index.php on line 3"]);
 
-        var entries = SiteErrorLogReader.Read("new.loc", [_apache], _wdcApacheLog, _phpLogs, 100, null);
+        var entries = SiteErrorLogReader.Read("new.loc", [_apache], _wdcApacheLog, _phpLogs, null, 100, null);
 
         Assert.Single(entries);
         Assert.Equal("php-error", entries[0].Source);

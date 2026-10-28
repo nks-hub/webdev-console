@@ -177,11 +177,14 @@ public sealed class SiteOrchestrator
         // 1c. Per-site PHP overrides — write ~/.wdc/sites-php/{domain}/php.ini
         // before the vhost is generated so the template can reference its
         // path via FcgidInitialEnv PHPRC. If PhpSettings is null the writer
-        // returns null and no vhost directive is emitted.
+        // returns null and no vhost directive is emitted. Every PHP site also
+        // gets conf.d/10-wdc-site-log.ini, its own PHP error log for PHP_INI_SCAN_DIR.
         try
         {
             var phpIniWriter = _sp.GetService<SitePhpIniWriter>();
-            if (phpIniWriter?.Write(site) is not null) result.Ok("phpIni");
+            var wroteIni = phpIniWriter?.Write(site) is not null;
+            phpIniWriter?.WriteSiteLog(site);
+            if (wroteIni) result.Ok("phpIni");
         }
         catch (Exception ex)
         {
