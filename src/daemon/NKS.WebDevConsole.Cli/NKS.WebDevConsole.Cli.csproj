@@ -16,14 +16,24 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <!-- Keep in lockstep with daemon csproj + frontend package.json on every
-         release. Without this, Assembly.GetName().Version defaults to
-         "1.0.0.0" so the CLI version command and config-export schema marker
-         both report the wrong version regardless of the actual shipped
+         release (scripts/verify-electron-release.mjs fails the release build
+         when they differ). Without this, Assembly.GetName().Version defaults
+         to "1.0.0.0" so the CLI version command and config-export schema
+         marker both report the wrong version regardless of the actual shipped
          release. -->
-    <Version>0.2.1</Version>
-    <AssemblyVersion>0.2.1.0</AssemblyVersion>
-    <FileVersion>0.2.1.0</FileVersion>
-    <InformationalVersion>0.2.1</InformationalVersion>
+    <Version>0.5.3</Version>
+    <AssemblyVersion>0.5.3.0</AssemblyVersion>
+    <FileVersion>0.5.3.0</FileVersion>
+    <InformationalVersion>0.5.3</InformationalVersion>
+  </PropertyGroup>
+
+  <!-- `dotnet publish -r <rid>` (npm stage:cli:*, CI) ships one self-contained
+       file; a plain `dotnet build` of the solution has no RuntimeIdentifier
+       and is unaffected. ReadyToRun keeps CLI start-up short. -->
+  <PropertyGroup Condition=" '$(RuntimeIdentifier)' != '' ">
+    <PublishSingleFile>true</PublishSingleFile>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <DebugType>none</DebugType>
   </PropertyGroup>
 
 </Project>

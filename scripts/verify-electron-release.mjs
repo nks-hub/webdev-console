@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
-import { basename, join, resolve } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 function parseArgs(argv) {
   const options = { dir: null, target: null }
@@ -43,9 +44,28 @@ function includesFile(files, predicate) {
   return files.some((file) => predicate(file))
 }
 
+// The app, the daemon and the bundled `wdc` CLI report one version; the
+// csproj stamps are edited by hand on release, so a missed one fails here.
+function versionStamps(repoRoot) {
+  const csproj = (project) => readFileSync(join(repoRoot, 'src', 'daemon', project, `${project}.csproj`), 'utf-8')
+  const stamps = {
+    'src/frontend/package.json version': JSON.parse(readFileSync(join(repoRoot, 'src', 'frontend', 'package.json'), 'utf-8')).version,
+  }
+  for (const [label, project] of [['Daemon', 'NKS.WebDevConsole.Daemon'], ['Cli', 'NKS.WebDevConsole.Cli']]) {
+    const text = csproj(project)
+    stamps[`${label} csproj <Version>`] = /<Version>([^<]+)<\/Version>/.exec(text)?.[1]
+    stamps[`${label} csproj <AssemblyVersion>`] = /<AssemblyVersion>([^<]+)\.0<\/AssemblyVersion>/.exec(text)?.[1]
+  }
+  return stamps
+}
+
 function main() {
   const { dir, target } = parseArgs(process.argv.slice(2))
   const releaseDir = resolve(dir)
+
+  const stamps = versionStamps(resolve(dirname(fileURLToPath(import.meta.url)), '..'))
+  assert(new Set(Object.values(stamps)).size === 1 && !Object.values(stamps).includes(undefined),
+    `Version stamps differ: ${JSON.stringify(stamps, null, 2)}`)
 
   assert(existsSync(releaseDir), `Release directory does not exist: ${releaseDir}`)
   const files = walkFiles(releaseDir)
@@ -85,6 +105,13 @@ function main() {
   } else {
     throw new Error(`Unknown target '${target}'`)
   }
+
+  // `wdc` is promised by the README and, on Windows, put on PATH by the
+  // installer (build/installer.nsh); it lives in resources/cli of every layout.
+  const cliRe = target === 'win' ? /[\\/]resources[\\/]cli[\\/]wdc\.exe$/i : /[\\/]resources[\\/]cli[\\/]wdc$/i
+  assert(files.some((file) => cliRe.test(file)),
+    `Missing bundled CLI (${target === 'win' ? 'wdc.exe' : 'wdc'}) inside the unpacked resources/cli. ` +
+    `Run the stage:cli:${target} script before electron-builder.`)
 
   // Guard against the v0.2.5 regression: macOS runner hit GitHub API rate
   // limit, stage-plugins silently exit(0)'d, and the DMG shipped with zero

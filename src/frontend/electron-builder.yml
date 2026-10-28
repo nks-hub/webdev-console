@@ -19,6 +19,10 @@ extraResources:
   # the MCP hub's "Connect an AI client" card shows the exact command.
   - from: resources/mcp-server
     to: mcp-server
+  # `wdc` CLI, published self-contained and single-file by `npm run stage:cli:*`.
+  # The Windows installer puts <install>\resources\cli on PATH (build/installer.nsh).
+  - from: resources/cli
+    to: cli
   # Ship the tray PNGs (and their @2x Retina companions) so the tray
   # loader in electron/main.ts can read them from
   # process.resourcesPath/build/. Without this they stay in buildResources
@@ -58,6 +62,8 @@ nsis:
   deleteAppDataOnUninstall: false
   shortcutName: NKS WebDev Console
   artifactName: "NKS-WebDev-Console-${version}-setup-${arch}.${ext}"
+  # Adds/removes <install>\resources\cli on the user (or machine) PATH.
+  include: build/installer.nsh
 
 portable:
   artifactName: "NKS-WebDev-Console-${version}-portable-${arch}.${ext}"
