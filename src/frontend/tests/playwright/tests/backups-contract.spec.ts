@@ -59,6 +59,20 @@ test.describe('Backups contract', () => {
     }
   })
 
+  // The same GTID set broke the Databases page round trip: an export from
+  // this MySQL failed to import back (ERROR 3546).
+  test('the Databases page export and import handle the GTID set', () => {
+    const db = read('..', 'daemon', 'NKS.WebDevConsole.Daemon', 'Data', 'DatabaseEndpoints.cs')
+    const exportRoute = db.slice(db.indexOf('"/api/databases/{name}/export"'), db.indexOf('"/api/databases/{name}/import"'))
+    expect(exportRoute).toMatch(/args\.AddRange\(MysqlDumpCompat\.DumpOptions\(mysqldump\)\);\s*args\.Add\(name\);/)
+    const importRoute = db.slice(db.indexOf('"/api/databases/{name}/import"'))
+    expect(importRoute).toMatch(/MysqlDumpCompat\.CopyWithoutServerStateAsync\(dump, destination, pipeCt\)/)
+    expect(importRoute).not.toMatch(/PipeSource\.FromFile\(tmpFile\)/)
+    const backups = read('..', 'daemon', 'NKS.WebDevConsole.Daemon', 'Backup', 'MysqlBackupClient.cs')
+    expect(backups).toMatch(/options: MysqlDumpCompat\.DumpOptions\)/)
+    expect(backups).toMatch(/MysqlDumpCompat\.CopyWithoutServerStateAsync\(sql, destination, ct\)/)
+  })
+
   test('restore dialog strings exist in both languages', () => {
     const cs = JSON.parse(read('src', 'locales', 'cs.json'))
     expect(cs.backupsPage.restore.databases).toBe('Obnovit databáze (přepíše jejich obsah)')

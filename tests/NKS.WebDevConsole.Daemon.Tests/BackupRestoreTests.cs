@@ -5,6 +5,7 @@ using Moq;
 using NKS.WebDevConsole.Core.Interfaces;
 using NKS.WebDevConsole.Core.Models;
 using NKS.WebDevConsole.Daemon.Backup;
+using NKS.WebDevConsole.Daemon.Data;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace NKS.WebDevConsole.Daemon.Tests;
@@ -300,13 +301,15 @@ public class BackupRestoreTests : IDisposable
     [Fact]
     public void Mysql_dumps_leave_out_the_gtid_set_and_mariadb_gets_no_unknown_option()
     {
-        Assert.Equal(new[] { "--set-gtid-purged=OFF" }, MysqlBackupClient.DumpOptionsFromHelp(MySqlDumpHelp));
-        Assert.Empty(MysqlBackupClient.DumpOptionsFromHelp(MariaDbDumpHelp));
-        Assert.Empty(MysqlBackupClient.DumpOptionsFromHelp(""));
-        Assert.Empty(MysqlBackupClient.DumpOptionsFromHelp(null));
+        Assert.Equal(new[] { "--set-gtid-purged=OFF" }, MysqlDumpCompat.DumpOptionsFromHelp(MySqlDumpHelp));
+        Assert.Empty(MysqlDumpCompat.DumpOptionsFromHelp(MariaDbDumpHelp));
+        Assert.Empty(MysqlDumpCompat.DumpOptionsFromHelp(""));
+        Assert.Empty(MysqlDumpCompat.DumpOptionsFromHelp(null));
+        // A missing or broken binary adds nothing rather than failing the export.
+        Assert.Empty(MysqlDumpCompat.DumpOptions(Path.Combine(_tempRoot, "no-such", "mysqldump.exe")));
 
         var (_, args, _) = MysqlBackupClient.Command("C:/mysql/bin/mysqld.exe", "mysqldump", 3306, null,
-            MysqlBackupClient.DumpArgs("shop"), MysqlBackupClient.DumpOptionsFromHelp(MySqlDumpHelp));
+            MysqlBackupClient.DumpArgs("shop"), MysqlDumpCompat.DumpOptionsFromHelp(MySqlDumpHelp));
         Assert.Equal(new[]
         {
             "-h", "127.0.0.1", "-P", "3306", "-u", "root", "--set-gtid-purged=OFF",
@@ -325,7 +328,7 @@ public class BackupRestoreTests : IDisposable
     private static async Task<byte[]> Filter(byte[] dump)
     {
         using var output = new MemoryStream();
-        await MysqlBackupClient.CopyWithoutServerStateAsync(new MemoryStream(dump), output, CancellationToken.None);
+        await MysqlDumpCompat.CopyWithoutServerStateAsync(new MemoryStream(dump), output, CancellationToken.None);
         return output.ToArray();
     }
 
