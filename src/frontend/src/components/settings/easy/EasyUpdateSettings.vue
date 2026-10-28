@@ -8,8 +8,9 @@
       </el-descriptions-item>
       <el-descriptions-item :label="t('settings.update.latest')">
         <span v-if="updateCheck.loading">{{ t('common.loading') }}</span>
-        <span v-else-if="latestVersion" class="mono">
-          v{{ latestVersion }}
+        <!-- Only the number is mono; the tag is words and keeps the UI font. -->
+        <span v-else-if="latestVersion">
+          <span class="mono">v{{ latestVersion }}</span>
           <el-tag v-if="hasUpdate" type="warning" size="small" style="margin-left:var(--wdc-space-2)">
             {{ t('settings.update.available') }}
           </el-tag>
