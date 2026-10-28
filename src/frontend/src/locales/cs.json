@@ -1022,7 +1022,7 @@
       "noProject": "Projekt Composeru nenalezen",
       "openComposerPage": "Otevřít stránku Composer",
       "init": "Inicializovat Composer",
-      "initHint": "Pro začátek spusťte ve složce webu composer init",
+      "initHint": "Tlačítko níže vytvoří ve složce webu soubor composer.json, stejně jako příkaz composer init.",
       "install": "Spustit composer install",
       "require": "Přidat balíček",
       "packageName": "Název balíčku",

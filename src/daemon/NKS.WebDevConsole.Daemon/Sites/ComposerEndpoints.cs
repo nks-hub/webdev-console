@@ -95,9 +95,45 @@ internal static class ComposerEndpoints
     /// Null when Composer can run, or when that cannot be told (the action is tried and a real failure stays a 500).
     /// </summary>
     internal static IResult? ComposerNotInstalled(object invoker) =>
-        ComposerAvailable(invoker) == false
-            ? Results.Json(new { error = "composer_not_installed", code = "composer_not_installed" }, statusCode: 409)
-            : null;
+        ComposerAvailable(invoker) == false ? NotInstalledResult() : null;
+
+    private static IResult NotInstalledResult() =>
+        Results.Json(new { error = "composer_not_installed", code = "composer_not_installed" }, statusCode: 409);
+
+    /// <summary>
+    /// Whether <paramref name="ex"/> is the OS failing to start Composer itself (file or path not found), however
+    /// deep the runner wrapped it. A <c>.phar</c> is started through PHP, so there the missing file is PHP, which is
+    /// a different problem and stays a plain failure.
+    /// </summary>
+    internal static bool ComposerCouldNotStart(Exception ex, object invoker)
+    {
+        for (var e = ex; e is not null; e = e.InnerException!)
+            if (e is System.ComponentModel.Win32Exception { NativeErrorCode: 2 or 3 })
+                return !(ConfiguredExecutable(invoker)?.EndsWith(".phar", StringComparison.OrdinalIgnoreCase) ?? false);
+        return false;
+    }
+
+    private static string? ConfiguredExecutable(object invoker)
+    {
+        try
+        {
+            var config = invoker.GetType()
+                .GetField("_config", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                ?.GetValue(invoker);
+            return config?.GetType().GetProperty("ExecutablePath")?.GetValue(config) as string;
+        }
+        catch { return null; }
+    }
+
+    /// <summary>
+    /// The answer for an action that threw: 409 <c>composer_not_installed</c> when Composer could not be started,
+    /// a 500 with the exception's message for anything else. Second guard behind <see cref="ComposerNotInstalled"/>
+    /// for a Composer that the availability check let through but the OS cannot run.
+    /// </summary>
+    internal static IResult ComposerFailed(Exception ex, object invoker, string title) =>
+        ComposerCouldNotStart(ex, invoker)
+            ? NotInstalledResult()
+            : Results.Problem(title: title, detail: ex.InnerException?.Message ?? ex.Message, statusCode: 500);
 
     /// <summary>
     /// <c>composer outdated</c> compares the installed packages with their latest versions. Without a
@@ -152,7 +188,7 @@ internal static class ComposerEndpoints
             return docroot;
         }
 
-        app.MapGet("/api/sites/{domain}/composer/status", async (string domain, SiteManager sm, ILoggerFactory lf) =>
+        app.MapGet("/api/sites/{domain}/composer/status", async (string domain, SiteManager sm, IServiceProvider sp, ILoggerFactory lf) =>
         {
             var site = sm.Get(domain);
             if (site is null) return Results.NotFound(new { error = $"Site '{domain}' not found" });
@@ -221,7 +257,11 @@ internal static class ComposerEndpoints
                 };
             }
 
-            return Results.Ok(new { hasComposerJson = hasJson, hasLock, packages, phpVersion, framework = framework ?? "none", installSuggestion, composerRoot });
+            // Lets the tab say "Composer is not installed" before a button fails, also for a folder without composer.json.
+            var invoker = ResolveComposerInvoker(sp, pluginLoader);
+            bool? composerAvailable = invoker is null ? null : ComposerAvailable(invoker);
+
+            return Results.Ok(new { hasComposerJson = hasJson, hasLock, packages, phpVersion, framework = framework ?? "none", installSuggestion, composerRoot, composerAvailable });
         });
 
         app.MapPost("/api/sites/{domain}/composer/install", async (string domain, SiteManager sm, IServiceProvider sp, ILoggerFactory lf, CancellationToken ct) =>
@@ -249,7 +289,7 @@ internal static class ComposerEndpoints
             catch (Exception ex)
             {
                 logger.LogError(ex, "composer install failed for {Domain}", domain);
-                return Results.Problem(title: "composer install failed", detail: ex.InnerException?.Message ?? ex.Message, statusCode: 500);
+                return ComposerFailed(ex, invoker, "composer install failed");
             }
         });
 
@@ -292,7 +332,7 @@ internal static class ComposerEndpoints
             catch (Exception ex)
             {
                 logger.LogError(ex, "composer require {Package} failed for {Domain}", package, domain);
-                return Results.Problem(title: "composer require failed", detail: ex.InnerException?.Message ?? ex.Message, statusCode: 500);
+                return ComposerFailed(ex, invoker, "composer require failed");
             }
         });
 
@@ -335,7 +375,7 @@ internal static class ComposerEndpoints
             catch (Exception ex)
             {
                 logger.LogError(ex, "composer remove {Package} failed for {Domain}", package, domain);
-                return Results.Problem(title: "composer remove failed", detail: ex.InnerException?.Message ?? ex.Message, statusCode: 500);
+                return ComposerFailed(ex, invoker, "composer remove failed");
             }
         });
 
@@ -362,7 +402,7 @@ internal static class ComposerEndpoints
                 var (_, exitCode, stdout, stderr) = await InvokeComposerAsync(invoker, "RunAsync", [composerRoot, args.ToArray(), phpOverride, ct]);
                 return Results.Ok(new { exitCode, stdout, stderr, composerRoot });
             }
-            catch (Exception ex) { return Results.Problem(title: "composer init failed", detail: ex.Message, statusCode: 500); }
+            catch (Exception ex) { return ComposerFailed(ex, invoker, "composer init failed"); }
         });
 
         app.MapGet("/api/sites/{domain}/composer/diagnose", async (string domain, SiteManager sm, IServiceProvider sp, ILoggerFactory lf, CancellationToken ct) =>
@@ -389,7 +429,7 @@ internal static class ComposerEndpoints
                 }
                 return Results.Ok(new { warnings, errors });
             }
-            catch (Exception ex) { return Results.Problem(title: "composer diagnose failed", detail: ex.Message, statusCode: 500); }
+            catch (Exception ex) { return ComposerFailed(ex, invoker, "composer diagnose failed"); }
         });
 
         app.MapGet("/api/sites/{domain}/composer/outdated", async (string domain, SiteManager sm, IServiceProvider sp, ILoggerFactory lf, CancellationToken ct) =>
@@ -430,6 +470,10 @@ internal static class ComposerEndpoints
                     catch (Exception ex) { logger.LogWarning(ex, "composer outdated parse failed"); }
                 }
                 return Results.Ok(new { installed, composerAvailable = true });
+            }
+            catch (Exception ex) when (ComposerCouldNotStart(ex, invoker))
+            {
+                return Results.Ok(new { installed = Array.Empty<object>(), composerAvailable = false });
             }
             catch (Exception ex) { return Results.Problem(title: "composer outdated failed", detail: ex.InnerException?.Message ?? ex.Message, statusCode: 500); }
         });

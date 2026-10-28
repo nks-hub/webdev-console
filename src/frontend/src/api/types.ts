@@ -302,6 +302,8 @@ export interface ComposerStatus {
   phpVersion: string | null
   framework: string | null
   installSuggestion?: ComposerInstallSuggestion
+  /** False when the Composer plugin has no executable that exists; absent from older daemons. */
+  composerAvailable?: boolean
 }
 
 export interface ComposerCommandResult {

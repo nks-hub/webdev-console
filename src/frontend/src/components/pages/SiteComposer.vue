@@ -532,6 +532,7 @@ async function loadStatus(): Promise<void> {
   currentOperation.value = 'Loading composer status from composer.json…'
   try {
     status.value = await composerStatus(props.domain)
+    composerMissing.value = status.value.composerAvailable === false
     // Nothing to compare in a folder without composer.json.
     if (status.value.hasComposerJson) {
       currentOperation.value = 'Checking for outdated packages…'
