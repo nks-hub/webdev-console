@@ -949,21 +949,26 @@ public class SiteManagerTests : IDisposable
         Assert.DoesNotContain("ServerAlias 10.254.0.7", conf);
     }
 
+    private const string TestVhostTemplate =
+        """
+        {{ for bind_address in site.bind_addresses -}}
+        <VirtualHost {{ bind_address }}:{{ port }}>
+            ServerName {{ site.domain }}
+            {{ if site.aliases && site.aliases.size > 0 -}}
+            ServerAlias {{ for a in site.aliases }}{{ a }} {{ end }}
+            {{- end }}
+        </VirtualHost>
+        {{ end -}}
+        """;
+
     private static void EnsureVhostTemplateForTests()
     {
         var dir = Path.Combine(AppContext.BaseDirectory, "Templates");
         Directory.CreateDirectory(dir);
-        File.WriteAllText(Path.Combine(dir, "vhost.conf.scriban"),
-            """
-            {{ for bind_address in site.bind_addresses -}}
-            <VirtualHost {{ bind_address }}:{{ port }}>
-                ServerName {{ site.domain }}
-                {{ if site.aliases && site.aliases.size > 0 -}}
-                ServerAlias {{ for a in site.aliases }}{{ a }} {{ end }}
-                {{- end }}
-            </VirtualHost>
-            {{ end -}}
-            """);
+        var path = Path.Combine(dir, "vhost.conf.scriban");
+        // The bin dir is shared by concurrent test runs; rewriting an unchanged file races their reads.
+        if (File.Exists(path) && File.ReadAllText(path) == TestVhostTemplate) return;
+        File.WriteAllText(path, TestVhostTemplate);
     }
 
     [Fact]
