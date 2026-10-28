@@ -16,7 +16,7 @@
           :closable="false"
           show-icon
           class="simple-hidden-tab"
-          :title="$t('settings.simple.hiddenTab')"
+          :title="$t('settings.simple.hiddenTab', { name: hiddenTabLabel })"
         >
           <el-button size="small" type="primary" @click="openAdvancedTab(hiddenTabRequested)">
             {{ $t('settings.simple.switchToAdvanced') }}
@@ -1201,6 +1201,20 @@ function openAdvancedTab(tab: string): void {
   activeTab.value = tab
 }
 
+// Scrolls a Simple-mode panel into view only when it is not already in the
+// upper part of the window. The first row (General, Update, the banner) always
+// is, and scrolling to it only pushed the page title out of sight.
+function revealPanel(id: string): void {
+  const el = document.getElementById(id)
+  if (!el) return
+  const top = el.getBoundingClientRect().top
+  if (top < 0 || top > window.innerHeight * 0.6) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+// Label of the Advanced-only section a link asked for, named in the banner.
+const hiddenTabLabel = computed(() =>
+  settingsSections.value.find(s => s.name === hiddenTabRequested.value)?.label ?? '')
+
 function applyDeepLink(): void {
   // The page stays alive under other routes; their ?tab= is not ours.
   if (route.path !== '/settings') return
@@ -1218,7 +1232,7 @@ function applyDeepLink(): void {
       // An Advanced-only section has no panel here; show the banner that says
       // so (the page keeps its scroll position between visits).
       const panel = hiddenTabRequested.value ? 'simple-hidden-tab' : SIMPLE_PANEL_FOR_TAB[tabParam]
-      if (panel) setTimeout(() => document.getElementById(panel)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
+      if (panel) setTimeout(() => revealPanel(panel), 100)
       if (hiddenTabRequested.value) return
     } else {
       hiddenTabRequested.value = null

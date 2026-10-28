@@ -2801,7 +2801,7 @@
         "crashed": "Crashed"
       },
       "switchToAdvanced": "Switch to Advanced mode",
-      "hiddenTab": "These settings are only in Advanced mode."
+      "hiddenTab": "The “{name}” section is only in Advanced mode."
     },
     "account": {
       "simpleSubtitle": "Sign-in and cross-device sync",
@@ -3024,6 +3024,7 @@
       "latest": "Latest version",
       "available": "Available",
       "upToDate": "Up to date",
+      "newerBuild": "Your build is newer",
       "notChecked": "Not checked yet",
       "lastChecked": "Last checked",
       "check": "Check for updates",

@@ -280,6 +280,98 @@ public class BackupRestoreTests : IDisposable
         Assert.Empty(MysqlBackupClient.Command(exe, "mysql", 3306, null, []).Env);
     }
 
+    // Live v0.5.4: every restored database failed with ERROR 3546, because
+    // mysqldump wrote SET @@GLOBAL.GTID_PURGED into the dump.
+
+    private const string MySqlDumpHelp = """
+        mysqldump  Ver 9.7.1 for Win64 on x86_64 (MySQL Community Server - GPL)
+          --single-transaction
+                              Creates a consistent snapshot by dumping all tables in a
+          --set-gtid-purged[=name]
+                              Add 'SET @@GLOBAL.GTID_PURGED' to the output. Possible
+        """;
+
+    private const string MariaDbDumpHelp = """
+        mysqldump from 12.3.1-MariaDB, client 10.19 for Win64 (AMD64)
+          --gtid              Used together with --master-data=1 or --dump-slave=1.
+          --single-transaction
+        """;
+
+    [Fact]
+    public void Mysql_dumps_leave_out_the_gtid_set_and_mariadb_gets_no_unknown_option()
+    {
+        Assert.Equal(new[] { "--set-gtid-purged=OFF" }, MysqlBackupClient.DumpOptionsFromHelp(MySqlDumpHelp));
+        Assert.Empty(MysqlBackupClient.DumpOptionsFromHelp(MariaDbDumpHelp));
+        Assert.Empty(MysqlBackupClient.DumpOptionsFromHelp(""));
+        Assert.Empty(MysqlBackupClient.DumpOptionsFromHelp(null));
+
+        var (_, args, _) = MysqlBackupClient.Command("C:/mysql/bin/mysqld.exe", "mysqldump", 3306, null,
+            MysqlBackupClient.DumpArgs("shop"), MysqlBackupClient.DumpOptionsFromHelp(MySqlDumpHelp));
+        Assert.Equal(new[]
+        {
+            "-h", "127.0.0.1", "-P", "3306", "-u", "root", "--set-gtid-purged=OFF",
+            "--single-transaction", "--routines", "--events", "--triggers", "--databases", "shop",
+        }, args);
+    }
+
+    [Fact]
+    public void Import_options_go_before_the_database_name()
+    {
+        var (_, args, _) = MysqlBackupClient.Command("C:/mysql/bin/mysqld.exe", "mysql", 3306, null,
+            MysqlBackupClient.ImportArgs("shop"), ["--system-command=OFF"]);
+        Assert.Equal(new[] { "-h", "127.0.0.1", "-P", "3306", "-u", "root", "--system-command=OFF", "--connect-timeout=5", "shop" }, args);
+    }
+
+    private static async Task<byte[]> Filter(byte[] dump)
+    {
+        using var output = new MemoryStream();
+        await MysqlBackupClient.CopyWithoutServerStateAsync(new MemoryStream(dump), output, CancellationToken.None);
+        return output.ToArray();
+    }
+
+    [Fact]
+    public async Task Restore_drops_the_gtid_and_log_bin_statements_of_old_dumps()
+    {
+        var dump = string.Join("\r\n",
+            "-- MySQL dump 10.13",
+            "SET @MYSQLDUMP_TEMP_LOG_BIN = @@SESSION.SQL_LOG_BIN;",
+            "SET @@SESSION.SQL_LOG_BIN= 0;",
+            "",
+            "SET @@GLOBAL.GTID_PURGED=/*!80000 '+'*/ '3e11fa47-71ca-11e1-9e33-c80aa9429562:1-23,",
+            "4a1b2c3d-71ca-11e1-9e33-c80aa9429562:1-5';",
+            "CREATE DATABASE /*!32312 IF NOT EXISTS*/ `shop`;",
+            "INSERT INTO `t` VALUES (1,'mentions SET @@GLOBAL.GTID_PURGED in data');",
+            "set @@global.gtid_purged='x:1';",
+            "SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;",
+            "-- Dump completed");
+
+        var text = Encoding.UTF8.GetString(await Filter(Encoding.UTF8.GetBytes(dump)));
+
+        Assert.DoesNotContain("GTID_PURGED=", text);
+        Assert.DoesNotContain("4a1b2c3d", text);
+        Assert.DoesNotContain("gtid_purged='x:1'", text);
+        Assert.DoesNotContain("SET @@SESSION.SQL_LOG_BIN", text);
+        Assert.Contains("CREATE DATABASE /*!32312 IF NOT EXISTS*/ `shop`;\r\n", text);
+        Assert.Contains("INSERT INTO `t` VALUES (1,'mentions SET @@GLOBAL.GTID_PURGED in data');", text);
+        Assert.EndsWith("-- Dump completed", text);
+    }
+
+    [Fact]
+    public async Task Restore_filter_keeps_binary_data_byte_for_byte()
+    {
+        // Not valid UTF-8 on purpose: a dump without --hex-blob holds raw bytes.
+        var insert = Encoding.ASCII.GetBytes("INSERT INTO `b` VALUES ('")
+            .Concat(new byte[] { 0xFF, 0xFE, 0x00, 0xC3, 0x28, 0x80 })
+            .Concat(Encoding.ASCII.GetBytes("');\n")).ToArray();
+        var gtid = Encoding.ASCII.GetBytes("SET @@GLOBAL.GTID_PURGED='u:1';\n");
+
+        // Long enough to cross the 80 KB read buffer in the middle of a line.
+        var bigLine = Encoding.ASCII.GetBytes("INSERT INTO `c` VALUES ('" + new string('x', 100_000) + "');\n");
+        var output = await Filter([.. gtid, .. insert, .. bigLine, .. insert]);
+
+        Assert.Equal([.. insert, .. bigLine, .. insert], output);
+    }
+
     [Fact]
     public void Create_database_statement_quotes_a_checked_name()
     {
