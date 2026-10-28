@@ -39,6 +39,16 @@ internal static class BackupEndpoints
             catch { /* SSE is best-effort */ }
         }
 
+        // A backup_restore intent names no content, so an AI client could get
+        // "restore the configuration" approved and then ask for databases too.
+        // Dumps and site files are restored from the WDC app only.
+        IResult? McpDataRestoreForbidden(BackupRestoreOptions options) =>
+            McpCallerContext.IsMcpToken && (options.Databases || options.SiteFiles)
+                ? Results.Json(
+                    new { error = "mcp_forbidden", detail = "Databases and site files are restored in the WDC app" },
+                    statusCode: 403)
+                : null;
+
         BackupContentFlags ReadContentFlagsFromSettings(SettingsStore s)
         {
             var flags = BackupContentFlags.None;
@@ -225,6 +235,7 @@ internal static class BackupEndpoints
                     archivePath = resolved;
                     options = new BackupRestoreOptions(body!.Databases, body.SiteFiles);
                 }
+                if (McpDataRestoreForbidden(options) is { } forbidden) return forbidden;
 
                 var result = bm.RestoreBackup(archivePath, options);
                 return Results.Ok(RestoreResponse(result, uploadedTmp is null ? archivePath : null));
@@ -247,6 +258,21 @@ internal static class BackupEndpoints
         app.MapPost("/api/backup/{id}/restore", async (BackupManager bm, string id, HttpContext ctx,
             NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator) =>
         {
+            // Optional body { databases, siteFiles }: both off (and no body at
+            // all) restores only the configuration, as before.
+            var options = new BackupRestoreOptions();
+            if (ctx.Request.ContentLength > 0 && ctx.Request.ContentType?.Contains("json") == true)
+            {
+                try
+                {
+                    var body = await ctx.Request.ReadFromJsonAsync<RestoreRequest>(caseInsensitiveJson);
+                    options = new BackupRestoreOptions(body?.Databases ?? false, body?.SiteFiles ?? false);
+                }
+                catch (JsonException ex) { return Results.BadRequest(new { error = $"Invalid JSON body: {ex.Message}" }); }
+            }
+            // Checked before the intent is consumed.
+            if (McpDataRestoreForbidden(options) is { } forbidden) return forbidden;
+
             // Restoring replaces state.db, sites and certificates. GUI callers keep the
             // existing confirm dialog; an MCP-token caller needs a confirmed intent.
             var brIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
@@ -264,18 +290,6 @@ internal static class BackupEndpoints
             if (!PathContainment.IsUnder(backupRoot, resolved))
                 return Results.BadRequest(new { error = "Path escapes backup root" });
             if (!File.Exists(resolved)) return Results.NotFound(new { error = "Backup not found" });
-            // Optional body { databases, siteFiles }: both off (and no body at
-            // all) restores only the configuration, as before.
-            var options = new BackupRestoreOptions();
-            if (ctx.Request.ContentLength > 0 && ctx.Request.ContentType?.Contains("json") == true)
-            {
-                try
-                {
-                    var body = await ctx.Request.ReadFromJsonAsync<RestoreRequest>(caseInsensitiveJson);
-                    options = new BackupRestoreOptions(body?.Databases ?? false, body?.SiteFiles ?? false);
-                }
-                catch (JsonException ex) { return Results.BadRequest(new { error = $"Invalid JSON body: {ex.Message}" }); }
-            }
             try
             {
                 return Results.Ok(RestoreResponse(bm.RestoreBackup(resolved, options), id));
