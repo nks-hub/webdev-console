@@ -107,7 +107,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, computed, watch } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AppHeader from './components/layout/AppHeader.vue'
@@ -155,8 +155,12 @@ const daemonStore = useDaemonStore()
 const updatesStore = useUpdatesStore()
 const drawerOpen = ref(false)
 
-// Close mobile drawer on route change
-watch(() => route.path, () => { drawerOpen.value = false })
+// Close the mobile drawer on route change. All pages share one scroll container,
+// so without the reset a page opens at the previous page's offset, title hidden.
+watch(() => route.path, () => {
+  drawerOpen.value = false
+  void nextTick(() => document.getElementById('main')?.scrollTo(0, 0))
+})
 const pluginsStore = usePluginsStore()
 const sitesStore = useSitesStore()
 const authStore = useAuthStore()

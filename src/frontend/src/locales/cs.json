@@ -3324,12 +3324,12 @@
         "body": "<p>V menu vlevo otevřete <strong>Weby</strong> a klikněte na <strong>Nový web</strong> (nebo stiskněte <code>Ctrl+N</code>). Zadejte lokální doménu, například <code>mojeapp.loc</code>, a vyberte složku webu. WDC doménu zapíše do souboru hosts samo.</p><h3 id='form'>Formulář</h3><p>Doména, složka webu, na čem web běží (PHP, statický web nebo Node.js), verze PHP a přepínače HTTPS, tunel Cloudflare a vytvoření databáze. V obou režimech je stejný.</p><h3 id='page'>Stránka webu</h3><p>Po vytvoření se otevře stránka webu se záložkami Přehled, Nastavení, Logy a Metriky. Pokročilý režim přidává Deploy a Historii. Další záložky přidávají pluginy, třeba SSL, Cloudflare a Composer.</p>"
       },
       "sitesSimple": {
-        "title": "Weby v Jednoduchém režimu",
+        "title": "Weby v jednoduchém režimu",
         "body": "<p>Weby jsou v tabulce: název s adresou, stav, verze PHP a složka. Tlačítko <strong>Otevřít</strong> otevře web v prohlížeči, vedlejší tlačítko jeho složku a menu <strong>…</strong> nabízí úpravu, duplikování, zapnutí nebo vypnutí a smazání. Kliknutím na řádek se otevře stránka webu. Nový web vytvoříte tlačítkem <strong>Nový web</strong>.</p><h3 id='setup'>Nový web</h3><p>Doména, složka webu (navrhne se podle domény), na čem web běží, verze PHP a přepínače HTTPS, tunel Cloudflare a vytvoření databáze.</p>"
       },
       "sitesAdvanced": {
-        "title": "Weby v Pokročilém režimu",
-        "body": "<p>Stejná tabulka, navíc s výběrovými políčky, řazením podle názvu, stavu a verze PHP a sloupci Síť a Tunel, když je web používá. Označené weby můžete hromadně zapnout, vypnout, použít znovu a smazat.</p><h3 id='tabs'>Záložky stránky webu</h3><ul><li><strong>Přehled</strong>: stav webu a jeho hlavní nastavení</li><li><strong>Nastavení</strong>: doména a aliasy, složka webu, PHP nebo Node.js, HTTPS, síť a porty, veřejný přístup, framework a Docker, dole smazání webu</li><li><strong>Logy</strong>: chyby a přístupy z Apache</li><li><strong>Metriky</strong>: počet požadavků a historický graf provozu</li><li><strong>Deploy</strong>: nasazení na server, jen v Pokročilém režimu</li><li><strong>Historie</strong>: zálohy konfigurace, ke kterým se lze vrátit</li><li><strong>SSL</strong>, <strong>Cloudflare</strong>, <strong>Composer</strong>: záložky z pluginů</li></ul>"
+        "title": "Weby v pokročilém režimu",
+        "body": "<p>Stejná tabulka, navíc s výběrovými políčky, řazením podle názvu, stavu a verze PHP a sloupci Síť a Tunel, když je web používá. Označené weby můžete hromadně zapnout, vypnout, použít znovu a smazat.</p><h3 id='tabs'>Záložky stránky webu</h3><ul><li><strong>Přehled</strong>: stav webu a jeho hlavní nastavení</li><li><strong>Nastavení</strong>: doména a aliasy, složka webu, PHP nebo Node.js, HTTPS, síť a porty, veřejný přístup, framework a Docker, dole smazání webu</li><li><strong>Logy</strong>: chyby a přístupy z Apache</li><li><strong>Metriky</strong>: počet požadavků a historický graf provozu</li><li><strong>Deploy</strong>: nasazení na server, jen v pokročilém režimu</li><li><strong>Historie</strong>: zálohy konfigurace, ke kterým se lze vrátit</li><li><strong>SSL</strong>, <strong>Cloudflare</strong>, <strong>Composer</strong>: záložky z pluginů</li></ul>"
       },
       "databases": {
         "title": "Databáze",
@@ -3361,7 +3361,7 @@
       },
       "shortcuts": {
         "title": "Klávesové zkratky",
-        "body": "<ul><li><code>Ctrl+K</code> / <code>Cmd+K</code>: otevře paletu příkazů (funguje i s Caps Lockem a na české klávesnici)</li><li><code>F5</code>: znovu naváže spojení s démonem</li><li><code>Ctrl+N</code>: nový web</li><li><code>Ctrl+1</code> až <code>Ctrl+7</code>: Přehled / Weby / Databáze / SSL / PHP / Binárky / Nastavení. Čísla jsou na horní řadě kláves a na české klávesnici fungují bez Shiftu. V Jednoduchém režimu vedou i na stránky, které menu neukazuje.</li></ul><p>Při psaní do textového pole nebo editoru se zkratky kromě <code>Ctrl+K</code> nepoužijí, aby vás nepřenesly jinam uprostřed úprav.</p>"
+        "body": "<ul><li><code>Ctrl+K</code> / <code>Cmd+K</code>: otevře paletu příkazů (funguje i s Caps Lockem a na české klávesnici)</li><li><code>F5</code>: znovu naváže spojení s démonem</li><li><code>Ctrl+N</code>: nový web</li><li><code>Ctrl+1</code> až <code>Ctrl+7</code>: Přehled / Weby / Databáze / SSL / PHP / Binárky / Nastavení. Čísla jsou na horní řadě kláves a na české klávesnici fungují bez Shiftu. V jednoduchém režimu vedou i na stránky, které menu neukazuje.</li></ul><p>Při psaní do textového pole nebo editoru se zkratky kromě <code>Ctrl+K</code> nepoužijí, aby vás nepřenesly jinam uprostřed úprav.</p>"
       },
       "settings": {
         "title": "Nastavení",
@@ -3373,7 +3373,7 @@
       },
       "metrics": {
         "title": "Metriky a logy",
-        "body": "<p>Každý web má metriky požadavků z přístupového logu Apache a souhrn chyb z Apache a PHP-FPM. Najdete je na stránce webu v záložkách Metriky a Logy.</p><h3 id='dashboard'>Přehled</h3><p>Úvodní stránka <strong>Přehled</strong> shrnuje stav jednou větou a pod ní ukazuje seznam <em>Vyžaduje pozornost</em> (spadlá služba, chybějící Apache, stará záloha, nová verze) a tabulku služeb se stavem. V Pokročilém režimu v tabulce přibývá port, verze a využití CPU a paměti a pod ní čísla, grafy CPU a paměti za posledních 5 minut a nedávná aktivita. V Jednoduchém režimu je pod tabulkou počet požadavků a chyb za 24 hodin, zkratky a poslední weby.</p><p>Nenainstalovaná služba je označená jako <em>Nenainstalováno</em> a má tlačítko <strong>Instalovat</strong>, které otevře stránku Binárky.</p>"
+        "body": "<p>Každý web má metriky požadavků z přístupového logu Apache a souhrn chyb z Apache a PHP-FPM. Najdete je na stránce webu v záložkách Metriky a Logy.</p><h3 id='dashboard'>Přehled</h3><p>Úvodní stránka <strong>Přehled</strong> shrnuje stav jednou větou a pod ní ukazuje seznam <em>Vyžaduje pozornost</em> (spadlá služba, chybějící Apache, stará záloha, nová verze) a tabulku služeb se stavem. V pokročilém režimu v tabulce přibývá port, verze a využití CPU a paměti a pod ní čísla, grafy CPU a paměti za posledních 5 minut a nedávná aktivita. V jednoduchém režimu je pod tabulkou počet požadavků a chyb za 24 hodin, zkratky a poslední weby.</p><p>Nenainstalovaná služba je označená jako <em>Nenainstalováno</em> a má tlačítko <strong>Instalovat</strong>, které otevře stránku Binárky.</p>"
       }
     },
     "wizard": {
@@ -3392,7 +3392,7 @@
         },
         "ssl": {
           "title": "Zapněte HTTPS",
-          "desc": "Při zakládání webu zapněte přepínač <strong>HTTPS</strong>. Když ještě chybí lokální certifikační autorita, klikněte na <strong>Nainstalovat a zapnout</strong>, aby prohlížeč certifikátům důvěřoval. Certifikáty existujících webů spravuje stránka <strong>SSL</strong> (v Pokročilém režimu je v menu).",
+          "desc": "Při zakládání webu zapněte přepínač <strong>HTTPS</strong>. Když ještě chybí lokální certifikační autorita, klikněte na <strong>Nainstalovat a zapnout</strong>, aby prohlížeč certifikátům důvěřoval. Certifikáty existujících webů spravuje stránka <strong>SSL</strong> (v pokročilém režimu je v menu).",
           "tip": "Tip: odznak u certifikátu zežloutne, když do vypršení zbývá 14 dnů nebo méně."
         },
         "browser": {
@@ -3402,7 +3402,7 @@
         },
         "database": {
           "title": "Spravujte databáze",
-          "desc": "V Pokročilém režimu otevřete v menu vlevo <strong>Databáze</strong>: vytvoříte databázi, spustíte SQL dotaz nebo naimportujete a exportujete dump. Databázi můžete vytvořit i rovnou při zakládání webu.",
+          "desc": "V pokročilém režimu otevřete v menu vlevo <strong>Databáze</strong>: vytvoříte databázi, spustíte SQL dotaz nebo naimportujete a exportujete dump. Databázi můžete vytvořit i rovnou při zakládání webu.",
           "tip": "Tip: když MySQL hlásí „Access denied“, zkontrolujte v Nastavení → Porty, jestli port neobsazuje jiný program."
         },
         "mcp": {
@@ -4002,7 +4002,7 @@
   "app": {
     "name": "NKS WebDev Console",
     "short": "WDC",
-    "advancedPageNote": "Tato stránka patří do Pokročilého režimu, proto ji menu v Jednoduchém režimu neukazuje.",
+    "advancedPageNote": "Tato stránka patří do pokročilého režimu, proto ji menu v jednoduchém režimu neukazuje.",
     "switchToAdvanced": "Přepnout na Pokročilý",
     "skipToContent": "Přeskočit na obsah"
   },

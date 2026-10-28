@@ -952,6 +952,14 @@ html.dark .nav-item-tunnel .nav-label {
   font-weight: 500;
 }
 
+/* Controls are 36px tall (34px inner + border) while Element sizes a small
+   form's label for 24px, which put side labels 6px above the control's midline. */
+.el-form-item--label-left .el-form-item__label,
+.el-form-item--label-right .el-form-item__label {
+  height: 36px;
+  line-height: 36px;
+}
+
 .el-form-item {
   margin-bottom: 16px !important;
 }
