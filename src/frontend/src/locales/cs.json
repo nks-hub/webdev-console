@@ -2582,7 +2582,7 @@
   "metrics": {
     "historical": {
       "dateLabel": "Datum",
-      "granularityLabel": "Granularita",
+      "granularityLabel": "Interval",
       "refresh": "Obnovit",
       "loading": "Načítání…",
       "emptyDay": "Žádný provoz v tento den",

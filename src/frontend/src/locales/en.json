@@ -2582,7 +2582,7 @@
   "metrics": {
     "historical": {
       "dateLabel": "Date",
-      "granularityLabel": "Granularity",
+      "granularityLabel": "Interval",
       "refresh": "Refresh",
       "loading": "Loading...",
       "emptyDay": "No traffic on this day",

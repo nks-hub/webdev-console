@@ -18,6 +18,7 @@
           v-model="selectedLines"
           size="small"
           style="width: 90px"
+          :aria-label="$t('logs.errors.lines')"
           @change="fetchLogs"
         >
           <el-option v-for="n in LINE_OPTIONS" :key="n" :label="String(n)" :value="n" />
@@ -31,6 +32,7 @@
           type="datetime"
           size="small"
           style="width: 200px"
+          :aria-label="$t('logs.errors.since')"
           clearable
           :placeholder="$t('logs.errors.since')"
           @change="fetchLogs"
@@ -39,7 +41,7 @@
 
       <div class="toolbar-group">
         <span class="toolbar-label">{{ $t('logs.errors.autoRefresh') }}</span>
-        <el-switch v-model="autoRefresh" size="small" @change="onAutoRefreshToggle" />
+        <el-switch v-model="autoRefresh" size="small" :aria-label="$t('logs.errors.autoRefresh')" @change="onAutoRefreshToggle" />
       </div>
     </div>
 

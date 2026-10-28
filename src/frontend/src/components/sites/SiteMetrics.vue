@@ -17,19 +17,20 @@
       </label>
       <label class="control">
         <span class="control-label">{{ $t('metrics.historical.granularityLabel') }}</span>
-        <el-select v-model="granularity" size="small" class="granularity" @change="load">
-          <el-option v-for="g in ['1m', '5m', '15m', '1h']" :key="g" :label="g" :value="g" />
+        <el-select v-model="granularity" size="small" style="width: 100px" @change="load">
+          <el-option v-for="g in GRANULARITIES" :key="g.value" :label="g.label" :value="g.value" />
         </el-select>
       </label>
       <el-button size="small" :loading="loading" :icon="Refresh" @click="load">{{ $t('metrics.historical.refresh') }}</el-button>
       <div class="series-toggles" role="group" :aria-label="$t('siteEdit.metrics')">
-        <el-check-tag
+        <button
           v-for="s in seriesOptions"
           :key="s.key"
-          :checked="activeSeries.includes(s.key)"
+          type="button"
           class="series-toggle"
-          @change="(checked: boolean) => toggleSeries(s.key, checked)"
-        >{{ $t(s.labelKey) }}</el-check-tag>
+          :aria-pressed="activeSeries.includes(s.key)"
+          @click="toggleSeries(s.key, !activeSeries.includes(s.key))"
+        >{{ $t(s.labelKey) }}</button>
       </div>
     </div>
 
@@ -74,6 +75,13 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.g
 
 const date = ref(today())
 const granularity = ref('5m')
+// The daemon takes these exact values; the labels are what a person reads.
+const GRANULARITIES = [
+  { value: '1m', label: '1 min' },
+  { value: '5m', label: '5 min' },
+  { value: '15m', label: '15 min' },
+  { value: '1h', label: '1 h' },
+]
 const loading = ref(false)
 const data = ref<HistoricalMetrics | null>(null)
 
@@ -182,8 +190,22 @@ const chartOption = computed(() => {
 .control { display: grid; gap: var(--wdc-space-1); }
 .control-label { color: var(--wdc-text-2); font-size: 0.8rem; }
 .date-picker { width: 150px; }
-.granularity { width: 90px; }
 .series-toggles { display: flex; gap: var(--wdc-space-2); margin-left: auto; }
+.series-toggle {
+  min-height: 30px;
+  padding: 0 var(--wdc-space-3);
+  border: 1px solid var(--wdc-border-strong);
+  border-radius: var(--wdc-radius);
+  background: transparent;
+  color: var(--wdc-text-2);
+  font-family: var(--wdc-font-display);
+  font-size: 0.87rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+@media (hover: hover) { .series-toggle:hover { color: var(--wdc-text); } }
+.series-toggle[aria-pressed="true"] { border-color: var(--wdc-accent); background: var(--wdc-accent-dim); color: var(--wdc-accent-ink); }
+.series-toggle:focus-visible { outline: 2px solid var(--wdc-accent); outline-offset: 1px; }
 .chart-wrap {
   position: relative;
   border: 1px solid var(--wdc-border);
