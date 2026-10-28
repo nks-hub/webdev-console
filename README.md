@@ -89,11 +89,11 @@ On Windows, `run.cmd` from the repo root does both (supports `--no-build`, `--da
 Create your first site (with the app running, see [CLI](#cli) for installing `wdc`):
 
 ```bash
-wdc sites create --domain my-app.local --docroot "$HOME/wdc/sites/my-app" --php 8.3 --ssl
+wdc sites create --domain my-app.local --docroot "$HOME/Sites/my-app.local" --php 8.3 --ssl
 wdc services start apache
 ```
 
-In PowerShell use `--docroot "$HOME\wdc\sites\my-app"`. A missing document root is created.
+In PowerShell use `--docroot "$HOME\Sites\my-app.local"`. A missing document root is created.
 
 Open `https://my-app.local/`. The site is served from the document root with PHP 8.3 through Apache + mod_fcgid and a mkcert-signed SSL certificate.
 
@@ -119,7 +119,7 @@ The default Windows install dir is `%LOCALAPPDATA%\Programs\NKS WebDev Console` 
 wdc status                                    # daemon and service overview
 wdc sites                                     # list all sites
 wdc sites create --domain my-app.local \
-                 --docroot "$HOME/wdc/sites/my-app" --php 8.3 --ssl
+                 --docroot "$HOME/Sites/my-app.local" --php 8.3 --ssl
 wdc services start apache
 wdc databases                                 # list databases
 wdc binaries catalog                          # available PHP / Apache / MySQL versions

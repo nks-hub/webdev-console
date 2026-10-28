@@ -2176,7 +2176,7 @@ systemCmd.SetAction(async (parseResult, ct) =>
 
 // --- wdc new {domain} — shortcut for sites create --domain {domain} ---
 var newDomainArg = new Argument<string>("domain") { Description = "Domain (e.g. myapp.loc)" };
-var newDocrootOpt = new Option<string?>("--docroot") { Description = "Document root" };
+var newDocrootOpt = new Option<string?>("--docroot") { Description = "Document root (default: <home>/Sites/<domain>, as in the app)" };
 var newPhpOpt = new Option<string?>("--php") { Description = "PHP version (default: 8.4)" };
 var newSslOpt = new Option<bool>("--ssl") { Description = "Enable SSL" };
 var newAliasesOpt = new Option<string?>("--aliases") { Description = "Comma-separated aliases" };
@@ -2185,7 +2185,7 @@ newCommand.SetAction(async (parseResult, ct) =>
 {
     var domain = parseResult.GetValue(newDomainArg)!;
     var docroot = Path.GetFullPath(parseResult.GetValue(newDocrootOpt)
-        ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "wdc", "sites", domain.Split('.')[0]));
+        ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Sites", domain.Trim().ToLowerInvariant()));
     var php = parseResult.GetValue(newPhpOpt) ?? "8.4";
     var ssl = parseResult.GetValue(newSslOpt);
     var aliasStr = parseResult.GetValue(newAliasesOpt);
