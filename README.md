@@ -86,33 +86,48 @@ cd src/frontend && npm run dev
 
 On Windows, `run.cmd` from the repo root does both (supports `--no-build`, `--daemon-only`, `--frontend-only`).
 
-Create your first site:
+Create your first site (with the app running, see [CLI](#cli) for installing `wdc`):
 
 ```bash
-wdc site create --name my-app --php 8.3 --domain my-app.local --ssl
-wdc service start apache
+wdc sites create --domain my-app.local --docroot "$HOME/Sites/my-app.local" --php 8.3 --ssl
+wdc services start apache
 ```
 
-Open `https://my-app.local/`. The site is served from `~/wdc/sites/my-app/` with PHP 8.3 through Apache + mod_fcgid and a mkcert-signed SSL certificate.
+In PowerShell use `--docroot "$HOME\Sites\my-app.local"`. A missing document root is created.
+
+Open `https://my-app.local/`. The site is served from the document root with PHP 8.3 through Apache + mod_fcgid and a mkcert-signed SSL certificate.
 
 ## Usage
 
 ### CLI
 
-The `wdc` binary (System.CommandLine) is published alongside the daemon:
+Every installer includes `wdc`, a self-contained single-file binary (System.CommandLine) that sits in the app's `resources/cli` folder. It talks to the running daemon, so start the app first.
+
+- **Windows installer:** `<install dir>\resources\cli\wdc.exe`. The installer adds that folder to your user `PATH` (per-user install) or the system `PATH` (all-users install) and removes it on uninstall. Open a new terminal afterwards. The portable build does not touch `PATH`.
+- **macOS:** `/Applications/NKS WebDev Console.app/Contents/Resources/cli/wdc`. Not on `PATH`; the installer leaves your shell profile alone.
+- **Linux (AppImage):** `resources/cli/wdc` inside the image. Run `./NKS-WebDev-Console-*.AppImage --appimage-extract` once, then use `squashfs-root/resources/cli/wdc`. Not on `PATH`.
+
+On macOS and Linux link it yourself once, for example:
 
 ```bash
-wdc site list                                 # list all sites
-wdc site create --name my-app --php 8.3 \
-                --domain my-app.local --ssl   # create + provision SSL
-wdc service start apache
-wdc database list
-wdc binaries catalog                          # available PHP / Apache / MySQL versions
-wdc doctor                                    # 13 health checks
-wdc --json site list                          # machine-readable output for scripts
+sudo ln -s "/Applications/NKS WebDev Console.app/Contents/Resources/cli/wdc" /usr/local/bin/wdc
 ```
 
-All write commands have `HttpRequestException` handling; list commands emit TSV when piped.
+The default Windows install dir is `%LOCALAPPDATA%\Programs\NKS WebDev Console` (per-user) or `C:\Program Files\NKS WebDev Console` (all users). From a source checkout, `dotnet run --project src/daemon/NKS.WebDevConsole.Cli -- <command>` runs the same CLI.
+
+```bash
+wdc status                                    # daemon and service overview
+wdc sites                                     # list all sites
+wdc sites create --domain my-app.local \
+                 --docroot "$HOME/Sites/my-app.local" --php 8.3 --ssl
+wdc services start apache
+wdc databases                                 # list databases
+wdc binaries catalog                          # available PHP / Apache / MySQL versions
+wdc doctor                                    # 13 health checks
+wdc sites --json                              # machine-readable output for scripts
+```
+
+`wdc --help` lists every command. Output is a table in a terminal and tab-separated lines when piped.
 
 ### REST API + auth
 

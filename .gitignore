@@ -78,6 +78,7 @@ appsettings.*.json
 /src/daemon/NKS.WebDevConsole.Daemon/logs/
 src/frontend/resources/daemon/
 src/frontend/resources/mcp-server/
+src/frontend/resources/cli/
 src/frontend/release/
 /docs/
 .tmp-csr/

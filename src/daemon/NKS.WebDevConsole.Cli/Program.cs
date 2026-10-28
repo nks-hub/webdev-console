@@ -214,10 +214,12 @@ logsCommand.SetAction(async (parseResult, ct) =>
         var pf = File.ReadAllLines(portFile);
         var port = pf[0];
         var token = pf.Length > 1 ? pf[1] : "";
-        var wsUrl = $"ws://localhost:{port}/api/logs/{id}/stream{(string.IsNullOrEmpty(token) ? "" : $"?token={Uri.EscapeDataString(token)}")}";
+        var wsUrl = $"ws://localhost:{port}/api/logs/{id}/stream";
         try
         {
             using var ws = new System.Net.WebSockets.ClientWebSocket();
+            // The daemon accepts ?token= only on /api/events, /api/ws* and downloads, so this route needs the header.
+            ws.Options.SetRequestHeader("Authorization", $"Bearer {token}");
             await ws.ConnectAsync(new Uri(wsUrl), CancellationToken.None);
             AnsiConsole.MarkupLine($"[dim]Streaming logs for {Markup.Escape(id)} (Ctrl+C to stop)...[/]");
             using var cts = new CancellationTokenSource();
@@ -294,7 +296,8 @@ svcInfoCmd.SetAction(async (parseResult, ct) =>
     table.AddRow("PID", GetInt(svc, "pid")?.ToString() ?? "-");
     table.AddRow("CPU", GetDouble(svc, "cpuPercent") is double c ? $"{c:F1}%" : "-");
     table.AddRow("Memory", GetLong(svc, "memoryBytes") is long m ? FormatBytes(m) : "-");
-    if (svc.TryGetProperty("uptime", out var up)) table.AddRow("Uptime", FormatUptime(up.ValueKind == System.Text.Json.JsonValueKind.String ? long.TryParse(up.GetString(), out var us) ? us : 0 : up.ValueKind == System.Text.Json.JsonValueKind.Number ? (long)up.GetDouble() : 0));
+    // `uptime` is a TimeSpan string ("00:12:34"); the whole-seconds twin is omitted while the service is down.
+    if (GetLong(svc, "uptimeSeconds") is long up) table.AddRow("Uptime", FormatUptime(up));
     AnsiConsole.Write(table);
 });
 servicesCommand.Add(svcInfoCmd);
@@ -436,7 +439,8 @@ createSiteCmd.SetAction(async (parseResult, ct) =>
     var tplApplied = tplName is not null && siteTemplates.ContainsKey(tplName);
 
     string domain = parseResult.GetValue(domainOpt) ?? AnsiConsole.Ask<string>("Domain (e.g. [green]myapp.loc[/]):") ?? "";
-    string docRoot = parseResult.GetValue(docrootOpt) ?? AnsiConsole.Ask<string>("Document root:") ?? "";
+    // Absolute here: the daemon resolves a relative path against its own working directory and creates nothing for it.
+    string docRoot = Path.GetFullPath(parseResult.GetValue(docrootOpt) ?? AnsiConsole.Ask<string>("Document root:") ?? "");
     var php = parseResult.GetValue(phpOpt) ?? (tplApplied ? tpl.php : "8.4");
     var ssl = parseResult.GetValue(sslOpt) || (tplApplied && tpl.ssl)
               || (!json && !tplApplied && domain == null && AnsiConsole.Confirm("Enable SSL?", false));
@@ -546,7 +550,7 @@ updateSiteCmd.SetAction(async (parseResult, ct) =>
 {
     var domain = parseResult.GetValue(updateDomainArg)!;
     var php = parseResult.GetValue(updatePhpOpt);
-    var docroot = parseResult.GetValue(updateDocrootOpt);
+    var docroot = parseResult.GetValue(updateDocrootOpt) is { } dir ? Path.GetFullPath(dir) : null;
     var sslOpt = parseResult.GetValue(updateSslOpt);
     var nodePort = parseResult.GetValue(updateNodePortOpt);
     var json = parseResult.GetValue(jsonOption);
@@ -1526,8 +1530,18 @@ phpSwitchCmd.SetAction(async (parseResult, ct) =>
         { found = true; break; }
     }
     if (!found) { AnsiConsole.MarkupLine($"[red]PHP {Markup.Escape(ver)} not installed[/]"); Environment.ExitCode = 1; return; }
-    if (json) PrintJson(new { activeVersion = ver });
-    else AnsiConsole.MarkupLine($"[green]Default PHP set to {Markup.Escape(ver)}[/]");
+    try
+    {
+        var result = await client.PutAsync("/api/php/default", JsonContent.Create(new { version = ver }));
+        var active = result.TryGetProperty("version", out var av) ? av.GetString() ?? ver : ver;
+        if (json) PrintJson(new { activeVersion = active });
+        else AnsiConsole.MarkupLine($"[green]Default PHP set to {Markup.Escape(active)}[/]");
+    }
+    catch (HttpRequestException ex)
+    {
+        Environment.ExitCode = 1;
+        AnsiConsole.MarkupLine($"[red]Failed to switch PHP:[/] {Markup.Escape(ex.Message)}");
+    }
 });
 phpCommand.Add(phpSwitchCmd);
 
@@ -2162,7 +2176,7 @@ systemCmd.SetAction(async (parseResult, ct) =>
 
 // --- wdc new {domain} — shortcut for sites create --domain {domain} ---
 var newDomainArg = new Argument<string>("domain") { Description = "Domain (e.g. myapp.loc)" };
-var newDocrootOpt = new Option<string?>("--docroot") { Description = "Document root" };
+var newDocrootOpt = new Option<string?>("--docroot") { Description = "Document root (default: <home>/Sites/<domain>, as in the app)" };
 var newPhpOpt = new Option<string?>("--php") { Description = "PHP version (default: 8.4)" };
 var newSslOpt = new Option<bool>("--ssl") { Description = "Enable SSL" };
 var newAliasesOpt = new Option<string?>("--aliases") { Description = "Comma-separated aliases" };
@@ -2170,7 +2184,8 @@ var newCommand = new Command("new", "Create a new site (shortcut for sites creat
 newCommand.SetAction(async (parseResult, ct) =>
 {
     var domain = parseResult.GetValue(newDomainArg)!;
-    var docroot = parseResult.GetValue(newDocrootOpt) ?? $"C:\\work\\htdocs\\{domain.Split('.')[0]}";
+    var docroot = Path.GetFullPath(parseResult.GetValue(newDocrootOpt)
+        ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Sites", domain.Trim().ToLowerInvariant()));
     var php = parseResult.GetValue(newPhpOpt) ?? "8.4";
     var ssl = parseResult.GetValue(newSslOpt);
     var aliasStr = parseResult.GetValue(newAliasesOpt);
@@ -3543,8 +3558,8 @@ return invokeExitCode != 0 ? invokeExitCode : Environment.ExitCode;
 // --- Helpers ---
 // Centralised reader for the CLI assembly version. Three sites previously
 // duplicated this: --version, `wdc version`, and the schema marker in
-// `wdc config export`. The csproj now sets Version=0.2.0 explicitly (earlier
-// it defaulted to 1.0.0.0), so this returns the real shipped version; the
+// `wdc config export`. The csproj sets Version explicitly (it defaults to
+// 1.0.0.0) and release verification keeps it equal to the daemon's; the
 // "0.0.0" fallback is a safety net for builds where the attribute is absent.
 static string CliAssemblyVersion() =>
     typeof(DaemonClient).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
