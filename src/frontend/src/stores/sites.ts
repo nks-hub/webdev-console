@@ -3,6 +3,11 @@ import { ref } from 'vue'
 import { fetchSites, createSite, deleteSite, updateSite, daemonAuthHeaders } from '../api/daemon'
 import type { SiteInfo } from '../api/types'
 
+// The daemon reports a failed apply step as an English "<step>: <detail>" warning. The site page shows
+// the same step translated and with a hint, so a toast would only repeat it in another language.
+const APPLY_STEP_WARNING = /^(ssl|phpIni|vhost|php|reload|node|hosts|cloudflare): /
+const withoutApplySteps = (warnings?: string[]) => (warnings ?? []).filter(w => !APPLY_STEP_WARNING.test(w))
+
 export const useSitesStore = defineStore('sites', () => {
   const sites = ref<SiteInfo[]>([])
   const loading = ref(false)
@@ -27,7 +32,7 @@ export const useSitesStore = defineStore('sites', () => {
     // SiteCreateResponse union in api/daemon.ts captures both shapes.
     const raw = await createSite(data)
     const site = (raw as { site?: SiteInfo }).site ?? (raw as SiteInfo)
-    lastCreateWarnings.value = (raw as { warnings?: string[] }).warnings ?? []
+    lastCreateWarnings.value = withoutApplySteps((raw as { warnings?: string[] }).warnings)
     lastCreateHints.value = (raw as { hints?: string[] }).hints ?? []
     // Optimistic push so the table updates instantly…
     sites.value.push(site)
@@ -48,7 +53,7 @@ export const useSitesStore = defineStore('sites', () => {
     // shapes — unwrap then propagate warnings via the side-channel.
     const raw = await updateSite(domain, data)
     const updated = (raw as { site?: SiteInfo }).site ?? (raw as SiteInfo)
-    lastUpdateWarnings.value = (raw as { warnings?: string[] }).warnings ?? []
+    lastUpdateWarnings.value = withoutApplySteps((raw as { warnings?: string[] }).warnings)
     const idx = sites.value.findIndex(s => s.domain === domain)
     if (idx >= 0) sites.value[idx] = updated
     return updated
