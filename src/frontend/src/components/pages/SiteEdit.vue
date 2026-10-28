@@ -74,14 +74,14 @@
                       v-model="aliasInput"
                       size="small"
                       class="alias-input"
-                      placeholder="www.myapp.loc"
+                      :placeholder="`www.${exampleDomain}`"
                       :aria-label="$t('siteEdit.addAlias')"
                       @keydown.enter.prevent="addAlias"
                       @blur="addAlias"
                     />
                     <el-button v-else size="small" class="alias-add-btn" @click="showAliasInput">+ {{ $t('siteEdit.addAlias') }}</el-button>
                   </div>
-                  <div class="hint">{{ $t('sites.new.aliasesHint') }}</div>
+                  <div class="hint">{{ $t('sites.new.aliasesHint', { example: exampleDomain }) }}</div>
                 </el-form-item>
               </el-form>
             </EditCard>
@@ -91,7 +91,6 @@
                 <el-form-item>
                   <el-input
                     v-model="site.documentRoot"
-                    placeholder="C:\work\htdocs\myapp"
                     class="path-input"
                     spellcheck="false"
                     :aria-label="$t('sites.new.folder')"
@@ -397,7 +396,7 @@ import {
   type BindAddressOption,
 } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
-import { openUrl, revealFolder, siteUrl } from '../../utils/siteUrl'
+import { displayPath, openUrl, revealFolder, siteUrl } from '../../utils/siteUrl'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -411,6 +410,7 @@ const siteState = useSiteStateStore()
 const uid = useId()
 
 const domain = computed(() => String(route.params.domain || ''))
+const exampleDomain = computed(() => t('sites.new.domainExample'))
 
 const site = ref<SiteInfo | null>(null)
 const loading = ref(false)
@@ -505,6 +505,7 @@ function normalizeBind(values: string[] | undefined): string[] {
 }
 
 function normalizeSiteCopy(s: SiteInfo) {
+  s.documentRoot = displayPath(s.documentRoot)
   s.bindAddresses = normalizeBind(s.bindAddresses?.length ? s.bindAddresses : [s.bindAddress || '*'])
   s.bindAddress = s.bindAddresses[0] ?? '*'
   if (s.domain?.toLowerCase() === 'localhost') s.localhostLoopbackEnabled = true
