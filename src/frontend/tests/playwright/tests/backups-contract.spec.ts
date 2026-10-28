@@ -52,8 +52,11 @@ test.describe('Backups contract', () => {
     const endpoint = read('..', 'daemon', 'NKS.WebDevConsole.Daemon', 'Backup', 'BackupEndpoints.cs')
     expect(endpoint).toMatch(/McpCallerContext\.IsMcpToken && \(options\.Databases \|\| options\.SiteFiles\)/)
     expect(endpoint.match(/if \(McpDataRestoreForbidden\(options\) is \{ \} forbidden\) return forbidden;/g)).toHaveLength(2)
-    const byId = endpoint.slice(endpoint.indexOf('"/api/backup/{id}/restore"'))
-    expect(byId.indexOf('McpDataRestoreForbidden(options)')).toBeLessThan(byId.indexOf('ValidateAndConsumeAsync'))
+    // On both routes the check runs before the intent is consumed.
+    for (const route of ['"/api/restore"', '"/api/backup/{id}/restore"']) {
+      const handler = endpoint.slice(endpoint.indexOf(route))
+      expect(handler.indexOf('McpDataRestoreForbidden(options)'), route).toBeLessThan(handler.indexOf('ValidateAndConsumeAsync'))
+    }
   })
 
   test('restore dialog strings exist in both languages', () => {

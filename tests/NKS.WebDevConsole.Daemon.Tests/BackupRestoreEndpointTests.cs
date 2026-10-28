@@ -142,20 +142,35 @@ public class BackupRestoreEndpointTests : IAsyncLifetime
 
         Assert.Equal(HttpStatusCode.Forbidden, status);
         Assert.Equal("mcp_forbidden", body.GetProperty("error").GetString());
-        _validator.Verify(x => x.ValidateAndConsumeAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
-            It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
+        AssertIntentNotConsumed();
         AssertNothingRestored();
     }
 
     [Theory]
     [InlineData("databases")]
     [InlineData("siteFiles")]
-    public async Task Mcp_token_cannot_ask_for_data_when_uploading_an_archive(string flag)
+    public async Task Mcp_token_cannot_ask_for_data_when_uploading_an_archive_and_keeps_its_intent(string flag)
     {
         var (status, body) = await PostAsync("/api/restore", McpToken, Upload(flag));
 
         Assert.Equal(HttpStatusCode.Forbidden, status);
         Assert.Equal("mcp_forbidden", body.GetProperty("error").GetString());
+        AssertIntentNotConsumed();
+        AssertNothingRestored();
+    }
+
+    private void AssertIntentNotConsumed() =>
+        _validator.Verify(x => x.ValidateAndConsumeAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
+
+    [Fact]
+    public async Task Mcp_upload_without_the_flags_still_goes_through_its_intent()
+    {
+        var (status, _) = await PostAsync("/api/restore", McpToken, Upload());
+
+        Assert.Equal(HttpStatusCode.OK, status);
+        _validator.Verify(x => x.ValidateAndConsumeAsync(It.IsAny<string>(), "backup_restore", It.IsAny<string>(),
+            It.IsAny<string>(), false, It.IsAny<CancellationToken>()), Times.Once);
         AssertNothingRestored();
     }
 
