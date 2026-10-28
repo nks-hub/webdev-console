@@ -39,15 +39,15 @@ internal static class SystemEndpoints
             uptime = DaemonUptimeSeconds()
         }));
 
-        app.MapGet("/api/system", async (IServiceProvider sp, BinaryManager bm, SiteManager sm, CatalogClient cc, SettingsStore settings) =>
+        app.MapGet("/api/system", async (IServiceProvider sp, BinaryManager bm, SiteManager sm, CatalogClient cc, SettingsStore settings, ServiceRunTracker tracker, ILoggerFactory lf) =>
         {
             var modules = sp.GetServices<IServiceModule>().ToArray();
             // Fan out the status probes concurrently — the previous foreach awaited
             // each module sequentially, so /api/system latency scaled linearly with
             // plugin count. With 10 built-in plugins that's 10× the slowest probe;
             // Task.WhenAll brings it back to max() of the per-module times.
-            var statuses = await Task.WhenAll(
-                modules.Select(m => m.GetStatusAsync(CancellationToken.None)));
+            var log = lf.CreateLogger("ServiceStatus");
+            var statuses = await Task.WhenAll(modules.Select(m => tracker.StatusAsync(m, log)));
             var total = statuses.Length;
             var running = statuses.Count(s => s.State == ServiceState.Running);
 

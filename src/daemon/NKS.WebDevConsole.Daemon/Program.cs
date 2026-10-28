@@ -531,6 +531,7 @@ if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SENTRY_DSN"))
 }
 app.UseWebSockets();
 app.UseCors();
+app.UseErrorsWithCors();
 
 // Sentry crash reporting — opt-in via TelemetryConsent. DSN resolution
 // is purely env-based; no default is baked into the binary so
