@@ -317,6 +317,18 @@ describe('intents for the new gated tools', () => {
   })
 })
 
+describe('Returns line matches the daemon response', () => {
+  it('wdc_create_backup names every field POST /api/backup returns', () => {
+    const src = readFileSync(join(here, '..', '..', '..', '..', 'src', 'daemon', 'NKS.WebDevConsole.Daemon', 'Backup', 'BackupEndpoints.cs'), 'utf8')
+    const ok = /MapPost\("\/api\/backup"[\s\S]*?return Results\.Ok\(new \{ ([^}]*) \}\);/.exec(src)![1]!
+    const fields = ok.split(',').map(f => f.split('=')[0]!.trim())
+    expect(fields).toEqual(['path', 'files', 'size', 'contentFlags', 'skipped'])
+    const description = allTools().tools.get('wdc_create_backup')!.config.description!
+    const returns = description.slice(description.indexOf('Returns:'))
+    for (const f of fields) expect(returns).toMatch(new RegExp(`\\b${f}\\b`))
+  })
+})
+
 describe('annotations and read-only mode', () => {
   it('read-only mode registers exactly the tools marked readOnlyHint', () => {
     const all = allTools().tools
