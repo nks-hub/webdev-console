@@ -115,6 +115,12 @@ test.describe('Tool pages — source contract', () => {
     expect(vue).not.toContain('accent-glow')
   })
 
+  test('databases page reloads its list every time it is shown, not only on first mount', () => {
+    const vue = page('Databases.vue')
+    expect(vue).toContain('onActivated(() => { void loadDatabases() })')
+    expect(vue).not.toMatch(/onMounted\(/)
+  })
+
   test('php page toggles zend extensions by bare name and sets the active version', () => {
     const vue = page('PhpManager.vue')
     expect(vue).not.toContain('[zend] ')

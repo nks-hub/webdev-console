@@ -253,7 +253,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onActivated, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -748,7 +748,9 @@ async function exportDb() {
   }
 }
 
-onMounted(() => { void loadDatabases() })
+// Also runs on first mount: the page lives inside <keep-alive>, and databases created
+// elsewhere (MCP, a new site, the CLI) must show up when the user comes back.
+onActivated(() => { void loadDatabases() })
 </script>
 
 <style scoped>
