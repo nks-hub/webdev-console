@@ -41,4 +41,14 @@ test.describe('CLI packaging contract', () => {
     expect(nsh).toContain('${WM_WININICHANGE}')
     expect(nsh).toContain('$INSTDIR\\resources\\cli')
   })
+
+  test('an update restarts the elevated app from the installer, not through the force-run template', () => {
+    expect(read('electron-builder.yml')).toContain('requestedExecutionLevel: requireAdministrator')
+    expect(read('build', 'installer.nsh')).toMatch(
+      /!macro customInstall[\s\S]*?\$\{if\} \$\{isUpdated\}\s+ExecShell "open" "\$INSTDIR\\\$\{APP_EXECUTABLE_FILENAME\}"[\s\S]*?!macroend/,
+    )
+    const main = read('electron', 'main.ts')
+    expect(main).toContain('electronAutoUpdater.quitAndInstall(true, false)')
+    expect(main).not.toContain('quitAndInstall(true, true)')
+  })
 })

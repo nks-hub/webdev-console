@@ -175,6 +175,12 @@ FunctionEnd
   ${else}
     Call wdcPathAddUser
   ${endif}
+  ; The app manifest requires elevation, so the template's --force-run restart
+  ; (ExecShellAsUser through the unelevated shell) never starts it. ShellExecute
+  ; from here does; the updater passes no --force-run, so it runs only once.
+  ${if} ${isUpdated}
+    ExecShell "open" "$INSTDIR\${APP_EXECUTABLE_FILENAME}"
+  ${endif}
 !macroend
 
 !macro customUnInstall

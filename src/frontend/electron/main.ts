@@ -1487,7 +1487,9 @@ async function installUpdateAndRestart() {
   try {
     // Silent: the assisted NSIS installer otherwise walks the user through the
     // whole wizard again (install mode, directory, finish) on every update.
-    electronAutoUpdater.quitAndInstall(true, true)
+    // No force-run: build/installer.nsh restarts the app itself, because the
+    // template's restart cannot start an app that requires elevation.
+    electronAutoUpdater.quitAndInstall(true, false)
   } catch (e) {
     // The installer did not take over: keep the app usable instead of
     // leaving it quitting with no daemon.
