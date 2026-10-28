@@ -186,41 +186,25 @@ internal static class BackupEndpoints
         app.MapPost("/api/restore", async (BackupManager bm, HttpContext ctx,
             NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator) =>
         {
-            // Restoring replaces state.db, sites and certificates. GUI callers keep the
-            // existing confirm dialog; an MCP-token caller needs a confirmed intent.
-            var brIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(brIntentToken) || McpCallerContext.IsMcpToken)
-            {
-                var brVerdict = await intentValidator.ValidateAndConsumeAsync(
-                    brIntentToken ?? "", "backup_restore", domain: "*backup*", host: "*backup*", allowUnconfirmed: false, ctx.RequestAborted);
-                if (!brVerdict.Ok)
-                    return Results.Json(
-                        new { error = "intent_rejected", reason = brVerdict.Reason, detail = brVerdict.Detail },
-                        statusCode: brVerdict.Reason == "pending_confirmation" ? 425 : 403);
-            }
             // An uploaded archive holds state.db and the sites' TLS private keys. It
             // used to stay in the shared temp dir with default permissions forever;
             // write it owner-only and delete it once the restore is done.
             string? uploadedTmp = null;
             try
             {
-                string archivePath;
+                // Read the request first: the MCP check below needs the options and
+                // must run before the intent is consumed, as on /api/backup/{id}/restore.
+                string? archivePath = null;
+                IFormFile? upload = null;
                 var options = new BackupRestoreOptions();
                 if (ctx.Request.HasFormContentType)
                 {
                     var form = await ctx.Request.ReadFormAsync();
-                    var file = form.Files.FirstOrDefault();
-                    if (file is null) return Results.BadRequest(new { error = "No file uploaded" });
+                    upload = form.Files.FirstOrDefault();
+                    if (upload is null) return Results.BadRequest(new { error = "No file uploaded" });
                     options = new BackupRestoreOptions(
                         string.Equals(form["databases"], "true", StringComparison.OrdinalIgnoreCase),
                         string.Equals(form["siteFiles"], "true", StringComparison.OrdinalIgnoreCase));
-                    uploadedTmp = Path.Combine(Path.GetTempPath(), $"wdc-restore-{Guid.NewGuid():N}.zip");
-                    var tmpOptions = new FileStreamOptions { Mode = FileMode.CreateNew, Access = FileAccess.Write };
-                    if (!OperatingSystem.IsWindows())
-                        tmpOptions.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
-                    using (var fs = new FileStream(uploadedTmp, tmpOptions))
-                        await file.CopyToAsync(fs);
-                    archivePath = uploadedTmp;
                 }
                 else
                 {
@@ -237,7 +221,31 @@ internal static class BackupEndpoints
                 }
                 if (McpDataRestoreForbidden(options) is { } forbidden) return forbidden;
 
-                var result = bm.RestoreBackup(archivePath, options);
+                // Restoring replaces state.db, sites and certificates. GUI callers keep the
+                // existing confirm dialog; an MCP-token caller needs a confirmed intent.
+                var brIntentToken = ctx.Request.Headers["X-Intent-Token"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(brIntentToken) || McpCallerContext.IsMcpToken)
+                {
+                    var brVerdict = await intentValidator.ValidateAndConsumeAsync(
+                        brIntentToken ?? "", "backup_restore", domain: "*backup*", host: "*backup*", allowUnconfirmed: false, ctx.RequestAborted);
+                    if (!brVerdict.Ok)
+                        return Results.Json(
+                            new { error = "intent_rejected", reason = brVerdict.Reason, detail = brVerdict.Detail },
+                            statusCode: brVerdict.Reason == "pending_confirmation" ? 425 : 403);
+                }
+
+                if (upload is not null)
+                {
+                    uploadedTmp = Path.Combine(Path.GetTempPath(), $"wdc-restore-{Guid.NewGuid():N}.zip");
+                    var tmpOptions = new FileStreamOptions { Mode = FileMode.CreateNew, Access = FileAccess.Write };
+                    if (!OperatingSystem.IsWindows())
+                        tmpOptions.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+                    using (var fs = new FileStream(uploadedTmp, tmpOptions))
+                        await upload.CopyToAsync(fs);
+                    archivePath = uploadedTmp;
+                }
+
+                var result = bm.RestoreBackup(archivePath!, options);
                 return Results.Ok(RestoreResponse(result, uploadedTmp is null ? archivePath : null));
             }
             catch (System.Text.Json.JsonException ex)
