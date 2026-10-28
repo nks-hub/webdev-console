@@ -877,7 +877,7 @@
           },
           "traffic": {
             "last24h": "Provoz (24 h)",
-            "hits": "{count} požadavků"
+            "hits": "{count} požadavek | {count} požadavky | {count} požadavků"
           },
           "fullLogs": "Zobrazit plné logy"
         }

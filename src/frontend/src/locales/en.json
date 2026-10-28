@@ -877,7 +877,7 @@
           },
           "traffic": {
             "last24h": "Traffic (24h)",
-            "hits": "{count} requests"
+            "hits": "{count} request | {count} requests"
           },
           "fullLogs": "Show full logs"
         }
