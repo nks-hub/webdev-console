@@ -1274,7 +1274,7 @@ internal static class DatabaseEndpoints
         });
 
         // Create database
-        app.MapPost("/api/databases", async (HttpContext ctx, BinaryManager bm, SettingsStore settings, IServiceProvider sp) =>
+        app.MapPost("/api/databases", async (HttpContext ctx, BinaryManager bm, SettingsStore settings, IServiceProvider sp, ConfigHistoryRepository history) =>
         {
             var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>();
             var dbName = body?.GetValueOrDefault("name") ?? "";
@@ -1296,9 +1296,10 @@ internal static class DatabaseEndpoints
                     .WithEnvironmentVariables(MysqlEnvVars())
                     .WithValidation(CliWrap.CommandResultValidation.None)
                     .ExecuteBufferedAsync();
-                return result.ExitCode == 0
-                    ? Results.Created($"/api/databases/{dbName}", new { name = dbName })
-                    : Results.BadRequest(new { error = result.StandardError.Trim() });
+                if (result.ExitCode != 0)
+                    return Results.BadRequest(new { error = result.StandardError.Trim() });
+                history.Record("database", dbName, "INSERT");
+                return Results.Created($"/api/databases/{dbName}", new { name = dbName });
             }
             catch (Exception ex)
             {
@@ -1319,6 +1320,7 @@ internal static class DatabaseEndpoints
             SettingsStore settings,
             IServiceProvider sp,
             NKS.WebDevConsole.Core.Interfaces.IDeployIntentValidator intentValidator,
+            ConfigHistoryRepository history,
             HttpContext ctx,
             CancellationToken ct) =>
         {
@@ -1360,9 +1362,10 @@ internal static class DatabaseEndpoints
                     .WithEnvironmentVariables(MysqlEnvVars())
                     .WithValidation(CliWrap.CommandResultValidation.None)
                     .ExecuteBufferedAsync(ct);
-                return result.ExitCode == 0
-                    ? Results.NoContent()
-                    : Results.BadRequest(new { error = result.StandardError.Trim() });
+                if (result.ExitCode != 0)
+                    return Results.BadRequest(new { error = result.StandardError.Trim() });
+                history.Record("database", name, "DELETE");
+                return Results.NoContent();
             }
             catch (Exception ex)
             {

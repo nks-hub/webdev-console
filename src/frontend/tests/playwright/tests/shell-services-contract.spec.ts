@@ -205,14 +205,23 @@ test.describe('Shell services contract', () => {
     }
   })
 
-  test('activity feed hides the database trigger as a source and labels the other sources', () => {
+  test('activity feed shows a translated source, field or nothing, never a raw code', () => {
     const dashboard = read('components', 'pages', 'Dashboard.vue')
-    expect(dashboard).toMatch(/SILENT_SOURCES = new Set\(\['app', 'trigger'\]\)/)
+    expect(dashboard).toMatch(/return te\(key\) \? t\(key\) : ''/)
+    expect(dashboard).toMatch(/activityLabel\('source', row\.source \?\? ''\)/)
+    // The daemon's field names are camelCase and the locale keys keep that case.
+    expect(dashboard).toMatch(/kind === 'field' \? code/)
     for (const locale of ['cs', 'en']) {
-      const data = JSON.parse(read('locales', `${locale}.json`)) as { dashboard: { activity: { source: Record<string, string> } } }
-      for (const key of ['mcp', 'cli', 'api', 'migration', 'import']) {
-        expect(data.dashboard.activity.source[key], `${locale} ${key}`).toBeTruthy()
-      }
+      const activity = (JSON.parse(read('locales', `${locale}.json`)) as {
+        dashboard: { activity: Record<'op' | 'entity' | 'source' | 'field', Record<string, string>> }
+      }).dashboard.activity
+      for (const key of ['mcp', 'cli', 'api', 'migration', 'import']) expect(activity.source[key], `${locale} source ${key}`).toBeTruthy()
+      // "app" is the default and "trigger" the database audit trigger: no label on purpose, so no "via ..." text.
+      expect(activity.source.app, locale).toBeUndefined()
+      expect(activity.source.trigger, locale).toBeUndefined()
+      for (const key of ['site', 'backup', 'database', 'php_version']) expect(activity.entity[key], `${locale} entity ${key}`).toBeTruthy()
+      for (const key of ['insert', 'update', 'delete', 'restore']) expect(activity.op[key], `${locale} op ${key}`).toBeTruthy()
+      expect(activity.field.phpVersion, locale).toBeTruthy()
     }
   })
 

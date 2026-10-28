@@ -805,6 +805,7 @@
         "cert": "Certificate",
         "certificate": "Certificate",
         "backup": "Backup",
+        "php_version": "PHP version",
         "vhost": "Virtual host",
         "config": "Configuration",
         "hosts": "Hosts file"
@@ -815,6 +816,25 @@
         "api": "API",
         "migration": "migration",
         "import": "import"
+      },
+      "field": {
+        "phpVersion": "PHP",
+        "documentRoot": "folder",
+        "sslEnabled": "HTTPS",
+        "enabled": "on or off",
+        "aliases": "aliases",
+        "httpPort": "HTTP port",
+        "httpsPort": "HTTPS port",
+        "framework": "framework",
+        "environment": "environment variables",
+        "cloudflare": "Cloudflare tunnel",
+        "phpSettings": "PHP settings",
+        "apacheSettings": "Apache settings",
+        "bindAddress": "network",
+        "bindAddresses": "network",
+        "localhostLoopbackEnabled": "localhost",
+        "nodeUpstreamPort": "Node.js",
+        "nodeStartCommand": "Node.js"
       }
     }
   },

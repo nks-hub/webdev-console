@@ -101,12 +101,16 @@ builder.Services.AddSingleton(sp => new ServiceConfigManager(
     sp.GetRequiredService<AtomicWriter>(),
     NKS.WebDevConsole.Core.Services.WdcPaths.Root
 ));
+// Rows for the Overview activity feed: sites, backups and databases are not
+// tables, so the code that changes them writes config_history itself.
+builder.Services.AddSingleton<NKS.WebDevConsole.Daemon.Data.ConfigHistoryRepository>();
 builder.Services.AddSingleton(sp => new SiteManager(
     sp.GetRequiredService<ILogger<SiteManager>>(),
     sp.GetRequiredService<TemplateEngine>(),
     sp.GetRequiredService<AtomicWriter>(),
     NKS.WebDevConsole.Core.Services.WdcPaths.SitesRoot,
-    NKS.WebDevConsole.Core.Services.WdcPaths.GeneratedRoot
+    NKS.WebDevConsole.Core.Services.WdcPaths.GeneratedRoot,
+    sp.GetRequiredService<NKS.WebDevConsole.Daemon.Data.ConfigHistoryRepository>()
 ));
 builder.Services.AddSingleton<NKS.WebDevConsole.Core.Interfaces.ISiteRegistry>(
     sp => sp.GetRequiredService<SiteManager>());

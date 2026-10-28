@@ -11,6 +11,8 @@ public sealed class DaemonClient : IDisposable
     public DaemonClient()
     {
         _http = new HttpClient();
+        // Lets the daemon label what this CLI changes in the Overview activity feed.
+        _http.DefaultRequestHeaders.Add("X-Wdc-Client", "cli");
     }
 
     public bool Connect()

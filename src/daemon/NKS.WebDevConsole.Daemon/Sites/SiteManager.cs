@@ -6,6 +6,7 @@ using NKS.WebDevConsole.Core.Interfaces;
 using NKS.WebDevConsole.Core.Models;
 using NKS.WebDevConsole.Core.Services;
 using NKS.WebDevConsole.Daemon.Config;
+using NKS.WebDevConsole.Daemon.Data;
 using Microsoft.Extensions.Logging;
 
 namespace NKS.WebDevConsole.Daemon.Sites;
@@ -17,6 +18,7 @@ public sealed class SiteManager : ISiteRegistry
     private readonly AtomicWriter _writer;
     private readonly string _sitesDir;
     private readonly string _generatedDir;
+    private readonly ConfigHistoryRepository? _history;
     // Read from every request thread while Create/Update/Delete mutate it, so
     // a plain Dictionary could corrupt or throw mid-enumeration. LoadAll swaps
     // in a fully built map instead of clearing the live one, so readers never
@@ -26,13 +28,15 @@ public sealed class SiteManager : ISiteRegistry
     // are atomic with respect to other creates/updates.
     private readonly SemaphoreSlim _mutationLock = new(1, 1);
 
-    public SiteManager(ILogger<SiteManager> logger, TemplateEngine te, AtomicWriter aw, string sitesDir, string generatedDir)
+    public SiteManager(ILogger<SiteManager> logger, TemplateEngine te, AtomicWriter aw, string sitesDir, string generatedDir,
+        ConfigHistoryRepository? history = null)
     {
         _logger = logger;
         _templateEngine = te;
         _writer = aw;
         _sitesDir = sitesDir;
         _generatedDir = generatedDir;
+        _history = history;
         Directory.CreateDirectory(_sitesDir);
         Directory.CreateDirectory(_generatedDir);
     }
@@ -295,6 +299,7 @@ public sealed class SiteManager : ISiteRegistry
         await GenerateVhostAsync(site);
 
         _logger.LogInformation("Created site {Domain}", site.Domain);
+        _history?.Record("site", site.Domain, "INSERT");
         return site;
     }
 
@@ -325,6 +330,11 @@ public sealed class SiteManager : ISiteRegistry
         if (!NKS.WebDevConsole.Daemon.Config.PathContainment.IsUnder(sitesRoot, path))
             throw new UnauthorizedAccessException("Resolved site path escapes sites root");
 
+        // Callers may edit the object the registry already holds and hand it back, so
+        // the file on disk (still the old state until the write below) is the only
+        // reliable "before" for the activity feed.
+        var previousToml = File.Exists(path) ? await File.ReadAllTextAsync(path) : null;
+
         await _writer.WriteAsync(path, toml);
         _sites[site.Domain] = site;
 
@@ -336,7 +346,57 @@ public sealed class SiteManager : ISiteRegistry
         // ApacheModule plugin, but the SiteManager-owned copy used for history was not).
         await GenerateVhostAsync(site);
 
+        RecordUpdate(site, previousToml, toml);
         return site;
+    }
+
+    // Fields whose old and new value go into the activity row. Everything else that
+    // changed (environment variables, per-site php and apache settings, the tunnel)
+    // is recorded by name only: those values can hold secrets.
+    private static readonly string[] ValueTrackedFields =
+        ["phpVersion", "documentRoot", "sslEnabled", "enabled", "aliases", "httpPort", "httpsPort", "framework"];
+
+    internal readonly record struct SiteChange(IReadOnlyList<string> Fields, string OldValues, string NewValues);
+
+    /// <summary>
+    /// Names of the SiteConfig properties (camelCase) that differ between the TOML
+    /// the site had and its new state, with old and new values of the safe ones.
+    /// Null when the old TOML cannot be read.
+    /// </summary>
+    internal static SiteChange? DescribeChange(string previousToml, SiteConfig current)
+    {
+        SiteConfig? previous;
+        try { previous = TomlSerializer.Deserialize<SiteConfig>(previousToml); }
+        catch (Exception) { return null; }
+        if (previous is null) return null;
+        NormalizeSiteBindAddresses(previous);
+
+        var options = new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web);
+        var before = System.Text.Json.JsonSerializer.SerializeToElement(previous, options);
+        var after = System.Text.Json.JsonSerializer.SerializeToElement(current, options);
+        var fields = new List<string>();
+        var oldValues = new System.Text.Json.Nodes.JsonObject();
+        var newValues = new System.Text.Json.Nodes.JsonObject();
+        foreach (var property in after.EnumerateObject())
+        {
+            var had = before.TryGetProperty(property.Name, out var old);
+            if (had && System.Text.Json.JsonElement.DeepEquals(old, property.Value)) continue;
+            fields.Add(property.Name);
+            if (!ValueTrackedFields.Contains(property.Name)) continue;
+            oldValues[property.Name] = had ? System.Text.Json.Nodes.JsonNode.Parse(old.GetRawText()) : null;
+            newValues[property.Name] = System.Text.Json.Nodes.JsonNode.Parse(property.Value.GetRawText());
+        }
+        return new SiteChange(fields, oldValues.ToJsonString(), newValues.ToJsonString());
+    }
+
+    private void RecordUpdate(SiteConfig site, string? previousToml, string currentToml)
+    {
+        if (_history is null) return;
+        if (previousToml is null) { _history.Record("site", site.Domain, "INSERT"); return; }
+        if (previousToml == currentToml) return;
+        if (DescribeChange(previousToml, site) is not { } change) { _history.Record("site", site.Domain, "UPDATE"); return; }
+        if (change.Fields.Count == 0) return;
+        _history.Record("site", site.Domain, "UPDATE", change.Fields, change.OldValues, change.NewValues);
     }
 
     public bool Delete(string domain)
@@ -367,7 +427,9 @@ public sealed class SiteManager : ISiteRegistry
 
         if (File.Exists(path)) File.Delete(path);
         if (File.Exists(genPath)) File.Delete(genPath);
-        return _sites.TryRemove(domain, out _);
+        var removed = _sites.TryRemove(domain, out _);
+        if (removed) _history?.Record("site", domain, "DELETE");
+        return removed;
     }
 
     // ── Config history ────────────────────────────────────────────────
