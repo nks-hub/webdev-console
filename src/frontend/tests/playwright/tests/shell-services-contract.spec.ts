@@ -165,6 +165,17 @@ test.describe('Shell services contract', () => {
     expect(rule).toMatch(/line-height: 36px/)
   })
 
+  test('simple status bar says which services it counts and counts the same set', () => {
+    const bar = read('components', 'layout', 'AppStatusBar.vue')
+    // "Everything is running" covers installed services only; the rest falls back to the advanced wording.
+    expect(bar).toMatch(/s\.installed !== false/)
+    expect(bar).toMatch(/t\('footer\.servicesRunning', \{ running: runningCount\.value, total: totalCount\.value \}/)
+    for (const [locale, text] of [['cs', 'Všechny nainstalované služby běží'], ['en', 'All installed services are running']]) {
+      const data = JSON.parse(read('locales', `${locale}.json`)) as { footer: { simpleAllRunning: string } }
+      expect(data.footer.simpleAllRunning, locale).toBe(text)
+    }
+  })
+
   test('mode names are lower case inside a sentence', () => {
     const cs = JSON.parse(read('locales', 'cs.json')) as { app: { advancedPageNote: string } }
     expect(cs.app.advancedPageNote).toBe('Tato stránka patří do pokročilého režimu, proto ji menu v jednoduchém režimu neukazuje.')

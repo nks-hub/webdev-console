@@ -3293,7 +3293,7 @@
     "problems": "{n} problem | {n} problems",
     "simpleOffline": "The app cannot reach its background service",
     "simpleProblems": "{n} service has a problem | {n} services have a problem",
-    "simpleAllRunning": "Everything is running"
+    "simpleAllRunning": "All installed services are running"
   },
   "help": {
     "title": "Help",
