@@ -113,7 +113,7 @@
           </el-table-column>
 
           <!-- Source tag -->
-          <el-table-column :label="$t('hosts.tableSource')" width="100">
+          <el-table-column :label="$t('hosts.tableSource')" width="120">
             <template #default="{ row }">
               <el-tag
                 size="small"
