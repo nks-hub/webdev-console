@@ -1111,7 +1111,7 @@
       "dbName": "Název databáze",
       "more": "Další nastavení",
       "aliasesEmpty": "Zadejte alias a stiskněte Enter",
-      "aliasesHint": "Další domény, na kterých web odpovídá. Hvězdička zastupuje libovolnou subdoménu: *.myapp.loc.",
+      "aliasesHint": "Další domény, na kterých web odpovídá. Hvězdička zastupuje libovolnou subdoménu: *.{example}.",
       "template": {
         "php-generic": {
           "label": "PHP (obecný web)",

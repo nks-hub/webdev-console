@@ -1111,7 +1111,7 @@
       "dbName": "Database name",
       "more": "More options",
       "aliasesEmpty": "Type an alias and press Enter",
-      "aliasesHint": "Other domains the site answers on. An asterisk stands for any subdomain: *.myapp.loc.",
+      "aliasesHint": "Other domains the site answers on. An asterisk stands for any subdomain: *.{example}.",
       "template": {
         "php-generic": {
           "label": "PHP (generic site)",
