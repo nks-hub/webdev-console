@@ -1082,6 +1082,7 @@ import {
 } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import { formatBytes } from '../../utils/format'
+import { backupContentLabel } from '../../utils/backupContent'
 import HealthStatusDot from '../shared/HealthStatusDot.vue'
 import SettingsPanel from '../shared/SettingsPanel.vue'
 import SettingsCard from '../settings/shared/SettingsCard.vue'
@@ -1500,7 +1501,9 @@ async function manualBackup() {
   backupCreating.value = true
   try {
     const result = await createBackup()
-    ElMessage.success(t('settingsToast.backupCreated', { files: result.files, size: formatBytes(result.size, locale.value) }))
+    const missing = [...new Set((result.skipped ?? []).map(s => backupContentLabel(s.content)))]
+    if (missing.length) ElMessage.warning(t('settingsToast.backupIncomplete', { missing: missing.join(', ') }))
+    else ElMessage.success(t('settingsToast.backupCreated', { files: result.files, size: formatBytes(result.size, locale.value) }, result.files))
   } catch (e) {
     ElMessage.error(t('settingsToast.backupFailed', { err: errorMessage(e) }))
   } finally {
@@ -1795,7 +1798,7 @@ async function discoverMamp() {
       const ir = await fetch(`${daemonBaseUrl()}/api/sites/migrate-mamp`, { method: 'POST', headers: authHeaders() })
       if (!ir.ok) throw new Error((await ir.text().catch(() => '')) || `HTTP ${ir.status}`)
       const result = await ir.json()
-      ElMessage.success(t('settingsToast.mampImported', { count: result.count }))
+      ElMessage.success(t('settingsToast.mampImported', { count: result.count }, result.count))
     }
   } catch (e) {
     if (e !== 'cancel') ElMessage.error(t('settingsToast.mampFailed', { err: errorMessage(e) }))
