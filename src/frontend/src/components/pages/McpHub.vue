@@ -14,6 +14,23 @@
       </p>
     </div>
 
+    <!-- Simple mode keeps the connect card, Activity and Requests; rules,
+         the action list and their tooling are advanced-mode only. A link
+         to /mcp/grants or /mcp/kinds says so instead of silently showing
+         Activity, above the card: the open setup steps would push it off
+         the first screen. -->
+    <el-alert
+      v-if="!advanced && advancedOnlyRoute"
+      type="info"
+      show-icon
+      :closable="false"
+      class="hub-simple-note"
+      data-testid="mcp-hub-simple-note"
+    >
+      <template #title>{{ t('mcpHub.simpleOnly') }}</template>
+      <el-button size="small" @click="uiMode.setUiMode('advanced')">{{ t('mcpHub.switchToAdvanced') }}</el-button>
+    </el-alert>
+
     <!-- Connect an AI client — copy-paste registration for Claude Code,
          Claude Desktop and Cursor, the MCP enable switch, and live status
          (enabled, daemon ready, Node.js, last call). Collapses itself once
@@ -32,22 +49,6 @@
     </div>
 
     <template v-else>
-      <!-- Simple mode keeps the connect card, Activity and Requests; rules,
-           the action list and their tooling are advanced-mode only. A link
-           to /mcp/grants or /mcp/kinds says so instead of silently showing
-           Activity. -->
-      <el-alert
-        v-if="!advanced && advancedOnlyRoute"
-        type="info"
-        show-icon
-        :closable="false"
-        class="hub-simple-note"
-        data-testid="mcp-hub-simple-note"
-      >
-        <template #title>{{ t('mcpHub.simpleOnly') }}</template>
-        <el-button size="small" @click="uiMode.setUiMode('advanced')">{{ t('mcpHub.switchToAdvanced') }}</el-button>
-      </el-alert>
-
       <!-- Suggested grants — nudges based on repeated manual approvals.
            Cross-tab so it surfaces regardless of which subview the user
            is currently looking at. -->

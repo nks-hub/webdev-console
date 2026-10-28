@@ -155,6 +155,9 @@ test.describe('MCP approval UX contract', () => {
     // title to the sidebar.
     expect(hub).not.toMatch(/\.page \{ padding: 0/)
     expect(hub).toContain('data-testid="mcp-hub-simple-note"')
+    // Round 8: the note sits above the connect card, whose open steps
+    // pushed it off the first screen.
+    expect(hub.indexOf('data-testid="mcp-hub-simple-note"')).toBeLessThan(hub.indexOf('<McpConnectCard />'))
     const card = read('components', 'mcp', 'McpConnectCard.vue')
     // On Requests, Rules or Actions the setup steps collapse, also when the
     // kept-alive hub only changes route (round 3). Simple mode shows Activity
