@@ -147,7 +147,7 @@
       <el-button size="small" :loading="loading" @click="refresh" :icon="Refresh">
         {{ t('mcpActivity.refresh') }}
       </el-button>
-      <el-button size="small" @click="exportCsv" :icon="Download">
+      <el-button size="small" :disabled="totalCount === 0" @click="exportCsv" :icon="Download">
         {{ t('mcpActivity.exportCsv') }}
       </el-button>
       <span v-if="totalCount" class="muted total-count">
@@ -602,6 +602,7 @@ async function exportCsv(): Promise<void> {
   if (dangerFilter.value) params.set('dangerLevel', dangerFilter.value)
   if (toolFilter.value) params.set('toolName', toolFilter.value)
   if (sessionFilter.value) params.set('sessionId', sessionFilter.value)
+  if (searchQuery.value) params.set('q', searchQuery.value)
   const url = `/api/mcp/tool-calls/export.csv${params.toString() ? '?' + params.toString() : ''}`
   // Use the same baseUrl + auth pattern as the json() helper. Easier to
   // ask the api module for a URL we can fetch with a Bearer header and

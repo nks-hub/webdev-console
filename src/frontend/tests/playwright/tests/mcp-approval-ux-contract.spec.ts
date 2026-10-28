@@ -157,9 +157,11 @@ test.describe('MCP approval UX contract', () => {
     expect(hub).toContain('data-testid="mcp-hub-simple-note"')
     const card = read('components', 'mcp', 'McpConnectCard.vue')
     // On Requests, Rules or Actions the setup steps collapse, also when the
-    // kept-alive hub only changes route (round 3).
-    expect(card).toContain('const expanded = ref(!onTabRoute())')
-    expect(card).toContain("watch(() => route.path, () => { if (onTabRoute()) expanded.value = false })")
+    // kept-alive hub only changes route (round 3). Simple mode shows Activity
+    // on /mcp/grants and /mcp/kinds, so only Requests collapses there (round 6).
+    expect(card).toContain('const expanded = ref(setupRequested() || !onTabRoute())')
+    expect(card).toContain('else if (onTabRoute()) expanded.value = false')
+    expect(card).toContain('uiMode.isAdvanced ? /\\/mcp\\/(intents|grants|kinds)$/ : /\\/mcp\\/intents$/')
     // The profile panel sits on the Rules tab, not above the tabs (round 3).
     expect(hub).toMatch(/<el-tab-pane v-if="advanced" name="grants" lazy>[\s\S]*?<McpOnboardingPanel \/>\s*<McpGrants \/>/)
     expect(read('components', 'pages', 'McpActivity.vue')).toContain("caller.startsWith('client:')")

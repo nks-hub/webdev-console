@@ -98,7 +98,16 @@ test.describe('MCP connect contract', () => {
     expect(card).toContain("'mcp:tool-call'")
     for (const id of ['claudeCode', 'claudeDesktop', 'cursor']) expect(card).toContain(`id: '${id}'`)
     const caps = readFileSync(join(srcRoot, 'components', 'settings', 'McpCapabilitiesSettings.vue'), 'utf-8')
-    expect(caps).toMatch(/data-testid="settings-mcp-connect-link"[\s\S]*?router\.push\('\/mcp\/activity'\)/)
+    // "How to connect" opens the steps even after an AI client has called WDC.
+    expect(caps).toMatch(/data-testid="settings-mcp-connect-link"[\s\S]*?router\.push\('\/mcp\/activity\?setup=1'\)/)
+    expect(card).toContain("route.query.setup === '1'")
+    expect(card).toContain('if (lastCallAt.value && !setupRequested()) expanded.value = false')
+  })
+
+  test('CSV export sends every filter the activity list uses', () => {
+    const activity = readFileSync(join(srcRoot, 'components', 'pages', 'McpActivity.vue'), 'utf-8')
+    const exportFn = activity.slice(activity.indexOf('async function exportCsv'), activity.indexOf('async function refresh'))
+    for (const param of ['dangerLevel', 'toolName', 'sessionId', 'q']) expect(exportFn).toContain(`params.set('${param}'`)
   })
 
   test('connect strings exist in en and cs', () => {

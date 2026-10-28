@@ -112,6 +112,7 @@ import { ElMessage } from 'element-plus'
 import { DocumentCopy } from '@element-plus/icons-vue'
 import { fetchMcpToolCalls, saveSettings, subscribeEventsMap } from '../../api/daemon'
 import { useFeatureFlagsStore } from '../../stores/featureFlags'
+import { useUiModeStore } from '../../stores/uiMode'
 import {
   MCP_SERVER_PATH_PLACEHOLDER,
   appLaunch,
@@ -131,12 +132,19 @@ const lastCallTool = ref('')
 const savingEnabled = ref(false)
 // Open by default until an AI client has actually called WDC, unless the
 // hub was opened on Requests, Rules or Actions: the setup steps would push
-// that tab below the fold.
+// that tab below the fold. Simple mode shows Activity for Rules and Actions.
+// "How to connect" in Settings asks for the steps with ?setup=1.
 const route = useRoute()
-const onTabRoute = (): boolean => /\/mcp\/(intents|grants|kinds)$/.test(route.path)
-const expanded = ref(!onTabRoute())
+const uiMode = useUiModeStore()
+const onTabRoute = (): boolean =>
+  (uiMode.isAdvanced ? /\/mcp\/(intents|grants|kinds)$/ : /\/mcp\/intents$/).test(route.path)
+const setupRequested = (): boolean => route.query.setup === '1'
+const expanded = ref(setupRequested() || !onTabRoute())
 // The hub is kept alive, so this also has to happen when the route changes.
-watch(() => route.path, () => { if (onTabRoute()) expanded.value = false })
+watch(() => route.fullPath, () => {
+  if (setupRequested()) expanded.value = true
+  else if (onTabRoute()) expanded.value = false
+})
 
 const serverPath = computed(() => serverInfo.value?.serverPath ?? MCP_SERVER_PATH_PLACEHOLDER)
 
@@ -242,7 +250,7 @@ let timer: ReturnType<typeof setInterval> | null = null
 
 onMounted(async () => {
   await refresh()
-  if (lastCallAt.value) expanded.value = false
+  if (lastCallAt.value && !setupRequested()) expanded.value = false
   unsubscribe = subscribeEventsMap({
     'mcp:tool-call': () => { void refreshLastCall() },
     'mcp:settings-changed': () => { void flags.load() },
