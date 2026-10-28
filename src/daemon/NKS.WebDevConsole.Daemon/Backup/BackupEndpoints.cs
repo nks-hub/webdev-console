@@ -107,14 +107,17 @@ internal static class BackupEndpoints
 
                 // `out` may only name a new .zip in the backup folder: the
                 // archive carries state.db and TLS private keys.
-                var (path, files, size, resultFlags) = bm.CreateBackup(outPath, flags);
+                var (path, files, size, resultFlags, skipped) = bm.CreateBackup(outPath, flags);
+                // `skipped`: what was asked for but left out (MySQL stopped, a
+                // site folder missing), so the UI can say so instead of "done".
+                var skippedJson = skipped.Select(s => new { content = s.Content.ToString(), detail = s.Detail }).ToList();
                 // backup:completed / backup:failed — the desktop app shows an OS
                 // notification (backup channel); same payload as BackupScheduler.
                 await BroadcastBackupEventAsync(sse, "backup:completed", new
                 {
-                    trigger = "manual", path, files, size, contentFlags = resultFlags.ToString(),
+                    trigger = "manual", path, files, size, contentFlags = resultFlags.ToString(), skipped = skippedJson,
                 });
-                return Results.Ok(new { path, files, size, contentFlags = resultFlags.ToString() });
+                return Results.Ok(new { path, files, size, contentFlags = resultFlags.ToString(), skipped = skippedJson });
             }
             catch (ArgumentException ex)
             {

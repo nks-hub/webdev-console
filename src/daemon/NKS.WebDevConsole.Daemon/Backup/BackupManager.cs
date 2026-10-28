@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
+using NKS.WebDevConsole.Core.Interfaces;
 using NKS.WebDevConsole.Core.Services;
 
 namespace NKS.WebDevConsole.Daemon.Backup;
@@ -29,22 +30,27 @@ public sealed class BackupManager
     private readonly ILogger<BackupManager> _logger;
     private readonly string _wdcRoot;
     private readonly string _backupRoot;
+    private readonly ISiteRegistry? _sites;
+    private readonly IMysqlBackupDumper? _mysqlDumper;
 
-    public BackupManager(ILogger<BackupManager> logger)
-        : this(logger, WdcPaths.Root)
+    public BackupManager(ILogger<BackupManager> logger, ISiteRegistry sites, IMysqlBackupDumper mysqlDumper)
+        : this(logger, WdcPaths.Root, sites, mysqlDumper)
     {
     }
 
     /// <summary>
-    /// Test-only constructor: lets tests pin the wdc root to a temp directory so
-    /// they don't touch the developer's real ~/.wdc/. Production code uses the
-    /// single-arg overload above.
+    /// Test constructor: lets tests pin the wdc root to a temp directory so
+    /// they don't touch the developer's real ~/.wdc/. Without a site registry
+    /// or dumper the Docroots and Databases categories are reported as skipped.
     /// </summary>
-    public BackupManager(ILogger<BackupManager> logger, string wdcRoot)
+    public BackupManager(ILogger<BackupManager> logger, string wdcRoot,
+        ISiteRegistry? sites = null, IMysqlBackupDumper? mysqlDumper = null)
     {
         _logger = logger;
         _wdcRoot = wdcRoot;
         _backupRoot = Path.Combine(_wdcRoot, "backups");
+        _sites = sites;
+        _mysqlDumper = mysqlDumper;
         Directory.CreateDirectory(_backupRoot);
     }
 
@@ -149,11 +155,13 @@ public sealed class BackupManager
     /// Creates a zip backup with the given content flags, at
     /// <see cref="ResolveOutputPath"/>. Never overwrites an existing file, and
     /// on Unix the archive is created owner-only (0600) from the start.
-    /// Returns the absolute path, file count, and archive size.
+    /// Returns the absolute path, file count, archive size, the categories the
+    /// archive really holds, and what was left out (MySQL not running, a site
+    /// folder missing). The manifest records the same categories as the result.
     /// </summary>
     /// <exception cref="ArgumentException">The path is outside the backup folder or not a .zip file.</exception>
     /// <exception cref="BackupTargetExistsException">A file already exists at the path.</exception>
-    public (string Path, int FileCount, long SizeBytes, BackupContentFlags Flags) CreateBackup(
+    public (string Path, int FileCount, long SizeBytes, BackupContentFlags Flags, IReadOnlyList<BackupSkip> Skipped) CreateBackup(
         string? outputPath = null,
         BackupContentFlags flags = BackupContentFlags.Default)
     {
@@ -175,21 +183,13 @@ public sealed class BackupManager
             throw new BackupTargetExistsException(target);
 
         int count = 0;
+        var skipped = new List<BackupSkip>();
         try
         {
             using var fs = OpenNewArchive(target);
             _logger.LogDebug("Archive file stream opened: {Path}", target);
 
             using var zip = new ZipArchive(fs, ZipArchiveMode.Create, leaveOpen: false);
-
-            // Manifest — always included
-            var contentList = flags.ToString();
-            var manifest = $"{{\"created\":\"{DateTime.UtcNow:O}\",\"source\":\"{Environment.MachineName}\",\"version\":\"2\",\"flags\":\"{contentList}\"}}";
-            var manifestEntry = zip.CreateEntry("manifest.json", CompressionLevel.Optimal);
-            using (var writer = new StreamWriter(manifestEntry.Open()))
-                writer.Write(manifest);
-            count++;
-            _logger.LogDebug("Manifest written");
 
             if (flags.HasFlag(BackupContentFlags.Vhosts))
                 count += PackVhosts(zip);
@@ -200,14 +200,28 @@ public sealed class BackupManager
             if (flags.HasFlag(BackupContentFlags.PluginConfigs))
                 count += PackPluginConfigs(zip);
 
+            // null = the whole category could not be packed; it leaves the flags.
             if (flags.HasFlag(BackupContentFlags.Databases))
-                count += PackDatabases(zip);
+            {
+                if (PackDatabases(zip, skipped) is int dumped) count += dumped;
+                else flags &= ~BackupContentFlags.Databases;
+            }
 
             if (flags.HasFlag(BackupContentFlags.Docroots))
-                count += PackDocroots(zip);
+            {
+                if (PackDocroots(zip, skipped) is int siteFiles) count += siteFiles;
+                else flags &= ~BackupContentFlags.Docroots;
+            }
 
             // Always pack state.db — small and critical
             count += PackStateDb(zip);
+
+            // Manifest last, so its flags name only what was actually packed.
+            var manifest = $"{{\"created\":\"{DateTime.UtcNow:O}\",\"source\":\"{Environment.MachineName}\",\"version\":\"2\",\"flags\":\"{flags}\"}}";
+            var manifestEntry = zip.CreateEntry("manifest.json", CompressionLevel.Optimal);
+            using (var writer = new StreamWriter(manifestEntry.Open()))
+                writer.Write(manifest);
+            count++;
         }
         catch (UnauthorizedAccessException ex)
         {
@@ -233,8 +247,10 @@ public sealed class BackupManager
             _logger.LogWarning(ex, "Could not stat archive after creation: {Path}", target);
         }
 
+        foreach (var skip in skipped)
+            _logger.LogWarning("Backup {Path} left out {Content}: {Detail}", target, skip.Content, skip.Detail);
         _logger.LogInformation("Backup complete: {Path} ({Files} files, {Size} bytes, flags={Flags})", target, count, size, flags);
-        return (target, count, size, flags);
+        return (target, count, size, flags, skipped);
     }
 
     private int PackVhosts(ZipArchive zip)
@@ -272,24 +288,120 @@ public sealed class BackupManager
         return count;
     }
 
-    private int PackDatabases(ZipArchive zip)
+    /// <summary>
+    /// One <c>databases/{name}.sql</c> per user database (mysqldump with
+    /// CREATE DATABASE, so <c>mysql &lt; file</c> restores it). Returns null
+    /// when no database could be dumped: MySQL missing, stopped or refusing root.
+    /// </summary>
+    private int? PackDatabases(ZipArchive zip, List<BackupSkip> skipped)
     {
-        // mysqldump is large and requires a running MySQL instance.
-        // For now we log a warning that this is a no-op in the default build
-        // (a future sprint will wire CliWrap + mysqldump). The flag is
-        // intentionally wired so the scheduler correctly includes the
-        // category name in the manifest even before the packer is implemented.
-        _logger.LogWarning("BackupContentFlags.Databases selected — mysqldump packer not yet implemented; skipping databases. Use manual mysqldump for now.");
-        return 0;
+        if (_mysqlDumper is null)
+        {
+            skipped.Add(new(BackupContentFlags.Databases, "MySQL dumps are not available in this process"));
+            return null;
+        }
+        IReadOnlyList<string> databases;
+        try
+        {
+            databases = _mysqlDumper.ListDatabases();
+        }
+        catch (Exception ex)
+        {
+            skipped.Add(new(BackupContentFlags.Databases, ex.Message));
+            return null;
+        }
+
+        int count = 0;
+        foreach (var database in databases)
+        {
+            // Dump to a temp file first: a dump that fails halfway must not
+            // leave a truncated .sql in the archive (zip entries can't be removed).
+            var tempPath = Path.Combine(_backupRoot, $".dump-{Guid.NewGuid():N}.sql");
+            try
+            {
+                using var dump = OpenTempFile(tempPath);
+                _mysqlDumper.Dump(database, dump);
+                dump.Position = 0;
+                var entry = zip.CreateEntry($"databases/{database}.sql", CompressionLevel.Optimal);
+                using var entryStream = entry.Open();
+                dump.CopyTo(entryStream);
+                count++;
+            }
+            catch (Exception ex)
+            {
+                skipped.Add(new(BackupContentFlags.Databases, $"{database}: {ex.Message}"));
+            }
+        }
+        return databases.Count > 0 && count == 0 ? null : count;
     }
 
-    private int PackDocroots(ZipArchive zip)
+    /// <summary>
+    /// Each site's document root under <c>docroots/{domain}/</c>. Linked
+    /// folders (junctions, symlinks) are not followed, so a link cannot pull in
+    /// a tree outside the site or loop; the backups folder itself is never packed.
+    /// Returns null when there is no site registry to read the folders from.
+    /// </summary>
+    private int? PackDocroots(ZipArchive zip, List<BackupSkip> skipped)
     {
-        // Docroots can be very large. Log a diagnostic and skip — the full
-        // implementation will require a progress-streaming API so the UI can
-        // show a progress bar during multi-GB packs.
-        _logger.LogWarning("BackupContentFlags.Docroots selected — docroots packer not yet implemented; skipping. Sites can be large, implement with care.");
-        return 0;
+        if (_sites is null)
+        {
+            skipped.Add(new(BackupContentFlags.Docroots, "The site list is not available in this process"));
+            return null;
+        }
+
+        var options = new EnumerationOptions { IgnoreInaccessible = true, AttributesToSkip = 0 };
+        var packedRoots = new HashSet<string>(OperatingSystem.IsLinux() ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase);
+        int count = 0;
+        foreach (var (domain, site) in _sites.Sites.OrderBy(s => s.Key, StringComparer.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(site.DocumentRoot) || !Directory.Exists(site.DocumentRoot))
+            {
+                skipped.Add(new(BackupContentFlags.Docroots, $"{domain}: folder {site.DocumentRoot} not found"));
+                continue;
+            }
+            var root = Path.GetFullPath(site.DocumentRoot);
+            if (!packedRoots.Add(root)) continue;
+
+            var pending = new Stack<string>();
+            pending.Push(root);
+            while (pending.TryPop(out var dir))
+            {
+                try
+                {
+                    foreach (var file in Directory.EnumerateFiles(dir, "*", options))
+                    {
+                        if (NKS.WebDevConsole.Daemon.Config.PathContainment.IsUnder(_backupRoot, file)) continue;
+                        var rel = Path.GetRelativePath(root, file).Replace(Path.DirectorySeparatorChar, '/');
+                        count += AddFileToZipSafe(zip, file, $"docroots/{domain}/{rel}");
+                    }
+                    foreach (var sub in new DirectoryInfo(dir).EnumerateDirectories("*", options))
+                    {
+                        if (!sub.Attributes.HasFlag(FileAttributes.ReparsePoint)) pending.Push(sub.FullName);
+                    }
+                }
+                catch (IOException ex)
+                {
+                    // A folder removed while the backup walks the tree.
+                    skipped.Add(new(BackupContentFlags.Docroots, $"{domain}: {ex.Message}"));
+                }
+            }
+        }
+        return count;
+    }
+
+    /// <summary>Scratch file next to the archives, owner-only on Unix, deleted on close.</summary>
+    private static FileStream OpenTempFile(string path)
+    {
+        var options = new FileStreamOptions
+        {
+            Mode = FileMode.CreateNew,
+            Access = FileAccess.ReadWrite,
+            Share = FileShare.None,
+            Options = FileOptions.DeleteOnClose,
+        };
+        if (!OperatingSystem.IsWindows())
+            options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+        return new FileStream(path, options);
     }
 
     private int PackStateDb(ZipArchive zip)
@@ -456,6 +568,10 @@ public sealed class BackupManager
             {
                 if (string.IsNullOrEmpty(entry.Name)) continue;
                 if (entry.FullName.Contains("..")) continue;
+                // Database dumps and site files are not restored (the confirm
+                // dialog says so); staging them would only copy gigabytes.
+                if (entry.FullName.StartsWith("databases/", StringComparison.Ordinal)
+                    || entry.FullName.StartsWith("docroots/", StringComparison.Ordinal)) continue;
                 var dest = Path.Combine(tempExtract, entry.FullName.Replace('/', Path.DirectorySeparatorChar));
                 var destFull = Path.GetFullPath(dest);
                 if (!destFull.StartsWith(Path.GetFullPath(tempExtract), StringComparison.OrdinalIgnoreCase))
@@ -601,6 +717,9 @@ public sealed class BackupManager
     /// <summary>Represents a single backup archive in the listing.</summary>
     public record BackupEntry(string Path, long Size, DateTime Created, BackupContentFlags ContentFlags);
 }
+
+/// <summary>Something a backup was asked to include but left out, and why.</summary>
+public sealed record BackupSkip(BackupContentFlags Content, string Detail);
 
 /// <summary>A backup was asked to write to a path that already exists.</summary>
 public sealed class BackupTargetExistsException(string path)

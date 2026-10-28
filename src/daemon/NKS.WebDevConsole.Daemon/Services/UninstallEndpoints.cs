@@ -94,8 +94,7 @@ internal static class UninstallEndpoints
             {
                 try
                 {
-                    var (path, _, _, _) = backupManager.CreateBackup();
-                    safetyBackupPath = path;
+                    safetyBackupPath = backupManager.CreateBackup().Path;
                 }
                 catch (Exception ex)
                 {
