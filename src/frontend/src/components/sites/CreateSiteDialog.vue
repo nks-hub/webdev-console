@@ -455,10 +455,13 @@ function onOpened() {
 }
 
 function reset() {
+  // Element Plus validates a field whenever its model changes, so emptying the form would leave
+  // "required" errors waiting for the next time the dialog opens. resetFields empties the fields
+  // that have rules without validating them and clears their state itself once they are empty.
+  formRef.value?.resetFields()
   Object.assign(form, emptyForm())
   docRootTouched.value = false
   sslTouched.value = false
-  formRef.value?.clearValidate()
   ensurePhpVersion()
 }
 

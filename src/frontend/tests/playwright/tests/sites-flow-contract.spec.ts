@@ -108,6 +108,22 @@ test.describe('Sites flow contract', () => {
     expect(read('components', 'sites', 'DuplicateSiteDialog.vue')).toMatch(/domainProblem\(/)
   })
 
+  test('the Cloudflare and Composer site tabs and the tunnel badge come from the host when the plugin declares none; plugin tabs are Advanced only', () => {
+    const store = read('stores', 'plugins.ts')
+    for (const type of ['cloudflare-site-tab', 'cloudflare-tunnel-badge', 'composer-site-tab']) expect(store, type).toContain(`componentType: '${type}'`)
+    expect(store).toMatch(/declared\.some\(d => d\.slot === slot\) \? declared : hostContributions\(m\.id\)/)
+    const edit = read('components', 'pages', 'SiteEdit.vue')
+    expect(edit).toMatch(/<PluginSlot\s+v-if="uiMode\.isAdvanced"\s+name="site-edit-tabs"/)
+    expect(edit).toMatch(/pluginTabNames\.value\.includes\(tab\)\) \{\s+if \(uiMode\.isSimple\) activeTab\.value = 'overview'/)
+  })
+
+  test('closing the new site dialog empties it without validating the emptied fields', () => {
+    const reset = read('components', 'sites', 'CreateSiteDialog.vue').match(/function reset\(\) \{[\s\S]*?\n\}/)?.[0] ?? ''
+    expect(reset).toMatch(/formRef\.value\?\.resetFields\(\)/)
+    // clearValidate lifts the guard that resetFields holds until the emptied fields have been looked at.
+    expect(reset).not.toMatch(/clearValidate/)
+  })
+
   test('i18n keys of the new states exist in both locales', () => {
     const get = (o: Record<string, unknown>, path: string) =>
       path.split('.').reduce<unknown>((a, k) => (a && typeof a === 'object' ? (a as Record<string, unknown>)[k] : undefined), o)

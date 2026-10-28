@@ -1,6 +1,6 @@
 <template>
   <div class="sites-table-wrap">
-    <table class="sites-table">
+    <table class="sites-table" :class="{ 'has-extra-columns': showNetwork || showTunnel }">
       <caption class="visually-hidden">{{ $t('sites.list.caption') }}</caption>
       <thead>
         <tr>
@@ -451,6 +451,11 @@ a.web-url:hover { color: var(--wdc-accent-ink); text-decoration: underline; text
 .row-actions :deep(.el-button + .el-button) { margin-left: 0; }
 .row-actions :deep(.el-button > span) { display: inline-flex; align-items: center; gap: var(--wdc-space-1); }
 
+/* With the network or tunnel column the folder moves under the address earlier, or the row buttons run off the edge. */
+@container (max-width: 1240px) {
+  .has-extra-columns .col-folder { display: none; }
+  .has-extra-columns .web-folder { display: block; max-width: 38ch; }
+}
 /* Narrow container: the folder moves under the address, the buttons lose their words. */
 @container (max-width: 1000px) {
   .col-folder { display: none; }
