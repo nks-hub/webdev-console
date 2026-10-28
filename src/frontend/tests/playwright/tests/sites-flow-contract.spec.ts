@@ -138,6 +138,27 @@ test.describe('Sites flow contract', () => {
     expect(reader).not.toMatch(/"error\.log"/)
   })
 
+  test('the Cloudflare and Composer tabs cost the Overview nothing and never ask for zones without an account', () => {
+    const cloudflare = read('plugin-components', 'CloudflareSiteTab.vue')
+    expect(cloudflare).toMatch(/<el-tab-pane :name="name" lazy>/)
+    expect(cloudflare).not.toMatch(/onMounted/)
+    expect(cloudflare).toMatch(/watch\(\(\) => props\.activeTab, \(tab\) => \{ if \(tab === props\.name\) opened\.value = true \}/)
+    expect(cloudflare).toMatch(/if \(hasCloudflareSetup\.value && enabled\.value && zones\.value\.length === 0/)
+    expect(cloudflare).toMatch(/v-if="metaLoaded && !hasCloudflareSetup" class="setup-warning"/)
+    expect(read('plugin-components', 'ComposerSiteTab.vue')).toMatch(/<el-tab-pane v-if="site\?\.phpVersion" :name="name" lazy>/)
+    expect(read('components', 'pages', 'SiteEdit.vue')).toMatch(/:context="\{ domain, site, redirectHttps, activeTab \}"/)
+  })
+
+  test('the Composer tab asks for outdated packages only for a project, and its empty state has a visible Init button', () => {
+    const composer = read('components', 'pages', 'SiteComposer.vue')
+    expect(composer).toMatch(/if \(status\.value\.hasComposerJson\) \{[\s\S]*?await loadOutdated\(\)/)
+    // el-empty has no "extra" slot; content in it is dropped.
+    expect(composer).not.toMatch(/<template #extra>/)
+    const endpoints = readFileSync(
+      resolve(srcRoot, '..', '..', 'daemon', 'NKS.WebDevConsole.Daemon', 'Sites', 'ComposerEndpoints.cs'), 'utf-8')
+    expect(endpoints).toMatch(/OutdatedHasNothingToCheck\(composerRoot, available\)/)
+  })
+
   test('i18n keys of the new states exist in both locales', () => {
     const get = (o: Record<string, unknown>, path: string) =>
       path.split('.').reduce<unknown>((a, k) => (a && typeof a === 'object' ? (a as Record<string, unknown>)[k] : undefined), o)
