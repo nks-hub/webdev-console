@@ -1,9 +1,11 @@
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using CliWrap;
 using NKS.WebDevConsole.Core.Services;
 using NKS.WebDevConsole.Daemon.Binaries;
+using NKS.WebDevConsole.Daemon.Data;
 using NKS.WebDevConsole.Daemon.Services;
 
 namespace NKS.WebDevConsole.Daemon.Backup;
@@ -53,14 +55,18 @@ public sealed class MysqlBackupClient(BinaryManager binaries, SettingsStore sett
     }
 
     public void Dump(string database, Stream output) =>
-        Run("mysqldump", DumpArgs(database), PipeTarget.ToStream(output));
+        Run("mysqldump", DumpArgs(database), PipeTarget.ToStream(output), options: DumpOptions);
 
     public void Import(string database, Stream sql)
     {
         if (!IsSafeDatabaseName(database))
             throw new InvalidOperationException($"'{database}' is not a database name restore accepts");
         Run("mysql", CreateDatabaseArgs(database), PipeTarget.Null);
-        Run("mysql", ImportArgs(database), PipeTarget.Null, PipeSource.FromStream(sql));
+        // The archive may come from another machine: the client's own commands
+        // (system, source, ...) are switched off where the client allows it.
+        Run("mysql", ImportArgs(database), PipeTarget.Null,
+            PipeSource.Create((destination, ct) => CopyWithoutServerStateAsync(sql, destination, ct)),
+            options: exe => MysqlClientHardening.ResolveAsync(exe, CancellationToken.None).GetAwaiter().GetResult());
     }
 
     internal static string[] ListArgs() => ["--connect-timeout=5", "-N", "-e", "SHOW DATABASES"];
@@ -73,35 +79,130 @@ public sealed class MysqlBackupClient(BinaryManager binaries, SettingsStore sett
 
     internal static string[] ImportArgs(string database) => ["--connect-timeout=5", database];
 
+    // MySQL's mysqldump writes the server's GTID set into the dump, and
+    // importing it into a server with GTIDs fails (ERROR 3546, the set overlaps
+    // GTID_EXECUTED). MariaDB's mysqldump has no such option, so it is passed
+    // only when the client's --help lists it, like MysqlClientHardening does.
+    private static readonly Regex SetGtidPurgedOption = new(@"^\s+--set-gtid-purged\b", RegexOptions.Multiline | RegexOptions.CultureInvariant);
+    private static readonly ConcurrentDictionary<string, string[]> DumpOptionsCache = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>mysqldump options supported according to its --help text.</summary>
+    internal static string[] DumpOptionsFromHelp(string? helpText) =>
+        helpText is not null && SetGtidPurgedOption.IsMatch(helpText) ? ["--set-gtid-purged=OFF"] : [];
+
+    private static string[] DumpOptions(string mysqldump)
+    {
+        var key = $"{mysqldump}|{File.GetLastWriteTimeUtc(mysqldump).Ticks}";
+        return DumpOptionsCache.GetOrAdd(key, _ =>
+        {
+            try
+            {
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                var help = new StringBuilder();
+                Cli.Wrap(mysqldump)
+                    .WithArguments(["--help"])
+                    .WithStandardOutputPipe(PipeTarget.ToStringBuilder(help))
+                    .WithValidation(CommandResultValidation.None)
+                    .ExecuteAsync(cts.Token)
+                    .GetAwaiter().GetResult();
+                return DumpOptionsFromHelp(help.ToString());
+            }
+            catch (Exception)
+            {
+                return [];
+            }
+        });
+    }
+
+    // Statements that replay the source server's state rather than data. Dumps
+    // made before --set-gtid-purged=OFF still carry them, and they fail on
+    // import (GTID set overlap) or need privileges a restore does not.
+    private static readonly byte[] GtidPurgedPrefix = "SET @@GLOBAL.GTID_PURGED"u8.ToArray();
+    private static readonly byte[] SqlLogBinPrefix = "SET @@SESSION.SQL_LOG_BIN"u8.ToArray();
+
+    /// <summary>
+    /// Copies a mysqldump file without the <c>SET @@GLOBAL.GTID_PURGED</c>
+    /// statement (which can span several lines, one per server UUID) and the
+    /// <c>SET @@SESSION.SQL_LOG_BIN</c> lines. Works on bytes, not text: a
+    /// dump without --hex-blob holds binary column data that is not valid UTF-8.
+    /// </summary>
+    internal static async Task CopyWithoutServerStateAsync(Stream input, Stream output, CancellationToken ct)
+    {
+        var line = new MemoryStream();
+        var buffer = new byte[81920];
+        var inGtidStatement = false;
+        int read;
+        while ((read = await input.ReadAsync(buffer, ct)) > 0)
+        {
+            var start = 0;
+            for (var i = 0; i < read; i++)
+            {
+                if (buffer[i] != (byte)'\n') continue;
+                line.Write(buffer, start, i - start + 1);
+                await EmitAsync();
+                start = i + 1;
+            }
+            line.Write(buffer, start, read - start);
+        }
+        if (line.Length > 0) await EmitAsync();
+
+        async Task EmitAsync()
+        {
+            var bytes = line.GetBuffer().AsMemory(0, (int)line.Length);
+            if (inGtidStatement || StartsWithIgnoreCase(bytes.Span, GtidPurgedPrefix))
+            {
+                // The statement ends at the line that ends with ";".
+                inGtidStatement = !bytes.Span.TrimEnd("\r\n \t"u8).EndsWith(";"u8);
+            }
+            else if (!StartsWithIgnoreCase(bytes.Span, SqlLogBinPrefix))
+            {
+                await output.WriteAsync(bytes, ct);
+            }
+            line.SetLength(0);
+        }
+    }
+
+    private static bool StartsWithIgnoreCase(ReadOnlySpan<byte> line, ReadOnlySpan<byte> prefix) =>
+        line.Length >= prefix.Length && Ascii.EqualsIgnoreCase(line[..prefix.Length], prefix);
+
+    /// <summary>The client executable next to the installed mysql binary.</summary>
+    internal static string ToolPath(string mysqlExecutable, string tool) =>
+        Path.Combine(Path.GetDirectoryName(mysqlExecutable)!, OperatingSystem.IsWindows() ? tool + ".exe" : tool);
+
     /// <summary>
     /// The full client invocation: executable next to the installed mysql,
-    /// root on 127.0.0.1:<paramref name="port"/>, and the password in
-    /// MYSQL_PWD, never on the command line (it shows in process lists).
+    /// root on 127.0.0.1:<paramref name="port"/>, then <paramref name="options"/>
+    /// and <paramref name="toolArgs"/>, and the password in MYSQL_PWD, never on
+    /// the command line (it shows in process lists).
     /// </summary>
     internal static (string Exe, List<string> Args, Dictionary<string, string?> Env) Command(
-        string mysqlExecutable, string tool, int port, string? password, IEnumerable<string> toolArgs)
+        string mysqlExecutable, string tool, int port, string? password, IEnumerable<string> toolArgs,
+        IEnumerable<string>? options = null)
     {
-        var exe = Path.Combine(Path.GetDirectoryName(mysqlExecutable)!, OperatingSystem.IsWindows() ? tool + ".exe" : tool);
         var args = new List<string>
         {
             "-h", "127.0.0.1",
             "-P", port.ToString(CultureInfo.InvariantCulture),
             "-u", "root",
         };
+        args.AddRange(options ?? []);
         args.AddRange(toolArgs);
         var env = string.IsNullOrEmpty(password)
             ? new Dictionary<string, string?>()
             : new Dictionary<string, string?> { ["MYSQL_PWD"] = password };
-        return (exe, args, env);
+        return (ToolPath(mysqlExecutable, tool), args, env);
     }
 
-    private void Run(string tool, IEnumerable<string> toolArgs, PipeTarget stdout, PipeSource? stdin = null)
+    private void Run(string tool, IEnumerable<string> toolArgs, PipeTarget stdout, PipeSource? stdin = null,
+        Func<string, string[]>? options = null)
     {
         var mysql = binaries.ListInstalled("mysql").FirstOrDefault(b => b.Executable is not null)
             ?? throw new InvalidOperationException("MySQL is not installed");
-        var (exe, args, env) = Command(mysql.Executable!, tool, settings.MysqlPort, MySqlRootPassword.TryRead(), toolArgs);
+        var exe = ToolPath(mysql.Executable!, tool);
         if (!File.Exists(exe))
             throw new InvalidOperationException($"{Path.GetFileName(exe)} not found in {Path.GetDirectoryName(exe)}");
+        var (_, args, env) = Command(mysql.Executable!, tool, settings.MysqlPort, MySqlRootPassword.TryRead(),
+            toolArgs, options?.Invoke(exe));
 
         var stderr = new StringBuilder();
         var result = Cli.Wrap(exe)
