@@ -12,6 +12,9 @@ public sealed class ComposerOutdatedTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), $"nks-wdc-composer-outdated-{Guid.NewGuid():N}");
 
+    // Rooted on every OS; C:\... is a bare relative name on Linux and macOS.
+    private static readonly string ManagedPhar = Path.Combine(Path.GetTempPath(), "wdc", "composer.phar");
+
     public ComposerOutdatedTests() => Directory.CreateDirectory(_dir);
 
     public void Dispose()
@@ -53,7 +56,7 @@ public sealed class ComposerOutdatedTests : IDisposable
     [Fact]
     public void ComposerAvailable_FollowsTheExecutablePathOfTheInvokersConfig()
     {
-        Assert.True(ComposerEndpoints.ComposerAvailable(new FakeInvoker(@"C:\wdc\composer.phar")));
+        Assert.True(ComposerEndpoints.ComposerAvailable(new FakeInvoker(ManagedPhar)));
         Assert.False(ComposerEndpoints.ComposerAvailable(new FakeInvoker(null)));
         Assert.False(ComposerEndpoints.ComposerAvailable(new FakeInvoker("  ")));
     }
@@ -93,7 +96,7 @@ public sealed class ComposerOutdatedTests : IDisposable
     [Fact]
     public void ComposerNotInstalled_WithComposer_OrWhenUnknown_LetsTheActionRun()
     {
-        Assert.Null(ComposerEndpoints.ComposerNotInstalled(new FakeInvoker(@"C:\wdc\composer.phar")));
+        Assert.Null(ComposerEndpoints.ComposerNotInstalled(new FakeInvoker(ManagedPhar)));
         Assert.Null(ComposerEndpoints.ComposerNotInstalled(new OldInvoker()));
     }
 
@@ -130,7 +133,7 @@ public sealed class ComposerOutdatedTests : IDisposable
     [Fact]
     public void ComposerFailed_WhenPhpOfAPharCouldNotBeStarted_StaysA500()
     {
-        var result = ComposerEndpoints.ComposerFailed(NotFound(), new FakeInvoker(@"C:\wdc\composer.phar"), "composer install failed");
+        var result = ComposerEndpoints.ComposerFailed(NotFound(), new FakeInvoker(ManagedPhar), "composer install failed");
 
         Assert.Equal(500, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
     }
