@@ -533,6 +533,7 @@ onUnmounted(() => {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
+  scrollbar-gutter: stable; /* a page that starts to scroll must not shift sideways */
   background: var(--wdc-bg);
   padding: 0;
 }
