@@ -44,6 +44,9 @@ internal static class PluginEndpoints
         ("nks.wdc.cloudflare", "Cloudflare (DNS + Tunnels)", "Cloudflare DNS + Tunnel API integration — provisioned via account token, not bound to a binary service.", "Networking"),
         ("nks.wdc.hosts",   "Hosts Manager",       "Windows hosts file manager with 5-backup rotation and managed block delimiters.", "System"),
         ("nks.wdc.composer", "Composer",           "PHP dependency manager — per-site composer.json/lock management, framework auto-install, runs under active PHP version.", "Runtimes"),
+        ("nks.wdc.postgresql", "PostgreSQL",       "PostgreSQL server with initdb, managed postgresql.conf and database tooling.", "Databases"),
+        ("nks.wdc.deploy",  "NksDeploy",           "Zero-downtime deployment through the nksdeploy CLI with release history.", "Deploy"),
+        ("nks.wdc.deploy.localrsync", "Local rsync deploy", "Deploy backend that publishes a site to a local or network folder with rsync.", "Deploy"),
     };
 
     internal sealed record MarketplaceEntry(
@@ -243,7 +246,9 @@ internal static class PluginEndpoints
                 {
                     id = p.Instance.Id,
                     name = p.Instance.DisplayName,
-                    version = p.Instance.Version,
+                    // plugin.json is bumped with every release tag; some plugins
+                    // left their code constant behind (Hosts says 1.0.0 in 1.0.2).
+                    version = string.IsNullOrWhiteSpace(p.Manifest?.Version) ? p.Instance.Version : p.Manifest.Version,
                     type = hasService ? "service" : "tool",
                     serviceId = resolvedServiceId,
                     enabled = pluginState.IsEnabled(p.Instance.Id),

@@ -95,6 +95,8 @@ test.describe('Tool pages — source contract', () => {
     expect(endpoint).not.toContain('"https://wdc.nks-hub.cz/plugins.json"')
     expect(endpoint).toMatch(/CatalogMarketplace\(pluginCatalog\.Cached, installed\)/)
     expect(endpoint).toContain('source = "catalog"')
+    // plugin.json follows the release tag; some code constants lag behind it.
+    expect(endpoint).toContain('version = string.IsNullOrWhiteSpace(p.Manifest?.Version) ? p.Instance.Version : p.Manifest.Version')
   })
 
   test('databases page turns daemon reasons into a next step', () => {
