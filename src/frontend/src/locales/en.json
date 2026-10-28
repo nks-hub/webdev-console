@@ -244,7 +244,7 @@
       "restore": "Restore",
       "delete": "Delete",
       "restoreConfirmTitle": "Restore backup",
-      "restoreConfirmMessage": "Restore the backup from {date}? This overwrites site configs, SSL certificates, plugin configs and the app's internal database (settings and the site list). MySQL databases and site files are not restored; if the backup holds them, they are in the archive's databases and docroots folders. The current state is saved as a safety backup first. The app restarts and the window reloads afterwards.",
+      "restoreConfirmMessage": "Restore the backup from {date}? This overwrites site configs, SSL certificates, plugin configs and the app's internal database (settings and the site list). The current state is saved as a safety backup first. The app restarts and the window reloads afterwards.",
       "deleteConfirmTitle": "Delete backup",
       "deleteConfirmMessage": "Delete backup {name}?",
       "backupFailed": "Backup failed",
@@ -263,6 +263,21 @@
     "skipped": {
       "databases": "Some MySQL databases are not in the backup. Check that MySQL is running.",
       "docroots": "Some site files are not in the backup. A site folder is missing or cannot be read."
+    },
+    "restore": {
+      "noData": "This backup holds no MySQL databases or site files; they stay as they are.",
+      "optional": "MySQL databases and site files are restored only if you tick them. The safety backup then also holds their current state.",
+      "databases": "Restore databases (overwrites their content)",
+      "siteFiles": "Restore site files (overwrites the site folders)",
+      "siteFilesHint": "Files from the backup replace files with the same name. Other files in the folders stay.",
+      "incompleteTitle": "Restore is incomplete",
+      "continue": "Continue",
+      "doneDatabases": "Databases: {names}.",
+      "doneSites": "Site files: {names}.",
+      "skipped": {
+        "databases": "Some databases were not restored. Check that MySQL is running.",
+        "docroots": "Some site files were not restored."
+      }
     },
     "schedule": {
       "cardTitle": "Auto-backup interval",

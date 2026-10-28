@@ -30,6 +30,34 @@ test.describe('Backups contract', () => {
     expect(endpoint).toMatch(/contentFlags = resultFlags\.ToString\(\), skipped = skippedJson/)
   })
 
+  // Backups can hold MySQL dumps and site files; restoring them overwrites
+  // live data, so they are opt-in per restore and start unticked.
+  test('restore offers dumps and site files, both off by default', () => {
+    const s = page()
+    expect(s).toMatch(/function restoreBackup\(b: BackupEntry\) \{\s*restoreTarget\.value = b\s*restoreDatabases\.value = false\s*restoreSiteFiles\.value = false/)
+    expect(s).toMatch(/<div v-if="restoreDbNames\.length" class="restore-option">\s*<el-checkbox v-model="restoreDatabases">/)
+    expect(s).toMatch(/<div v-if="restoreSites\.length" class="restore-option">\s*<el-checkbox v-model="restoreSiteFiles">/)
+    expect(s).toMatch(/databases: restoreDatabases\.value && restoreDbNames\.value\.length > 0,/)
+    expect(s).toMatch(/siteFiles: restoreSiteFiles\.value && restoreSites\.value\.length > 0,/)
+    // What was left out is shown before the window reloads.
+    expect(s).toMatch(/if \(data\.skipped\?\.length\) \{[\s\S]*?await ElMessageBox\.alert\([\s\S]*?restartDaemon\(\)/)
+    const endpoint = read('..', 'daemon', 'NKS.WebDevConsole.Daemon', 'Backup', 'BackupEndpoints.cs')
+    expect(endpoint).toMatch(/record RestoreRequest\(string\? Path = null, bool Databases = false, bool SiteFiles = false\)/)
+    expect(endpoint).toMatch(/new\s*\{\s*path = b\.Path, size = b\.Size, createdUtc = b\.Created, contentFlags = b\.ContentFlags\.ToString\(\),\s*databases = b\.Databases,/)
+  })
+
+  test('restore dialog strings exist in both languages', () => {
+    const cs = JSON.parse(read('src', 'locales', 'cs.json'))
+    expect(cs.backupsPage.restore.databases).toBe('Obnovit databáze (přepíše jejich obsah)')
+    expect(cs.backupsPage.restore.siteFiles).toBe('Obnovit soubory webů (přepíše složky webů)')
+    for (const lang of ['cs', 'en']) {
+      const r = JSON.parse(read('src', 'locales', `${lang}.json`)).backupsPage.restore
+      for (const key of ['noData', 'optional', 'databases', 'siteFiles', 'siteFilesHint', 'incompleteTitle', 'continue', 'doneDatabases', 'doneSites'])
+        expect(r[key], `${lang} ${key}`).toBeTruthy()
+      for (const key of ['databases', 'docroots']) expect(r.skipped[key]).toBeTruthy()
+    }
+  })
+
   test('messages exist in both languages and Czech counts have three forms', () => {
     for (const lang of ['cs', 'en']) {
       const j = JSON.parse(read('src', 'locales', `${lang}.json`))

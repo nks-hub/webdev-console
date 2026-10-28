@@ -89,4 +89,11 @@ public class ServicePortSettingsTests
         Assert.Contains(("ports.https", "HttpsPort"), ServicePortSettings.For("nginx"));
         Assert.Empty(ServicePortSettings.For("cloudflare"));
     }
+
+    [Fact]
+    public void Mailpit_smtp_port_also_reaches_php_for_mail()
+    {
+        Assert.Contains(("ports.mailpitSmtp", "MailSmtpPort"), ServicePortSettings.For("php"));
+        Assert.Contains(("ports.mailpitSmtp", "SmtpPort"), ServicePortSettings.For("mailpit"));
+    }
 }

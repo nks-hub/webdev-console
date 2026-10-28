@@ -66,8 +66,14 @@ internal static class BackupEndpoints
         // databases and docroots are opt-in.
         app.MapGet("/api/backup/list", (BackupManager bm) =>
         {
+            // databases / sites: what a restore can bring back on request.
             var list = bm.ListBackups()
-                .Select(b => new { path = b.Path, size = b.Size, createdUtc = b.Created, contentFlags = b.ContentFlags.ToString() })
+                .Select(b => new
+                {
+                    path = b.Path, size = b.Size, createdUtc = b.Created, contentFlags = b.ContentFlags.ToString(),
+                    databases = b.Databases,
+                    sites = b.Sites.Select(s => new { domain = s.Key, folder = s.Value }).ToList(),
+                })
                 .ToList();
             return Results.Ok(new { count = list.Count, backups = list });
         });
@@ -189,11 +195,15 @@ internal static class BackupEndpoints
             try
             {
                 string archivePath;
+                var options = new BackupRestoreOptions();
                 if (ctx.Request.HasFormContentType)
                 {
                     var form = await ctx.Request.ReadFormAsync();
                     var file = form.Files.FirstOrDefault();
                     if (file is null) return Results.BadRequest(new { error = "No file uploaded" });
+                    options = new BackupRestoreOptions(
+                        string.Equals(form["databases"], "true", StringComparison.OrdinalIgnoreCase),
+                        string.Equals(form["siteFiles"], "true", StringComparison.OrdinalIgnoreCase));
                     uploadedTmp = Path.Combine(Path.GetTempPath(), $"wdc-restore-{Guid.NewGuid():N}.zip");
                     var tmpOptions = new FileStreamOptions { Mode = FileMode.CreateNew, Access = FileAccess.Write };
                     if (!OperatingSystem.IsWindows())
@@ -204,8 +214,8 @@ internal static class BackupEndpoints
                 }
                 else
                 {
-                    var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>();
-                    var requested = body?.GetValueOrDefault("path");
+                    var body = await ctx.Request.ReadFromJsonAsync<RestoreRequest>(caseInsensitiveJson);
+                    var requested = body?.Path;
                     if (string.IsNullOrWhiteSpace(requested))
                         return Results.BadRequest(new { error = "path or multipart file required" });
                     var backupRoot = Path.GetFullPath(NKS.WebDevConsole.Core.Services.WdcPaths.BackupsRoot);
@@ -213,10 +223,11 @@ internal static class BackupEndpoints
                     if (!PathContainment.IsUnder(backupRoot, resolved))
                         return Results.BadRequest(new { error = "Path escapes backup root" });
                     archivePath = resolved;
+                    options = new BackupRestoreOptions(body!.Databases, body.SiteFiles);
                 }
 
-                var (restored, safety) = bm.RestoreBackup(archivePath);
-                return Results.Ok(new { restored, safetyBackup = safety, archive = uploadedTmp is null ? archivePath : null });
+                var result = bm.RestoreBackup(archivePath, options);
+                return Results.Ok(RestoreResponse(result, uploadedTmp is null ? archivePath : null));
             }
             catch (System.Text.Json.JsonException ex)
             {
@@ -253,12 +264,41 @@ internal static class BackupEndpoints
             if (!PathContainment.IsUnder(backupRoot, resolved))
                 return Results.BadRequest(new { error = "Path escapes backup root" });
             if (!File.Exists(resolved)) return Results.NotFound(new { error = "Backup not found" });
+            // Optional body { databases, siteFiles }: both off (and no body at
+            // all) restores only the configuration, as before.
+            var options = new BackupRestoreOptions();
+            if (ctx.Request.ContentLength > 0 && ctx.Request.ContentType?.Contains("json") == true)
+            {
+                try
+                {
+                    var body = await ctx.Request.ReadFromJsonAsync<RestoreRequest>(caseInsensitiveJson);
+                    options = new BackupRestoreOptions(body?.Databases ?? false, body?.SiteFiles ?? false);
+                }
+                catch (JsonException ex) { return Results.BadRequest(new { error = $"Invalid JSON body: {ex.Message}" }); }
+            }
             try
             {
-                var (restored, safety) = bm.RestoreBackup(resolved);
-                return Results.Ok(new { restored, safetyBackup = safety, archive = id });
+                return Results.Ok(RestoreResponse(bm.RestoreBackup(resolved, options), id));
             }
             catch (Exception ex) { return Results.Problem($"Restore failed: {ex.Message}"); }
         });
     }
+
+    /// <summary>Restore request body. Databases and SiteFiles are opt-in and default to off.</summary>
+    internal sealed record RestoreRequest(string? Path = null, bool Databases = false, bool SiteFiles = false);
+
+    /// <summary>
+    /// `restored` stays the restored config file count (older clients read
+    /// it); `items` and `skipped` report the opt-in databases and site files.
+    /// </summary>
+    private static object RestoreResponse(
+        (int RestoredFiles, string SafetyBackupPath, IReadOnlyList<BackupRestored> Items, IReadOnlyList<BackupSkip> Skipped) result,
+        string? archive) => new
+    {
+        restored = result.RestoredFiles,
+        safetyBackup = result.SafetyBackupPath,
+        archive,
+        items = result.Items.Select(i => new { content = i.Content.ToString(), name = i.Name, files = i.Files }).ToList(),
+        skipped = result.Skipped.Select(s => new { content = s.Content.ToString(), detail = s.Detail }).ToList(),
+    };
 }

@@ -198,19 +198,6 @@ public class BackupContentFlagsTests : IDisposable
 
     // ── Databases flag: one mysqldump per database ────────────────────────
 
-    private sealed class FakeDumper(IReadOnlyList<string>? databases, params string[] failing) : IMysqlBackupDumper
-    {
-        public IReadOnlyList<string> ListDatabases() =>
-            databases ?? throw new InvalidOperationException("Can't connect to MySQL server on '127.0.0.1:3306'");
-
-        public void Dump(string database, Stream output)
-        {
-            var bytes = System.Text.Encoding.UTF8.GetBytes($"CREATE DATABASE `{database}`;");
-            output.Write(bytes);
-            if (failing.Contains(database)) throw new InvalidOperationException("Lost connection");
-        }
-    }
-
     private static string ReadEntry(ZipArchive zip, string name)
     {
         using var sr = new StreamReader(zip.GetEntry(name)!.Open());
@@ -220,7 +207,7 @@ public class BackupContentFlagsTests : IDisposable
     [Fact]
     public void DatabasesFlag_packs_one_dump_per_database()
     {
-        var bm = new BackupManager(NullLogger<BackupManager>.Instance, _wdcDir, mysqlDumper: new FakeDumper(["shop", "blog"]));
+        var bm = new BackupManager(NullLogger<BackupManager>.Instance, _wdcDir, mysql: new FakeMysql(["shop", "blog"]));
         var outZip = Path.Combine(_wdcDir, "backups", "db.zip");
         var result = bm.CreateBackup(outZip, BackupContentFlags.Databases);
 
@@ -235,7 +222,7 @@ public class BackupContentFlagsTests : IDisposable
     [Fact]
     public void DatabasesFlag_without_mysql_is_reported_and_left_out_of_the_manifest()
     {
-        var bm = new BackupManager(NullLogger<BackupManager>.Instance, _wdcDir, mysqlDumper: new FakeDumper(null));
+        var bm = new BackupManager(NullLogger<BackupManager>.Instance, _wdcDir, mysql: new FakeMysql(null));
         var outZip = Path.Combine(_wdcDir, "backups", "db-down.zip");
         var result = bm.CreateBackup(outZip, BackupContentFlags.Vhosts | BackupContentFlags.Databases);
 
@@ -252,7 +239,7 @@ public class BackupContentFlagsTests : IDisposable
     [Fact]
     public void DatabasesFlag_failed_dump_leaves_no_partial_file()
     {
-        var bm = new BackupManager(NullLogger<BackupManager>.Instance, _wdcDir, mysqlDumper: new FakeDumper(["shop", "blog"], "blog"));
+        var bm = new BackupManager(NullLogger<BackupManager>.Instance, _wdcDir, mysql: new FakeMysql(["shop", "blog"], "blog"));
         var outZip = Path.Combine(_wdcDir, "backups", "db-partial.zip");
         var result = bm.CreateBackup(outZip, BackupContentFlags.Databases);
 

@@ -162,7 +162,8 @@ internal static class SettingsEndpoints
                 {
                     // A module reloads when one of its own keys changed
                     // (ServicePortSettings: http/https → webservers,
-                    // phpFpmBase → php and apache, database/cache keys 1:1).
+                    // phpFpmBase → php and apache, mailpitSmtp → mailpit and
+                    // php, database/cache keys 1:1).
                     var moduleId = module.ServiceId.ToLowerInvariant();
                     var relevant = ServicePortSettings.For(moduleId)
                         .Any(m => portKeys.Contains(m.Key, StringComparer.OrdinalIgnoreCase));
