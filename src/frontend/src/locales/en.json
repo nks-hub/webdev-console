@@ -2992,7 +2992,7 @@
       "mailpitSmtp": "Mailpit SMTP",
       "mailpitHttp": "Mailpit HTTP",
       "phpFpmBase": "PHP-FPM base port",
-      "phpFpmFormula": "Per-version ports are derived as base + major×10 + minor. E.g. base 9000 + PHP 8.4 = port 9084.",
+      "phpFpmFormula": "Each PHP version listens on base + major × 10 + minor, so base 9000 and PHP 8.4 give port 9084. Only PHP-FPM on macOS and Linux uses it. On Windows, Apache runs PHP through mod_fcgid and sites do not use this port.",
       "postgresqlPort": "PostgreSQL Port",
       "inUseTitle": "Port in use",
       "inUseConfirm": "Another program already uses these ports: {ports}. The service will not start on them until they are free. Save anyway?",

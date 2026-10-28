@@ -160,23 +160,12 @@ internal static class SettingsEndpoints
                 var modules = sp.GetServices<IServiceModule>().ToArray();
                 foreach (var module in modules)
                 {
-                    // Heuristic: match `ports.<serviceId>` or any port key that
-                    // looks like it could belong to this module (http/https map
-                    // to apache/caddy/nginx; database/cache keys map 1:1).
+                    // A module reloads when one of its own keys changed
+                    // (ServicePortSettings: http/https → webservers,
+                    // phpFpmBase → php and apache, database/cache keys 1:1).
                     var moduleId = module.ServiceId.ToLowerInvariant();
-                    var relevant = portKeys.Any(k =>
-                    {
-                        var key = k.Substring("ports.".Length).ToLowerInvariant();
-                        if (key == moduleId) return true;
-                        if (key.StartsWith(moduleId)) return true;
-                        // http/https touch any webserver module
-                        if ((key == "http" || key == "https") &&
-                            (moduleId == "apache" || moduleId == "caddy" || moduleId == "nginx"))
-                            return true;
-                        // php.ini sends mail() to Mailpit's SMTP port
-                        if (key == "mailpitsmtp" && moduleId == "php") return true;
-                        return false;
-                    });
+                    var relevant = ServicePortSettings.For(moduleId)
+                        .Any(m => portKeys.Contains(m.Key, StringComparer.OrdinalIgnoreCase));
                     if (!relevant) continue;
 
                     // Poke the module's private config object BEFORE reload so
@@ -195,33 +184,9 @@ internal static class SettingsEndpoints
                         var config = configField?.GetValue(module);
                         if (config is not null)
                         {
-                            foreach (var pk in portKeys)
-                            {
-                                var key = pk.Substring("ports.".Length).ToLowerInvariant();
-                                // Map common Settings keys to plugin-config property
-                                // names. Extend this table when new plugins get
-                                // their own port keys (mailpit/redis/mysql all
-                                // use different SettingsKey → PropertyName names).
-                                var propName = key switch
-                                {
-                                    "http"  when moduleId == "apache" || moduleId == "caddy" || moduleId == "nginx" => "HttpPort",
-                                    "https" when moduleId == "apache" || moduleId == "caddy" || moduleId == "nginx" => "HttpsPort",
-                                    "mysql"       when moduleId == "mysql"        => "Port",
-                                    "mariadb"     when moduleId == "mariadb"      => "Port",
-                                    "postgresql"  when moduleId == "postgresql"   => "Port",
-                                    "redis"       when moduleId == "redis"        => "Port",
-                                    "mailpitsmtp" when moduleId == "mailpit"      => "SmtpPort",
-                                    "mailpithttp" when moduleId == "mailpit"      => "WebPort",
-                                    "mailpitsmtp" when moduleId == "php"          => "MailSmtpPort",
-                                    _ => null,
-                                };
-                                if (propName is null) continue;
-                                var prop = config.GetType().GetProperty(propName);
-                                if (prop?.CanWrite == true && int.TryParse(settings[pk], out var port) && port > 0)
-                                {
-                                    prop.SetValue(config, port);
-                                }
-                            }
+                            // Same key → property table as boot hydration; only changed keys.
+                            ServicePortSettings.Apply(config, moduleId, key =>
+                                portKeys.Contains(key, StringComparer.OrdinalIgnoreCase) ? settings[key] : null);
                         }
                     }
                     catch (Exception ex)
@@ -237,18 +202,14 @@ internal static class SettingsEndpoints
                     // re-runs httpd.conf but leaves stale per-site files referencing
                     // the OLD port, so Apache binds the new Listen but no vhost
                     // matches → all requests fall to the default htdocs page.
+                    // ports.phpFpmBase is baked in the same way (the FastCGI address).
                     //
-                    // Fix: for webserver modules with HTTP/HTTPS port changes, iterate
+                    // Fix: for webserver modules with such a change, iterate
                     // every registered site and call the module's GenerateVhostAsync
                     // BEFORE reload. Reflection-based for the same cross-ALC reasons
                     // as the config-hydration block above.
                     var webServerModule = moduleId is "apache" or "caddy" or "nginx";
-                    var httpPortChanged = portKeys.Any(k =>
-                    {
-                        var key = k.Substring("ports.".Length).ToLowerInvariant();
-                        return key == "http" || key == "https";
-                    });
-                    if (webServerModule && httpPortChanged)
+                    if (webServerModule && portKeys.Any(ServicePortSettings.ChangesVhosts))
                     {
                         try
                         {
