@@ -295,8 +295,8 @@ internal static class SiteEndpoints
         });
 
         // Phase 8.1 error log aggregation — Apache error_log + PHP-FPM error_log.
-        // Discovers per-site and global error logs from every installed Apache version
-        // and from the PHP plugin's managed log directory. Returns a unified list of
+        // Discovers the site's own Apache error log in every installed Apache version
+        // and the logs of the PHP plugin's managed log directory. Returns a unified list of
         // parsed entries (timestamp, severity, source, message) sorted newest-first.
         // Graceful: missing files return an empty list, never an error.
         app.MapGet("/api/sites/{domain}/logs/errors", (
@@ -311,19 +311,15 @@ internal static class SiteEndpoints
 
             var limit = Math.Clamp(lines ?? 100, 1, 1000);
 
-            // Build Apache error log candidate list — per every installed Apache version
-            // the vhost template writes {domain}-error.log / {domain}-ssl-error.log.
-            // We also check the global error.log for context (e.g. startup/config errors).
-            var apacheCandidates = new List<string>();
-            foreach (var apache in bm.ListInstalled("apache"))
-            {
-                var logsDir = Path.Combine(apache.InstallPath, "logs");
-                apacheCandidates.Add(Path.Combine(logsDir, $"{domain}-error.log"));
-                apacheCandidates.Add(Path.Combine(logsDir, $"{domain}-ssl-error.log"));
-                apacheCandidates.Add(Path.Combine(logsDir, "error.log"));
-            }
-            // Fallback: WdcPaths.LogsRoot/apache/error.log (daemon's own Apache log dir)
-            apacheCandidates.Add(Path.Combine(WdcPaths.LogsRoot, "apache", "error.log"));
+            // The site's own error log in every installed Apache version. A site whose vhost writes to
+            // {domain}-error.log / {domain}-ssl-error.log gets an empty list until that file exists, never
+            // the global error.log (it holds the lines of every other site). The global log (and the
+            // daemon's own Apache log dir) is only for a vhost that defines no log of its own.
+            var apacheLogs = bm.ListInstalled("apache")
+                .SelectMany(apache => ApacheSiteErrorLogs.Resolve(
+                    domain, apache.InstallPath, Path.Combine(WdcPaths.LogsRoot, "apache", "error.log")))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
             // Build PHP error log candidate list — per-version FPM global error log
             // (php{versionTag}-fpm-error.log) and per-version web error log
@@ -342,14 +338,13 @@ internal static class SiteEndpoints
 
             try
             {
-                var entries = ErrorLogInspector.TailMultiple(
-                [
-                    (apacheCandidates, "apache-error"),
-                    (phpFpmCandidates, "php-fpm-error"),
-                    (phpWebCandidates, "php-error"),
-                ],
-                limit,
-                since);
+                // One source per file: Tail reads only the first existing path of a source.
+                var sources = apacheLogs
+                    .Select(path => (Paths: (IEnumerable<string>)[path], Source: "apache-error"))
+                    .ToList();
+                sources.Add((phpFpmCandidates, "php-fpm-error"));
+                sources.Add((phpWebCandidates, "php-error"));
+                var entries = ErrorLogInspector.TailMultiple(sources, limit, since);
 
                 return Results.Ok(entries.Select(e => new
                 {
