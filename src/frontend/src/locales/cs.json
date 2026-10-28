@@ -835,7 +835,60 @@
         "localhostLoopbackEnabled": "localhost",
         "nodeUpstreamPort": "Node.js",
         "nodeStartCommand": "Node.js"
-      }
+      },
+      "setting": {
+        "ports": {
+          "http": "Port HTTP",
+          "https": "Port HTTPS",
+          "mysql": "Port MySQL",
+          "redis": "Port Redis",
+          "postgresql": "Port PostgreSQL",
+          "mailpitSmtp": "Mailpit SMTP",
+          "mailpitHttp": "Mailpit HTTP",
+          "phpFpmBase": "Základní port PHP-FPM"
+        },
+        "general": {
+          "defaultPhp": "Výchozí verze PHP"
+        },
+        "php": {
+          "activeVersion": "Aktivní verze PHP"
+        },
+        "daemon": {
+          "autoStartEnabled": "Automatické spuštění služeb",
+          "catalogUrl": "Adresa katalogu"
+        },
+        "plugins": {
+          "autoSyncEnabled": "Automatická synchronizace pluginů"
+        },
+        "deploy": {
+          "enabled": "Deploy",
+          "useLegacyHostHandlers": "Starší obsluha deploye"
+        },
+        "mcp": {
+          "enabled": "AI klienti (MCP)",
+          "strict_kinds": "Přísné rozpoznávání akcí MCP",
+          "always_confirm_kinds": "Akce MCP, které se vždy schvalují",
+          "grant_expired_retention_days": "Uchování prošlých pravidel MCP",
+          "grant_revoked_retention_days": "Uchování odvolaných pravidel MCP",
+          "toolCallRetentionDays": "Uchování záznamu volání MCP"
+        },
+        "backup": {
+          "scheduleHours": "Interval automatické zálohy",
+          "retainCount": "Počet uchovávaných záloh",
+          "dir": "Složka záloh",
+          "content": {
+            "vhosts": "Zálohovat konfiguraci webů",
+            "pluginConfigs": "Zálohovat konfiguraci pluginů",
+            "ssl": "Zálohovat certifikáty SSL",
+            "databases": "Zálohovat databáze",
+            "docroots": "Zálohovat složky webů"
+          }
+        },
+        "sync": {
+          "deviceName": "Název zařízení"
+        }
+      },
+      "serviceAutoStart": "Automatický start služby {service}"
     }
   },
   "siteEditToast": {

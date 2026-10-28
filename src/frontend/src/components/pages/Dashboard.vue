@@ -98,17 +98,17 @@
 
       <!-- Recent activity from /api/activity (config_history). Hidden
            until something has been recorded. -->
-      <section v-if="activity.length > 0" class="activity-section">
+      <section v-if="visibleActivity.length > 0" class="activity-section">
         <div class="section-header">
           <h2 class="section-title">{{ $t('dashboard.recentActivity') }}</h2>
           <el-button size="small" text @click="loadActivity" :loading="activityLoading">{{ $t('common.refresh') }}</el-button>
         </div>
         <ol class="activity-list">
-          <li v-for="row in activity" :key="row.id" class="activity-row">
-            <span class="activity-dot" :class="`tone-${activityColor(row.operation)}`" aria-hidden="true" />
-            <span class="activity-op">{{ activityLabel('op', row.operation) }}</span>
+          <li v-for="row in visibleActivity" :key="row.id" class="activity-row">
+            <span class="activity-dot" :class="`tone-${activityColor(operationOf(row))}`" aria-hidden="true" />
+            <span class="activity-op">{{ activityLabel('op', operationOf(row)) }}</span>
             <span class="activity-entity">{{ activityLabel('entity', row.entityType) }}</span>
-            <span class="activity-name mono" v-if="row.entityName">{{ row.entityName }}</span>
+            <span class="activity-name" :class="{ mono: row.entityType !== 'setting' }" v-if="row.entityName">{{ entityNameOf(row) }}</span>
             <span class="activity-fields" v-if="changedFieldLabels(row)">{{ changedFieldLabels(row) }}</span>
             <span class="activity-source" v-if="activityLabel('source', row.source ?? '')">{{ $t('dashboard.activity.via', { source: activityLabel('source', row.source ?? '') }) }}</span>
             <time class="activity-time mono" :datetime="row.createdAt">{{ formatWhen(row.createdAt) }}</time>
@@ -263,6 +263,24 @@ function activityLabel(kind: 'op' | 'entity' | 'source' | 'field', code: string)
   const key = `dashboard.activity.${kind}.${kind === 'field' ? code : (code || '').toLowerCase()}`
   return te(key) ? t(key) : ''
 }
+
+// A setting is shown by its label ("Port HTTP"), never by its key. The daemon lists only
+// settings a user changes (ActivityEndpoints.UserSettings); a name without a label is
+// left out here as well, so a key added there without a label does not leak into the feed.
+const SERVICE_AUTOSTART = /^service\.([^.]+)\.autoStart$/i
+function settingLabel(name: string | undefined): string {
+  if (!name) return ''
+  const service = SERVICE_AUTOSTART.exec(name)
+  if (service) return t('dashboard.activity.serviceAutoStart', { service: service[1] })
+  const key = `dashboard.activity.setting.${name}`
+  return te(key) ? t(key) : ''
+}
+const visibleActivity = computed(() =>
+  activity.value.filter(row => row.entityType !== 'setting' || settingLabel(row.entityName)))
+const entityNameOf = (row: ActivityRow) => row.entityType === 'setting' ? settingLabel(row.entityName) : row.entityName
+// A setting row is first written when the user saves it for the first time: that is a change, not a creation.
+const operationOf = (row: ActivityRow) =>
+  row.entityType === 'setting' && row.operation.toLowerCase() === 'insert' ? 'update' : row.operation
 
 // An update lists what it changed ("PHP, HTTPS") when the daemon recorded the field names.
 function changedFieldLabels(row: ActivityRow): string {

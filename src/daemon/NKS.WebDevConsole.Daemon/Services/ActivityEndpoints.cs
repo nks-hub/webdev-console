@@ -45,16 +45,7 @@ internal static class ActivityEndpoints
             var clamped = Math.Clamp(limit ?? 20, 1, 200);
             try
             {
-                using var conn = db.CreateConnection();
-                var rows = await conn.QueryAsync(
-                    @"SELECT id, entity_type AS entityType, entity_name AS entityName,
-                             operation, changed_fields AS changedFields, source,
-                             created_at AS createdAt
-                      FROM config_history
-                      ORDER BY id DESC
-                      LIMIT @Limit",
-                    new { Limit = clamped });
-                return Results.Ok(rows);
+                return Results.Ok(await ReadRecentAsync(db, clamped));
             }
             catch (Exception ex)
             {
@@ -63,5 +54,50 @@ internal static class ActivityEndpoints
                 return Results.Ok(new { error = ex.Message, entries = Array.Empty<object>() });
             }
         });
+    }
+
+    /// <summary>
+    /// The settings a user changes in the app, and so the only ones the feed lists. The
+    /// settings table also holds what the daemon writes on its own (<c>sync.deviceId</c>,
+    /// the sign-in token and e-mail, <c>sync.lastSyncTime</c>, <c>catalog.plugin.*</c>); those
+    /// are not activity. The Overview has a translated label for every name here
+    /// (<c>dashboard.activity.setting.*</c>), and a test keeps the two lists in step.
+    /// Adding a user-facing setting means adding its name here and its label there.
+    /// </summary>
+    internal static readonly string[] UserSettings =
+    [
+        "ports.http", "ports.https", "ports.mysql", "ports.redis", "ports.postgresql",
+        "ports.mailpitSmtp", "ports.mailpitHttp", "ports.phpFpmBase",
+        "general.defaultPhp", "php.activeVersion",
+        "daemon.autoStartEnabled", "daemon.catalogUrl", "plugins.autoSyncEnabled",
+        "deploy.enabled", "deploy.useLegacyHostHandlers",
+        "mcp.enabled", "mcp.strict_kinds", "mcp.always_confirm_kinds",
+        "mcp.grant_expired_retention_days", "mcp.grant_revoked_retention_days", "mcp.toolCallRetentionDays",
+        "backup.scheduleHours", "backup.retainCount", "backup.dir",
+        "backup.content.vhosts", "backup.content.pluginConfigs", "backup.content.ssl",
+        "backup.content.databases", "backup.content.docroots",
+        "sync.deviceName",
+    ];
+
+    /// <summary>
+    /// Newest rows first. Setting rows are limited to <see cref="UserSettings"/> (and the
+    /// per-service auto-start switch, <c>service.&lt;id&gt;.autoStart</c>) in the query, so the
+    /// limit counts rows the feed shows.
+    /// </summary>
+    internal static async Task<IReadOnlyList<dynamic>> ReadRecentAsync(Database db, int limit)
+    {
+        using var conn = db.CreateConnection();
+        var rows = await conn.QueryAsync(
+            @"SELECT id, entity_type AS entityType, entity_name AS entityName,
+                     operation, changed_fields AS changedFields, source,
+                     created_at AS createdAt
+              FROM config_history
+              WHERE entity_type <> 'setting'
+                 OR entity_name IN @UserSettings
+                 OR entity_name LIKE 'service.%.autoStart'
+              ORDER BY id DESC
+              LIMIT @Limit",
+            new { Limit = limit, UserSettings });
+        return rows.ToList();
     }
 }
