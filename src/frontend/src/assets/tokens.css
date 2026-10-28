@@ -312,6 +312,20 @@ html:not(.dark) {
   --el-color-info:                var(--wdc-text-2);
 }
 
+/* Element Plus draws its empty-state box for pure white; on the light page
+   background its near-white fills vanish, so shift them a few steps darker. */
+html:not(.dark) .el-empty {
+  --el-empty-fill-color-1: oklch(95% 0.006 255);
+  --el-empty-fill-color-2: oklch(93% 0.007 255);
+  --el-empty-fill-color-3: oklch(92% 0.008 255);
+  --el-empty-fill-color-4: oklch(89% 0.009 255);
+  --el-empty-fill-color-5: oklch(88% 0.009 255);
+  --el-empty-fill-color-6: oklch(86% 0.010 255);
+  --el-empty-fill-color-7: oklch(84% 0.010 255);
+  --el-empty-fill-color-8: oklch(82% 0.011 255);
+  --el-empty-fill-color-9: oklch(76% 0.012 255);
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;

@@ -81,6 +81,22 @@ test.describe('Tool pages — source contract', () => {
     expect(vue).toContain(':disabled="!apiTokenInput"')
   })
 
+  test('cloudflare page sets the default zone a tunnelled new site needs', () => {
+    // siteState.cloudflareReady requires defaultZoneId and nothing else in the UI sets it.
+    const vue = page('CloudflareTunnel.vue')
+    expect(vue).toContain('v-model="config.defaultZoneId"')
+    expect(vue).toContain('saveCloudflareConfig({ defaultZoneId: zoneId || null })')
+    expect(vue).toContain("const DEFAULT_SUBDOMAIN_TEMPLATE = '{stem}-{hash}'")
+    expect(vue).toContain('<code>{hash}</code>')
+  })
+
+  test('plugin marketplace reads the plugin catalog, not a feed that does not exist', () => {
+    const endpoint = daemon('Plugin/PluginEndpoints.cs')
+    expect(endpoint).not.toContain('"https://wdc.nks-hub.cz/plugins.json"')
+    expect(endpoint).toMatch(/CatalogMarketplace\(pluginCatalog\.Cached, installed\)/)
+    expect(endpoint).toContain('source = "catalog"')
+  })
+
   test('databases page turns daemon reasons into a next step', () => {
     const endpoint = daemon('Data/DatabaseEndpoints.cs')
     for (const reason of ['mysql_not_installed', 'mysql_not_running', 'port_conflict']) {
