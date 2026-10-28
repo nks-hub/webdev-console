@@ -1582,6 +1582,9 @@ internal static class DatabaseEndpoints
             if (!File.Exists(mysqldump))
                 return Results.BadRequest(new { error = "mysqldump.exe not found" });
             var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm));
+            // Without --set-gtid-purged=OFF the export fails to import on this
+            // same server (ERROR 3546, GTID set overlap).
+            args.AddRange(MysqlDumpCompat.DumpOptions(mysqldump));
             args.Add(name);
             try
             {
@@ -1670,10 +1673,16 @@ internal static class DatabaseEndpoints
                 args.Add(name);
                 try
                 {
+                    // Dumps from older exports or other servers may carry the
+                    // GTID_PURGED / SQL_LOG_BIN statements that fail here.
                     var result = await CliWrap.Cli.Wrap(mysqlCli)
                         .WithArguments(args)
                         .WithEnvironmentVariables(MysqlEnvVars())
-                        .WithStandardInputPipe(CliWrap.PipeSource.FromFile(tmpFile))
+                        .WithStandardInputPipe(CliWrap.PipeSource.Create(async (destination, pipeCt) =>
+                        {
+                            await using var dump = File.OpenRead(tmpFile);
+                            await MysqlDumpCompat.CopyWithoutServerStateAsync(dump, destination, pipeCt);
+                        }))
                         .WithValidation(CliWrap.CommandResultValidation.None)
                         .ExecuteBufferedAsync();
                     return result.ExitCode == 0
