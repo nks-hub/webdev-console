@@ -432,9 +432,11 @@ h1, h2, h3, h4,
   border-top: 1px solid var(--wdc-border);
 }
 
-/* Short fade on route change; no movement. */
+/* Short fade on route change; no movement. `backwards`, not `both`: a fill that stays on
+   keeps an opacity effect, hence a stacking context, around the page for good, and dialogs
+   rendered inside it then sit below anything in the shell with a z-index (sticky menu footer). */
 .content-area > * {
-  animation: wdc-page-enter var(--wdc-dur-short) var(--wdc-ease-out) both;
+  animation: wdc-page-enter var(--wdc-dur-short) var(--wdc-ease-out) backwards;
 }
 @keyframes wdc-page-enter {
   from { opacity: 0; }
