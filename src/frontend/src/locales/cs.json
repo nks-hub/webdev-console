@@ -707,6 +707,10 @@
     "config": "Konfigurace",
     "newSite": "Nový web",
     "openMailpit": "Otevřít Mailpit",
+    "quickActions": {
+      "ssl": "SSL certifikáty",
+      "tunnel": "Tunel Cloudflare"
+    },
     "binaries": "Binárky",
     "tunnel": "Tunel",
     "memory": "Paměť",

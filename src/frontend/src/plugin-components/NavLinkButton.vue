@@ -4,17 +4,20 @@
        Vue Router when clicked. -->
   <el-button :size="size" :type="type" @click="onClick">
     <el-icon v-if="iconComponent" :size="14"><component :is="iconComponent" /></el-icon>
-    <span>{{ label }}</span>
+    <span>{{ text }}</span>
   </el-button>
 </template>
 
 <script setup lang="ts">
 import { computed, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Link, Lock, Download, Box, Connection, Files, QuestionFilled } from '@element-plus/icons-vue'
 
 const props = defineProps<{
   label: string
+  // Plugins send one English label; labelKey lets the app show its own translation.
+  labelKey?: string
   route?: string
   icon?: string
   type?: '' | 'primary' | 'success' | 'info' | 'warning' | 'danger'
@@ -22,6 +25,8 @@ const props = defineProps<{
 }>()
 
 const router = useRouter()
+const { t, te } = useI18n()
+const text = computed(() => (props.labelKey && te(props.labelKey) ? t(props.labelKey) : props.label))
 const ICONS: Record<string, unknown> = markRaw({ Link, Lock, Download, Box, Connection, Files, QuestionFilled })
 const iconComponent = computed(() => props.icon ? ICONS[props.icon] : undefined)
 

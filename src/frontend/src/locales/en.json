@@ -707,6 +707,10 @@
     "config": "Config",
     "newSite": "New Site",
     "openMailpit": "Open Mailpit",
+    "quickActions": {
+      "ssl": "SSL certificates",
+      "tunnel": "Cloudflare Tunnel"
+    },
     "binaries": "Binaries",
     "tunnel": "Tunnel",
     "memory": "Memory",
