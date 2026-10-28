@@ -9,7 +9,7 @@
        standalone "Apply" button that PUTs only this site and syncs the
        Cloudflare CNAME + ingress rules without dragging the rest of the
        SiteEdit form along. -->
-  <el-tab-pane :name="name">
+  <el-tab-pane :name="name" lazy>
     <template #label>
       <span class="tab-label"><el-icon><Link /></el-icon> {{ label }}</span>
     </template>
@@ -20,6 +20,17 @@
           <span class="edit-card-hint">{{ $t('cloudflareSite.subtitle') }}</span>
         </header>
         <div class="edit-card-body">
+          <!-- Account or tunnel missing: say so first, the rest of the tab cannot work without them. -->
+          <div v-if="metaLoaded && !hasCloudflareSetup" class="setup-warning">
+            <el-alert type="warning" :closable="false" show-icon>
+              <template #title>{{ $t('cloudflareSite.notConfiguredTitle') }}</template>
+              <div>{{ $t('cloudflareSite.notConfiguredBody') }}</div>
+              <el-button size="small" type="primary" @click="goToCloudflarePage">
+                {{ $t('cloudflareSite.openSetup') }}
+              </el-button>
+            </el-alert>
+          </div>
+
           <div class="ssl-toggle-row">
             <div class="ssl-toggle-meta">
               <div class="ssl-toggle-title">{{ $t('cloudflareSite.exposeTitle') }}</div>
@@ -28,6 +39,7 @@
             <el-switch
               :model-value="enabled"
               size="large"
+              :disabled="metaLoaded && !hasCloudflareSetup && !enabled"
               @update:model-value="onToggle"
             />
           </div>
@@ -35,18 +47,7 @@
           <!-- Inline config — only when the per-site toggle is ON. The
                full DNS / tunnel-ingress editor is still on /cloudflare;
                this is the "set the public host" minimum surface. -->
-          <div v-if="enabled" class="cf-config">
-            <div v-if="!hasCloudflareSetup" class="setup-warning">
-              <el-alert type="warning" :closable="false" show-icon>
-                <template #title>{{ $t('cloudflareSite.notConfiguredTitle') }}</template>
-                <div>{{ $t('cloudflareSite.notConfiguredBody') }}</div>
-                <el-button size="small" type="primary" @click="goToCloudflarePage">
-                  {{ $t('cloudflareSite.openSetup') }}
-                </el-button>
-              </el-alert>
-            </div>
-
-            <template v-else>
+          <div v-if="enabled && hasCloudflareSetup" class="cf-config">
               <el-form label-position="top" :model="form" class="cf-form">
                 <el-form-item :label="$t('cloudflareSite.subdomainLabel')">
                   <div class="subdomain-row">
@@ -113,14 +114,13 @@
                   <el-icon><DocumentCopy /></el-icon>
                 </el-button>
               </div>
-            </template>
           </div>
 
-          <div class="cf-actions">
+          <div v-if="hasCloudflareSetup" class="cf-actions">
             <el-button
               :type="enabled && !applied ? 'primary' : 'default'"
               :loading="applying"
-              :disabled="!enabled || !hasCloudflareSetup || !canApply"
+              :disabled="!enabled || !canApply"
               @click="applyNow"
             >
               {{ enabled
@@ -128,13 +128,13 @@
                   : $t('cloudflareSite.applyNow') }}
             </el-button>
             <el-button size="default" @click="goToCloudflarePage">
-              {{ $t('nav.tunnel') }}
+              {{ $t('siteEdit.openCloudflare') }}
             </el-button>
             <span v-if="applyStatus" class="apply-status" :class="applyStatus.kind">
               {{ applyStatus.message }}
             </span>
           </div>
-          <div class="hint" style="margin-top: var(--wdc-space-2)">
+          <div v-if="hasCloudflareSetup" class="hint" style="margin-top: var(--wdc-space-2)">
             {{ $t('cloudflareSite.applyHint') }}
           </div>
         </div>
@@ -145,7 +145,7 @@
 
 <script setup lang="ts">
 import { Link, DocumentCopy } from '@element-plus/icons-vue'
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
@@ -164,6 +164,8 @@ const props = defineProps<{
   name: string
   label: string
   site?: SiteInfo | null
+  /** Name of the tab the page shows; nothing is fetched before this one has been opened. */
+  activeTab?: string
 }>()
 
 const emit = defineEmits<{
@@ -179,6 +181,8 @@ const zones = ref<Array<{ id: string; name: string }>>([])
 const loadingZones = ref(false)
 const cfHasAccount = ref(false)
 const cfHasTunnel = ref(false)
+const metaLoaded = ref(false)
+const opened = ref(false)
 
 const form = reactive({
   subdomain: '',
@@ -260,6 +264,8 @@ async function loadCfMeta() {
   } catch {
     cfHasAccount.value = false
     cfHasTunnel.value = false
+  } finally {
+    metaLoaded.value = true
   }
 }
 
@@ -312,10 +318,14 @@ watch(() => form.protocol, (proto) => {
   }
 })
 
-onMounted(() => {
-  void loadCfMeta()
-  void loadZones()
-})
+// The tab costs the page nothing until it is opened; then the account state is read, and the zones only
+// when the tunnel is on for the site and an account with a token exists (without one Cloudflare answers 400).
+watch(() => props.activeTab, (tab) => { if (tab === props.name) opened.value = true }, { immediate: true })
+watch([opened, enabled], async () => {
+  if (!opened.value) return
+  if (!metaLoaded.value) await loadCfMeta()
+  if (hasCloudflareSetup.value && enabled.value && zones.value.length === 0 && !loadingZones.value) await loadZones()
+}, { immediate: true })
 
 // ── Actions ──────────────────────────────────────────────────────────
 
