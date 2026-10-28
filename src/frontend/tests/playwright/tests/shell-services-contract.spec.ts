@@ -225,6 +225,27 @@ test.describe('Shell services contract', () => {
     }
   })
 
+  test('every setting the daemon lists in the activity feed has a label in cs and en, internal ones do not', () => {
+    const endpoint = readFileSync(
+      resolve(srcRoot, '..', '..', 'daemon', 'NKS.WebDevConsole.Daemon', 'Services', 'ActivityEndpoints.cs'), 'utf-8')
+    const listed = endpoint.match(/UserSettings =\s*\[([\s\S]*?)\];/)?.[1] ?? ''
+    const keys = [...listed.matchAll(/"([A-Za-z_.]+)"/g)].map(m => m[1])
+    expect(keys.length).toBeGreaterThan(20)
+    const dashboard = read('components', 'pages', 'Dashboard.vue')
+    expect(dashboard).toMatch(/filter\(row => row\.entityType !== 'setting' \|\| settingLabel\(row\.entityName\)\)/)
+    for (const locale of ['cs', 'en']) {
+      const settings = (JSON.parse(read('locales', `${locale}.json`)) as {
+        dashboard: { activity: { setting: Record<string, unknown>; serviceAutoStart: string } }
+      }).dashboard.activity
+      expect(settings.serviceAutoStart, locale).toContain('{service}')
+      const label = (name: string) => name.split('.').reduce<unknown>((node, part) => (node as Record<string, unknown> | undefined)?.[part], settings.setting)
+      for (const key of keys) expect(typeof label(key), `${locale} label for ${key}`).toBe('string')
+      for (const internal of ['sync.deviceId', 'sync.accountToken', 'sync.accountEmail', 'sync.lastSyncTime', 'catalog.plugin.lastSyncAt']) {
+        expect(label(internal), `${locale} must not label ${internal}`).toBeUndefined()
+      }
+    }
+  })
+
   test('mode names are lower case inside a sentence', () => {
     const cs = JSON.parse(read('locales', 'cs.json')) as { app: { advancedPageNote: string } }
     expect(cs.app.advancedPageNote).toBe('Tato stránka patří do pokročilého režimu, proto ji menu v jednoduchém režimu neukazuje.')

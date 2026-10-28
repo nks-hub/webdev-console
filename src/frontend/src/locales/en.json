@@ -835,7 +835,60 @@
         "localhostLoopbackEnabled": "localhost",
         "nodeUpstreamPort": "Node.js",
         "nodeStartCommand": "Node.js"
-      }
+      },
+      "setting": {
+        "ports": {
+          "http": "HTTP port",
+          "https": "HTTPS port",
+          "mysql": "MySQL port",
+          "redis": "Redis port",
+          "postgresql": "PostgreSQL port",
+          "mailpitSmtp": "Mailpit SMTP",
+          "mailpitHttp": "Mailpit HTTP",
+          "phpFpmBase": "PHP-FPM base port"
+        },
+        "general": {
+          "defaultPhp": "Default PHP version"
+        },
+        "php": {
+          "activeVersion": "Active PHP version"
+        },
+        "daemon": {
+          "autoStartEnabled": "Start services automatically",
+          "catalogUrl": "Catalog address"
+        },
+        "plugins": {
+          "autoSyncEnabled": "Automatic plugin sync"
+        },
+        "deploy": {
+          "enabled": "Deploy",
+          "useLegacyHostHandlers": "Legacy deploy handlers"
+        },
+        "mcp": {
+          "enabled": "AI clients (MCP)",
+          "strict_kinds": "Strict MCP action kinds",
+          "always_confirm_kinds": "MCP actions that always need approval",
+          "grant_expired_retention_days": "Retention of expired MCP rules",
+          "grant_revoked_retention_days": "Retention of revoked MCP rules",
+          "toolCallRetentionDays": "MCP call log retention"
+        },
+        "backup": {
+          "scheduleHours": "Automatic backup interval",
+          "retainCount": "Backups kept",
+          "dir": "Backup folder",
+          "content": {
+            "vhosts": "Back up site configuration",
+            "pluginConfigs": "Back up plugin configuration",
+            "ssl": "Back up SSL certificates",
+            "databases": "Back up databases",
+            "docroots": "Back up site folders"
+          }
+        },
+        "sync": {
+          "deviceName": "Device name"
+        }
+      },
+      "serviceAutoStart": "Auto-start of service {service}"
     }
   },
   "siteEditToast": {

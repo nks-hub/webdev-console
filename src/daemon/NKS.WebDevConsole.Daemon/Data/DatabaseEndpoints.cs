@@ -44,6 +44,25 @@ internal static class DatabaseEndpoints
     /// </summary>
     internal const long ImportMaxBytes = 512L * 1024 * 1024;
 
+    /// <summary>What <c>SELECT COUNT(*) FROM information_schema.schemata WHERE ...</c> printed: true for 1, false for 0, null for anything else.</summary>
+    internal static bool? ParseDatabaseExists(string? output) => output?.Trim() switch
+    {
+        "1" => true,
+        "0" => false,
+        _ => null,
+    };
+
+    /// <summary>
+    /// CREATE DATABASE IF NOT EXISTS and DROP DATABASE IF EXISTS succeed whether or not they
+    /// changed anything. Record a create only when the database was not there before and a
+    /// drop only when it was; when that is unknown (mysql could not answer) record nothing.
+    /// </summary>
+    internal static void RecordDatabaseChange(ConfigHistoryRepository history, string name, bool? existedBefore, bool dropped)
+    {
+        if (existedBefore != dropped) return;
+        history.Record("database", name, dropped ? "DELETE" : "INSERT");
+    }
+
     // Room for multipart boundaries and part headers on top of ImportMaxBytes.
     private const long ImportMultipartOverheadBytes = 1024 * 1024;
 
@@ -437,6 +456,28 @@ internal static class DatabaseEndpoints
             return string.IsNullOrEmpty(password)
                 ? new Dictionary<string, string?>()
                 : new Dictionary<string, string?> { ["MYSQL_PWD"] = password };
+        }
+
+        // Whether the server has a database called <name>; null when mysql could not
+        // answer. The name has passed IsValidDatabaseName ([a-zA-Z0-9_]), so it is safe
+        // inside the quoted literal.
+        static async Task<bool?> DatabaseExistsAsync(string mysqlCli, int port, string name, CancellationToken ct = default)
+        {
+            var probe = MysqlBaseArgs(port);
+            probe.AddRange(["-N", "-B", "-e", $"SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = '{name}'"]);
+            try
+            {
+                var result = await CliWrap.Cli.Wrap(mysqlCli)
+                    .WithArguments(probe)
+                    .WithEnvironmentVariables(MysqlEnvVars())
+                    .WithValidation(CliWrap.CommandResultValidation.None)
+                    .ExecuteBufferedAsync(ct);
+                return result.ExitCode == 0 ? ParseDatabaseExists(result.StandardOutput) : null;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         static IReadOnlyDictionary<string, string?> MysqlEnvVarsForPassword(string? password) =>
@@ -1286,11 +1327,14 @@ internal static class DatabaseEndpoints
                 return Results.BadRequest(new { error = "MySQL not installed" });
 
             var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, OperatingSystem.IsWindows() ? "mysql.exe" : "mysql");
-            var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm));
+            var mysqlPort = ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm);
+            var args = MysqlBaseArgs(mysqlPort);
             args.Add("-e");
             args.Add($"CREATE DATABASE IF NOT EXISTS `{dbName}`");
             try
             {
+                // IF NOT EXISTS succeeds either way; ask first so the feed lists only a real create.
+                var existedBefore = await DatabaseExistsAsync(mysqlCli, mysqlPort, dbName);
                 var result = await CliWrap.Cli.Wrap(mysqlCli)
                     .WithArguments(args)
                     .WithEnvironmentVariables(MysqlEnvVars())
@@ -1298,7 +1342,7 @@ internal static class DatabaseEndpoints
                     .ExecuteBufferedAsync();
                 if (result.ExitCode != 0)
                     return Results.BadRequest(new { error = result.StandardError.Trim() });
-                history.Record("database", dbName, "INSERT");
+                RecordDatabaseChange(history, dbName, existedBefore, dropped: false);
                 return Results.Created($"/api/databases/{dbName}", new { name = dbName });
             }
             catch (Exception ex)
@@ -1352,11 +1396,14 @@ internal static class DatabaseEndpoints
                 return Results.BadRequest(new { error = "MySQL not installed" });
 
             var mysqlCli = Path.Combine(Path.GetDirectoryName(mysql.Executable)!, OperatingSystem.IsWindows() ? "mysql.exe" : "mysql");
-            var args = MysqlBaseArgs(ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm));
+            var mysqlPort = ResolveMysqlPortWithFallback(settings, sp, pluginLoader, bm);
+            var args = MysqlBaseArgs(mysqlPort);
             args.Add("-e");
             args.Add($"DROP DATABASE IF EXISTS `{name}`");
             try
             {
+                // IF EXISTS succeeds either way; ask first so the feed lists only a real drop.
+                var existedBefore = await DatabaseExistsAsync(mysqlCli, mysqlPort, name, ct);
                 var result = await CliWrap.Cli.Wrap(mysqlCli)
                     .WithArguments(args)
                     .WithEnvironmentVariables(MysqlEnvVars())
@@ -1364,7 +1411,7 @@ internal static class DatabaseEndpoints
                     .ExecuteBufferedAsync(ct);
                 if (result.ExitCode != 0)
                     return Results.BadRequest(new { error = result.StandardError.Trim() });
-                history.Record("database", name, "DELETE");
+                RecordDatabaseChange(history, name, existedBefore, dropped: true);
                 return Results.NoContent();
             }
             catch (Exception ex)
