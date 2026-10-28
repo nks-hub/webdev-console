@@ -644,6 +644,11 @@ async function spawnDaemonInner() {
     return
   }
 
+  // A port file left by a daemon that is gone (killed, crashed) still holds its
+  // token. The new daemon usually binds the same port, so until it rewrites the
+  // file the renderer sends the dead daemon's token and gets 401s.
+  try { if (existsSync(PORT_FILE)) unlinkSync(PORT_FILE) } catch { /* the next daemon overwrites it */ }
+
   const isDev = !app.isPackaged
 
   // Pass the portable data directory through explicitly so the daemon's
