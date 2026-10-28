@@ -103,6 +103,11 @@ test.describe('Sites flow contract', () => {
     for (const step of Object.keys(cs.siteApply.steps)) expect(store, step).toMatch(new RegExp(`APPLY_STEP_WARNING = .*\\b${step}\\b`))
   })
 
+  test('the duplicate dialog checks the new domain with the same rules as the new site dialog', () => {
+    expect(read('components', 'sites', 'CreateSiteDialog.vue')).toMatch(/domainProblem\(/)
+    expect(read('components', 'sites', 'DuplicateSiteDialog.vue')).toMatch(/domainProblem\(/)
+  })
+
   test('i18n keys of the new states exist in both locales', () => {
     const get = (o: Record<string, unknown>, path: string) =>
       path.split('.').reduce<unknown>((a, k) => (a && typeof a === 'object' ? (a as Record<string, unknown>)[k] : undefined), o)
