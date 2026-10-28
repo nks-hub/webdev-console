@@ -71,23 +71,24 @@ public sealed class ServiceRunTracker
 /// <summary>Builds <see cref="ServiceInfoDto"/> rows from module statuses and the binaries on disk.</summary>
 public static class ServiceInfoProjection
 {
-    // Service ids whose binary lives under ~/.wdc/binaries/{app}. Alternatives
-    // are tried in order; the first one that is installed supplies the version.
+    // Service ids whose binary lives under ~/.wdc/binaries/{app}. Each plugin
+    // runs only its own app (MySQL never starts a MariaDB binary or the other
+    // way round), so there is no fallback to a related app.
     // Ids missing here (node, hosts, ...) have no managed binary and count as installed.
-    private static readonly Dictionary<string, string[]> BinaryApps = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly Dictionary<string, string> BinaryApps = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["apache"] = ["apache"],
-        ["httpd"] = ["apache"],
-        ["nginx"] = ["nginx"],
-        ["caddy"] = ["caddy"],
-        ["php"] = ["php"],
-        ["mysql"] = ["mysql", "mariadb"],
-        ["mariadb"] = ["mariadb", "mysql"],
-        ["postgresql"] = ["postgresql"],
-        ["redis"] = ["redis"],
-        ["mailpit"] = ["mailpit"],
-        ["cloudflare"] = ["cloudflared"],
-        ["cloudflared"] = ["cloudflared"],
+        ["apache"] = "apache",
+        ["httpd"] = "apache",
+        ["nginx"] = "nginx",
+        ["caddy"] = "caddy",
+        ["php"] = "php",
+        ["mysql"] = "mysql",
+        ["mariadb"] = "mariadb",
+        ["postgresql"] = "postgresql",
+        ["redis"] = "redis",
+        ["mailpit"] = "mailpit",
+        ["cloudflare"] = "cloudflared",
+        ["cloudflared"] = "cloudflared",
     };
 
     // Config properties the plugins use for their listen ports; the same names
@@ -113,18 +114,12 @@ public static class ServiceInfoProjection
         string? app = null;
         string? version = null;
         var isInstalled = true;
-        if (BinaryApps.TryGetValue(status.Id, out var candidates))
+        if (BinaryApps.TryGetValue(status.Id, out var binaryApp))
         {
-            foreach (var candidate in candidates)
-            {
-                var hit = installed.FirstOrDefault(b => b.App.Equals(candidate, StringComparison.OrdinalIgnoreCase));
-                if (hit is null) continue;
-                app = candidate;
-                version = hit.Version;
-                break;
-            }
-            isInstalled = app is not null;
-            app ??= candidates[0];
+            app = binaryApp;
+            var hit = installed.FirstOrDefault(b => b.App.Equals(binaryApp, StringComparison.OrdinalIgnoreCase));
+            version = hit?.Version;
+            isInstalled = hit is not null;
         }
 
         // A module that is up is installed, whatever the folder scan says.

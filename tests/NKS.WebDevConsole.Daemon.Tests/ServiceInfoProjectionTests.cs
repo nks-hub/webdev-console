@@ -40,14 +40,28 @@ public class ServiceInfoProjectionTests
     }
 
     [Fact]
-    public void Build_MatchesServiceIdCaseInsensitively_AndFallsBackToAlternativeApp()
+    public void Build_MatchesServiceIdCaseInsensitively()
     {
         var dto = ServiceInfoProjection.Build(
-            Status("MySQL", ServiceState.Stopped), [Binary("mariadb", "11.4.10")], new ServiceRunTracker());
+            Status("MySQL", ServiceState.Stopped), [Binary("mysql", "9.7.1")], new ServiceRunTracker());
 
         Assert.True(dto.Installed);
-        Assert.Equal("11.4.10", dto.Version);
-        Assert.Equal("mariadb", dto.BinaryApp);
+        Assert.Equal("9.7.1", dto.Version);
+        Assert.Equal("mysql", dto.BinaryApp);
+    }
+
+    [Theory]
+    [InlineData("mariadb", "mysql", "9.7.1")]
+    [InlineData("mysql", "mariadb", "11.4.10")]
+    public void Build_NeverBorrowsTheVersionOfARelatedApp(string serviceId, string otherApp, string otherVersion)
+    {
+        // The MySQL and MariaDB plugins each run only their own binary.
+        var dto = ServiceInfoProjection.Build(
+            Status(serviceId, ServiceState.Stopped), [Binary(otherApp, otherVersion)], new ServiceRunTracker());
+
+        Assert.False(dto.Installed);
+        Assert.Null(dto.Version);
+        Assert.Equal(serviceId, dto.BinaryApp);
     }
 
     [Fact]
