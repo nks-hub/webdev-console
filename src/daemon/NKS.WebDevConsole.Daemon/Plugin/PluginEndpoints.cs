@@ -66,8 +66,11 @@ internal static class PluginEndpoints
         foreach (var entry in catalog)
         {
             if (string.IsNullOrWhiteSpace(entry.Id)) continue;
-            var id = entry.Id;
             var release = entry.Releases?.FirstOrDefault();
+            var (tagId, version) = SplitCatalogTag(release?.Version);
+            // The catalog derives its id from the archive name (nks.wdc.localrsync);
+            // the release tag carries the plugin's real id (nks.wdc.deploy.localrsync).
+            var id = tagId ?? entry.Id;
             // Plugins are platform-neutral .NET assemblies; the catalog lists one "any" archive.
             var download = release?.Downloads?.FirstOrDefault(d => !string.IsNullOrWhiteSpace(d.Url));
             var hasSha = !string.IsNullOrWhiteSpace(download?.Sha256);
@@ -76,7 +79,7 @@ internal static class PluginEndpoints
             result.Add(new MarketplaceEntry(
                 Id: id,
                 Name: isInstalled && !string.IsNullOrWhiteSpace(loaded.Name) ? loaded.Name : isBundled ? b.Name : id,
-                Version: CatalogVersion(release?.Version),
+                Version: version,
                 Description: isInstalled && !string.IsNullOrWhiteSpace(loaded.Description) ? loaded.Description : isBundled ? b.Description : "",
                 DownloadUrl: hasSha ? download!.Url : null,
                 Sha256: hasSha ? download!.Sha256 : null,
@@ -98,12 +101,12 @@ internal static class PluginEndpoints
         return result;
     }
 
-    /// <summary>The catalog tags releases as "&lt;id&gt;-v1.2.3"; the UI wants "1.2.3".</summary>
-    internal static string CatalogVersion(string? tag)
+    /// <summary>Splits a catalog release tag "&lt;plugin id&gt;-v1.2.3"; a bare "1.2.3" has no id.</summary>
+    internal static (string? Id, string Version) SplitCatalogTag(string? tag)
     {
-        if (string.IsNullOrWhiteSpace(tag)) return "";
+        if (string.IsNullOrWhiteSpace(tag)) return (null, "");
         var i = tag.LastIndexOf("-v", StringComparison.Ordinal);
-        return i >= 0 ? tag[(i + 2)..] : tag;
+        return i > 0 ? (tag[..i], tag[(i + 2)..]) : (null, tag);
     }
 
     public static void MapPluginEndpoints(this WebApplication app, PluginLoader pluginLoader, string pluginDir)
