@@ -247,6 +247,7 @@ import { useSiteStateStore, type InstalledPhp } from '../../stores/siteState'
 import { useUiModeStore } from '../../stores/uiMode'
 import { errorMessage } from '../../utils/errors'
 import { pickNativeFolder } from '../../utils/pickFolder'
+import { DOMAIN_LABEL_RE, domainProblem } from '../../utils/siteDomain'
 import { pathSeparator, siteUrl } from '../../utils/siteUrl'
 import { useFolderOwner, useFolderState } from './folderCheck'
 
@@ -417,18 +418,11 @@ async function loadBindOptions() {
 }
 
 // ── Validation ──────────────────────────────────────────────────────
-const LABEL_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/
 const rules = computed<FormRules>(() => ({
   domain: [{
     validator: (_r, value: string, cb: (e?: Error) => void) => {
-      const d = (value ?? '').trim().toLowerCase()
-      const labels = d.split('.')
-      if (!d) return cb(new Error(t('sites.new.err.domainRequired')))
-      if (/\s/.test(d)) return cb(new Error(t('sites.new.err.domainSpaces')))
-      if (d.length > 253 || !labels.every(l => LABEL_RE.test(l) && l.length <= 63)) return cb(new Error(t('sites.new.err.domainInvalid')))
-      if (d !== 'localhost' && labels.length < 2) return cb(new Error(t('sites.new.err.domainNoTld')))
-      if (sitesStore.sites.some(s => s.domain.toLowerCase() === d)) return cb(new Error(t('sites.new.err.domainExists')))
-      cb()
+      const problem = domainProblem(value, sitesStore.sites.map(s => s.domain))
+      cb(problem ? new Error(t(`sites.new.err.${problem}`)) : undefined)
     },
     trigger: ['blur', 'change'],
   }],
@@ -443,7 +437,7 @@ const rules = computed<FormRules>(() => ({
 const previewUrl = computed(() => {
   const d = form.domain.trim().toLowerCase()
   const labels = d.split('.')
-  if (!d || !labels.every(l => LABEL_RE.test(l))) return ''
+  if (!d || !labels.every(l => DOMAIN_LABEL_RE.test(l))) return ''
   return siteUrl({ domain: d, sslEnabled: form.sslEnabled, httpPort: 80, httpsPort: 443 })
 })
 
