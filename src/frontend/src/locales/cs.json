@@ -3939,7 +3939,7 @@
     "statusAria": "Stav připojení MCP",
     "status": {
       "enabled": "MCP je zapnuté",
-      "disabled": "MCP je vypnuté – AI klienti nemají přístup",
+      "disabled": "MCP je vypnuté, AI klienti nemají přístup",
       "portFile": "Démon je připravený pro AI klienty",
       "noPortFile": "Démon neběží nebo nepřipravil token pro MCP",
       "serverFound": "MCP server je součástí instalace",

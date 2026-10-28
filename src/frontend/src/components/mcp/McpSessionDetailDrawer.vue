@@ -50,7 +50,7 @@
         <div v-for="e in entries" :key="e.id" class="full-call-row" :class="`danger-${e.dangerLevel}`">
           <HealthStatusDot :level="dangerToDotLevel(e.dangerLevel)" />
           <code class="mono tool">{{ e.toolName }}</code>
-          <span class="muted dur">{{ e.durationMs }}ms</span>
+          <span class="muted dur">{{ e.durationMs }} ms</span>
           <el-tag v-if="e.resultCode !== 'ok'" type="danger" size="small">{{ e.resultCode }}</el-tag>
           <span class="muted at">{{ formatTime(e.calledAt) }}</span>
           <code v-if="e.argsSummary && e.argsSummary !== '{}'" class="mono args">{{ shortArgs(e.argsSummary) }}</code>

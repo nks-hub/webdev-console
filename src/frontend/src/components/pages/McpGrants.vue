@@ -1116,6 +1116,8 @@ function cooldownActiveSec(g: McpGrantRow): number {
 .page-header .actions { display: flex; gap: 8px; }
 .page > .page-header + * { padding-top: 16px; }
 .muted { color: var(--el-text-color-secondary); }
+/* Same intro size as the Requests tab. */
+.page-header + .muted { font-size: 13px; max-width: 760px; }
 .grants-table { margin-top: 8px; }
 .mono { font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace; font-size: 12px; }
 .last-match { margin-left: 4px; font-size: 11px; }

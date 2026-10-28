@@ -3939,7 +3939,7 @@
     "statusAria": "MCP connection status",
     "status": {
       "enabled": "MCP is enabled",
-      "disabled": "MCP is off – AI clients have no access",
+      "disabled": "MCP is off, AI clients have no access",
       "portFile": "The daemon is ready for AI clients",
       "noPortFile": "The daemon is not running or has not prepared the MCP token",
       "serverFound": "MCP server bundled",

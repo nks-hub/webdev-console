@@ -254,7 +254,7 @@
                   {{ t('mcpActivity.danger.mutate') }}
                 </el-tag>
                 <el-tag v-if="row.entry.resultCode !== 'ok'" type="danger" size="small">{{ row.entry.resultCode }}</el-tag>
-                <span class="muted dur">{{ row.entry.durationMs }}ms</span>
+                <span class="muted dur">{{ row.entry.durationMs }} ms</span>
                 <span class="muted at">{{ formatRelative(row.entry.calledAt) }}</span>
                 <code v-if="row.entry.argsSummary && row.entry.argsSummary !== '{}'" class="mono args-preview">
                   {{ row.entry.argsSummary.length > 60 ? row.entry.argsSummary.slice(0, 57) + '…' : row.entry.argsSummary }}
@@ -307,7 +307,7 @@
             {{ t('mcpActivity.danger.mutate') }}
           </el-tag>
           <el-tag v-if="row.entry.resultCode !== 'ok'" type="danger" size="small">{{ row.entry.resultCode }}</el-tag>
-          <span class="muted dur">{{ row.entry.durationMs }}ms</span>
+          <span class="muted dur">{{ row.entry.durationMs }} ms</span>
           <span class="muted at">{{ formatRelative(row.entry.calledAt) }}</span>
           <code v-if="row.entry.argsSummary && row.entry.argsSummary !== '{}'" class="mono args-preview" :title="row.entry.argsSummary">
             {{ row.entry.argsSummary.length > 60 ? row.entry.argsSummary.slice(0, 57) + '…' : row.entry.argsSummary }}
@@ -554,10 +554,10 @@ function formatRelative(iso: string): string {
 function formatDuration(startIso: string, endIso: string): string {
   try {
     const ms = Math.max(0, new Date(startIso).getTime() - new Date(endIso).getTime())
-    if (ms < 1000) return `${ms}ms`
+    if (ms < 1000) return `${ms} ms`
     const s = Math.round(ms / 1000)
-    if (s < 60) return `${s}s`
-    return `${Math.round(s / 60)}m`
+    if (s < 60) return `${s} s`
+    return `${Math.round(s / 60)} min`
   } catch { return '' }
 }
 
@@ -788,6 +788,8 @@ onBeforeUnmount(() => {
   display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
   padding: var(--wdc-space-2) 0;
 }
+/* The gap spaces the buttons; Element's sibling margin indented a wrapped one. */
+.activity-filters :deep(.el-button + .el-button) { margin-left: 0; }
 .total-count { font-size: 12px; }
 
 /* Sessions view — denser table-like layout instead of separate cards.
