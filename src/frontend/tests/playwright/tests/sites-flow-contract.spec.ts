@@ -165,14 +165,19 @@ test.describe('Sites flow contract', () => {
     const handlerOf = (route: string) => endpoints.match(new RegExp(`composer/${route}"[\\s\\S]*?(?=app\\.Map)`))?.[0] ?? ''
     for (const route of ['install', 'require', 'remove', 'init', 'diagnose']) {
       expect(handlerOf(route), route).toMatch(/ComposerNotInstalled\(invoker\) is \{ \} notInstalled\) return notInstalled/)
-      expect(handlerOf(route), route).toMatch(/statusCode: 500/)
+      expect(handlerOf(route), route).toMatch(/ComposerFailed\(ex, invoker,/)
     }
+    // A thrown run is 409 only when Composer itself could not be started; anything else stays 500.
+    expect(endpoints).toMatch(/ComposerCouldNotStart\(ex, invoker\)\s*\?\s*NotInstalledResult\(\)\s*:\s*Results\.Problem\([^;]*statusCode: 500/)
     expect(endpoints).toMatch(/error = "composer_not_installed", code = "composer_not_installed" \}, statusCode: 409/)
     // The site tab words the refusal itself instead of showing the daemon's text.
     const tab = read('components', 'pages', 'SiteComposer.vue')
     expect(tab).not.toMatch(/ElMessage\.error\(err instanceof Error/)
     expect(tab).toMatch(/composerErrorMessage\(err, t\)/)
     expect(read('utils', 'composerError.ts')).toMatch(/err\.status === 409/)
+    // The status answer carries the same flag, so the banner is there before a button is tried.
+    expect(endpoints).toMatch(/composerAvailable = invoker is null \? null : ComposerAvailable\(invoker\)/)
+    expect(tab).toMatch(/composerMissing\.value = status\.value\.composerAvailable === false/)
   })
 
   test('i18n keys of the new states exist in both locales', () => {
