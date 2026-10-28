@@ -49,6 +49,11 @@ const MANAGE_ROUTES: Record<string, string> = {
 }
 export const manageRouteOf = (serviceId: string): string | null => MANAGE_ROUTES[serviceId] ?? null
 
+// Configured by CLI args, per-site TOML or environment variables: no file for
+// the config editor to open.
+const CONFIGLESS_SERVICES = new Set(['mailpit', 'node', 'cloudflare', 'cloudflared', 'mkcert'])
+export const isConfigless = (serviceId: string) => CONFIGLESS_SERVICES.has(serviceId.toLowerCase())
+
 const PORT_LABELS: Record<string, string> = { http: 'HTTP', https: 'HTTPS', smtp: 'SMTP' }
 
 /** "80" for one port, "SMTP 1025 · HTTP 8025" when the service listens on several. */

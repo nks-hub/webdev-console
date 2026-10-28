@@ -39,7 +39,7 @@
     </div>
 
     <div v-else-if="files.length === 0" class="state-box state-text">
-      <template v-if="isConfigless">
+      <template v-if="configless">
         <p>{{ t('services.configlessSummary', { name: displayName }) }}</p>
         <p class="empty-hint">{{ t('services.configless.hint') }}</p>
       </template>
@@ -147,7 +147,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { fetchServiceConfig, saveServiceConfig, validateServiceConfig, type ConfigFile } from '../../api/daemon'
 import { useDaemonStore } from '../../stores/daemon'
 import { shortServiceName as shortName } from '../../utils/serviceState'
-import { cleanError, installRouteOf, stateOf } from '../../utils/services'
+import { cleanError, installRouteOf, isConfigless, stateOf } from '../../utils/services'
 import MonacoEditor from '../shared/MonacoEditor.vue'
 
 defineOptions({ name: 'ServiceConfig' })
@@ -226,12 +226,9 @@ const displayName = computed(() => service.value ? shortName(service.value) : se
 const notInstalled = computed(() => !!service.value && stateOf(service.value) === 'notInstalled')
 const editorLabel = computed(() => `${activeFile.value?.name ?? ''}, ${displayName.value}`)
 
-// Services that legitimately have no file-backed config — they configure
-// themselves via CLI args, per-site TOML, or environment variables. The
-// empty-state card shows a friendly hint for these instead of suggesting
-// the daemon broke.
-const CONFIGLESS_SERVICES = new Set(['mailpit', 'node', 'cloudflare', 'cloudflared', 'mkcert'])
-const isConfigless = computed(() => CONFIGLESS_SERVICES.has(serviceId.value.toLowerCase()))
+// The empty-state card shows a friendly hint for these instead of
+// suggesting the daemon broke.
+const configless = computed(() => isConfigless(serviceId.value))
 
 // Shown under "Details" so a power user knows where WDC looked. Matches the
 // lookup order in ServiceConfigManager.GetFilesAsync — keep in sync.

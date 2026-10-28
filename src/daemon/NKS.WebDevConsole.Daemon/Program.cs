@@ -754,6 +754,8 @@ foreach (var p in pluginLoader.Plugins)
                 "redis"      => new[] { ("ports.redis",      "Port") },
                 "mailpit"    => new[] { ("ports.mailpitSmtp", "SmtpPort"),
                                         ("ports.mailpitHttp", "WebPort") },
+                // php.ini sends mail() to Mailpit's SMTP port.
+                "php"        => new[] { ("ports.mailpitSmtp", "MailSmtpPort") },
                 _ => Array.Empty<(string, string)>(),
             };
             foreach (var (k, propName) in mapping)

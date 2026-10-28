@@ -173,6 +173,8 @@ internal static class SettingsEndpoints
                         if ((key == "http" || key == "https") &&
                             (moduleId == "apache" || moduleId == "caddy" || moduleId == "nginx"))
                             return true;
+                        // php.ini sends mail() to Mailpit's SMTP port
+                        if (key == "mailpitsmtp" && moduleId == "php") return true;
                         return false;
                     });
                     if (!relevant) continue;
@@ -210,6 +212,7 @@ internal static class SettingsEndpoints
                                     "redis"       when moduleId == "redis"        => "Port",
                                     "mailpitsmtp" when moduleId == "mailpit"      => "SmtpPort",
                                     "mailpithttp" when moduleId == "mailpit"      => "WebPort",
+                                    "mailpitsmtp" when moduleId == "php"          => "MailSmtpPort",
                                     _ => null,
                                 };
                                 if (propName is null) continue;
