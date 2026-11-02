@@ -29,6 +29,7 @@ const czech = {
     dropdown: { toggleDropdown: 'Otevřít nebo zavřít nabídku' },
     pagination: {
       ...elementCs.el.pagination,
+      pagesize: ' na stránku',
       page: 'Stránka',
       prev: 'Předchozí stránka',
       next: 'Další stránka',
