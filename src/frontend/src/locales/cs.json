@@ -46,6 +46,7 @@
     "manageService": "Spravovat {name}"
   },
   "common": {
+    "inAdvanced": "(pokročilý režim)",
     "save": "Uložit",
     "cancel": "Zrušit",
     "delete": "Smazat",
@@ -440,11 +441,12 @@
       "body": "AI klienti teď k WDC nemají přístup. Zapněte MCP přepínačem výše, pak se tu ukáže aktivita, žádosti a pravidla."
     },
     "glossary": {
+      "activity": "všechna volání nástrojů ze strany AI, včetně čtení, jak probíhají.",
       "requests": "AI chce udělat něco, co nejde snadno vrátit (smazat databázi, přepsat konfiguraci), a čeká, až to schválíte.",
       "rules": "které žádosti se schválí samy, třeba restart služeb.",
       "catalog": "seznam akcí, u kterých se AI musí zeptat."
     },
-    "simpleOnly": "Pravidla a Schvalované akce jsou jen v pokročilém režimu.",
+    "simpleOnly": "Pravidla a schvalované akce jsou jen v pokročilém režimu.",
     "switchToAdvanced": "Přepnout do pokročilého režimu"
   },
   "mcpOnboarding": {
@@ -520,7 +522,7 @@
       "mutates": "Změny",
       "destructives": "Nevratné",
       "errors": "Chyby",
-      "sessions": "Relace (session)",
+      "sessions": "Relace",
       "clickToFilter": "Kliknutím zobrazíte jen tuto úroveň",
       "clickToClear": "Kliknutím zrušíte filtr"
     },
@@ -1635,7 +1637,7 @@
     },
     "binaryMissing": "Chybí binárka, služba se zatím nespustí.",
     "enableAria": "Plugin {name} zapnutý",
-    "disabledHint": "Vypnuto. Zapnete ho přepínačem nahoře.",
+    "disabledHint": "Vypnuto. Zapněte ho přepínačem nahoře.",
     "platformUnsupported": "Na tomto systému nefunguje (jen {platforms})",
     "noneLoaded": "Nejsou načtené žádné pluginy",
     "byAuthor": "Autor: {author}",
@@ -2889,7 +2891,7 @@
       "network": {
         "title": "Síť a porty",
         "subtitle": "Porty, na kterých služby právě naslouchají.",
-        "editInAdvanced": "Změnit porty"
+        "editInAdvanced": "Změnit porty v pokročilém režimu"
       },
       "backup": {
         "title": "Záloha",

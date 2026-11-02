@@ -46,6 +46,7 @@
     "manageService": "Manage {name}"
   },
   "common": {
+    "inAdvanced": "(Advanced mode)",
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
@@ -440,6 +441,7 @@
       "body": "AI clients cannot reach WDC now. Turn MCP on with the switch above to see activity, requests and rules here."
     },
     "glossary": {
+      "activity": "every tool call an AI makes, reads included, as it happens.",
       "requests": "an AI wants to do something that is hard to undo (drop a database, overwrite a config) and waits for your approval.",
       "rules": "approve these requests automatically, for example service restarts.",
       "catalog": "the actions an AI has to ask about."
@@ -2889,7 +2891,7 @@
       "network": {
         "title": "Network & ports",
         "subtitle": "The ports your services listen on right now.",
-        "editInAdvanced": "Change ports"
+        "editInAdvanced": "Change ports in Advanced mode"
       },
       "backup": {
         "title": "Backup",

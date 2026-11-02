@@ -26,7 +26,15 @@
               <template #title>{{ $t('cloudflareSite.notConfiguredTitle') }}</template>
               <div>{{ $t('cloudflareSite.notConfiguredBody') }}</div>
               <el-button size="small" type="primary" @click="goToCloudflarePage">
-                {{ $t('cloudflareSite.openSetup') }}
+                {{ $t('cloudflareSite.openSetup') }}<template v-if="uiMode.isSimple"> {{ $t('common.inAdvanced') }}</template>
+              </el-button>
+            </el-alert>
+          </div>
+          <div v-else-if="metaLoaded && !cfHasDefaultZone" class="setup-warning">
+            <el-alert type="warning" :closable="false" show-icon>
+              <template #title>{{ $t('siteEdit.zoneNotConfigured') }}</template>
+              <el-button size="small" type="primary" @click="goToCloudflarePage">
+                {{ $t('cloudflareSite.openSetup') }}<template v-if="uiMode.isSimple"> {{ $t('common.inAdvanced') }}</template>
               </el-button>
             </el-alert>
           </div>
@@ -128,7 +136,7 @@
                   : $t('cloudflareSite.applyNow') }}
             </el-button>
             <el-button size="default" @click="goToCloudflarePage">
-              {{ $t('siteEdit.openCloudflare') }}
+              {{ $t('siteEdit.openCloudflare') }}<template v-if="uiMode.isSimple"> {{ $t('common.inAdvanced') }}</template>
             </el-button>
             <span v-if="applyStatus" class="apply-status" :class="applyStatus.kind">
               {{ applyStatus.message }}
@@ -156,6 +164,7 @@ import {
   updateSite,
 } from '../api/daemon'
 import type { SiteInfo } from '../api/types'
+import { useUiModeStore } from '../stores/uiMode'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
@@ -174,6 +183,7 @@ const emit = defineEmits<{
 }>()
 
 const router = useRouter()
+const uiMode = useUiModeStore()
 
 // ── State ────────────────────────────────────────────────────────────
 
@@ -181,6 +191,7 @@ const zones = ref<Array<{ id: string; name: string }>>([])
 const loadingZones = ref(false)
 const cfHasAccount = ref(false)
 const cfHasTunnel = ref(false)
+const cfHasDefaultZone = ref(false)
 const metaLoaded = ref(false)
 const opened = ref(false)
 
@@ -268,6 +279,7 @@ async function loadCfMeta() {
     const cfg = await fetchCloudflareConfig()
     cfHasAccount.value = Boolean(cfg.accountId && cfg.apiToken)
     cfHasTunnel.value = Boolean(cfg.tunnelId && cfg.tunnelToken)
+    cfHasDefaultZone.value = Boolean(cfg.defaultZoneId)
   } catch {
     cfHasAccount.value = false
     cfHasTunnel.value = false
@@ -406,6 +418,7 @@ async function applyNow() {
 }
 
 function goToCloudflarePage() {
+  uiMode.setUiMode('advanced')
   void router.push('/cloudflare')
 }
 
