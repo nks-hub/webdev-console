@@ -1405,6 +1405,7 @@ if (autoStartEnabled)
     // A failed auto-start is otherwise only in the console log; the tracker
     // hands the reason to /api/services so the UI can show it.
     var autoStartTracker = app.Services.GetRequiredService<ServiceRunTracker>();
+    var autoStartLogger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("AutoStart");
     autoStartServicesAsync = async () =>
     {
     var startTasks = modules.Select(async module =>
@@ -1425,10 +1426,10 @@ if (autoStartEnabled)
             // Started already (plugin init brought it up, or it survived a daemon
             // restart). StartAsync would throw "already Running" and the tracker
             // would show a failure for a healthy service.
-            var before = await module.GetStatusAsync(CancellationToken.None);
-            if (before.State == ServiceState.Running)
+            var before = await autoStartTracker.StatusAsync(module, autoStartLogger);
+            if (before.State is ServiceState.Running or ServiceState.Starting)
             {
-                Console.WriteLine($"[auto-start] {module.ServiceId}: already running");
+                Console.WriteLine($"[auto-start] {module.ServiceId}: already {before.State}");
                 return;
             }
             // Mirror the plugin-start dual-guard (F51f): a module whose
