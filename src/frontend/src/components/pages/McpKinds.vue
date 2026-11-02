@@ -73,24 +73,24 @@
     />
 
     <el-table v-else :data="filteredKinds" stripe size="small" class="kinds-table">
-      <el-table-column prop="id" :label="t('mcpKinds.col.id')" min-width="230">
+      <el-table-column prop="id" :label="t('mcpKinds.col.id')" min-width="170">
         <template #default="{ row }">
           <code class="mono" style="white-space: nowrap">{{ row.id }}</code>
         </template>
       </el-table-column>
-      <el-table-column prop="label" :label="t('mcpKinds.col.label')" min-width="240">
+      <el-table-column prop="label" :label="t('mcpKinds.col.label')" min-width="180">
         <template #default="{ row }">
           {{ humanLabel(row) }}
         </template>
       </el-table-column>
-      <el-table-column prop="pluginId" :label="t('mcpKinds.col.plugin')" width="160">
+      <el-table-column prop="pluginId" :label="t('mcpKinds.col.plugin')" width="110">
         <template #default="{ row }">
           <el-tag :type="row.pluginId === 'core' ? 'info' : 'success'" size="small" effect="plain">
             {{ pluginLabel(row.pluginId) }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="danger" :label="t('mcpKinds.col.danger')" width="140">
+      <el-table-column prop="danger" :label="t('mcpKinds.col.danger')" width="110">
         <template #default="{ row }">
           <el-tag
             :type="row.danger === 'destructive' ? 'danger' : 'warning'"
@@ -101,7 +101,7 @@
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="intentCount" :label="t('mcpKinds.col.intentCount')" width="120" sortable>
+      <el-table-column prop="intentCount" :label="t('mcpKinds.col.intentCount')" width="100" sortable>
         <template #default="{ row }">
           <strong v-if="(row.intentCount ?? 0) > 0">{{ row.intentCount }}</strong>
           <span v-else class="muted">{{ t('mcpKinds.unused') }}</span>
@@ -114,7 +114,8 @@
            When the kind is also in always-confirm, render a 🔒 chip to
            make clear the operator has overridden auto-approval — those
            grants will NOT actually fire for this kind. -->
-      <el-table-column :label="t('mcpKinds.col.autoApproveGrants')" width="270">
+      <!-- Fixed right: in a 900 px window the table scrolls and this column stays in view. -->
+      <el-table-column :label="t('mcpKinds.col.autoApproveGrants')" width="230" fixed="right">
         <template #default="{ row }">
           <el-tooltip
             v-if="row.alwaysConfirm === true"
