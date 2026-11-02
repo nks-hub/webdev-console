@@ -31,10 +31,15 @@ test.describe('Shell services contract', () => {
     expect(store).toMatch(/needsAttention\(s\)/)
   })
 
-  test('problem badge shows a number with text and links to the problem filter', () => {
+  test('problem badge shows a number with text; the menu item still opens every service', () => {
     const source = read('components', 'layout', 'AppSidebar.vue')
     expect(source).toMatch(/class="nav-problems"/)
-    expect(source).toMatch(/filter: 'problems'/)
+    // Opening Services from the menu with the Problems filter showed only the broken
+    // service and looked like the rest had vanished. The status bar keeps that deep link.
+    expect(source).not.toMatch(/filter: 'problems'/)
+    expect(read('components', 'layout', 'AppStatusBar.vue')).toMatch(/filter: 'problems'/)
+    // keep-alive: a filter left from a deep link must reset when the page is shown again.
+    expect(read('components', 'pages', 'ServicesPage.vue')).toMatch(/onActivated\(\(\) => \{ filter\.value = queryFilter\(\) \}\)/)
     expect(source).toMatch(/aria-describedby/)
     // The old unlabeled red cross is gone.
     expect(source).not.toMatch(/CircleCloseFilled/)
