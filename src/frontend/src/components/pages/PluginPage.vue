@@ -49,7 +49,7 @@
       <div class="plugin-desc-card">
         <div class="plugin-desc-title">{{ $t('plugins.page.about') }}</div>
         <p class="plugin-desc-body">
-          {{ manifest.description || $t('plugins.page.noDescription') }}
+          {{ pluginDescription }}
         </p>
         <div class="plugin-desc-meta">
           <span v-if="manifest.author">
@@ -109,6 +109,7 @@
 
 <script setup lang="ts">
 import { computed, onActivated, ref, shallowRef, watch, markRaw, type Component } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { usePluginsStore } from '../../stores/plugins'
 import { useDaemonStore } from '../../stores/daemon'
@@ -162,11 +163,22 @@ const PLUGIN_CUSTOM_ROUTES: Record<string, string> = {
   'nks.wdc.postgresql': '/plugins/postgresql',
   'nks.wdc.mailpit': '/plugins/mailpit',
   'nks.wdc.redis': '/plugins/redis',
+  // Core pages that manage what these plugins provide.
+  'nks.wdc.ssl': '/ssl',
+  'nks.wdc.composer': '/composer',
+  'nks.wdc.hosts': '/hosts',
 }
 
+const { t, te } = useI18n()
 const manifest = computed(() =>
   pluginsStore.manifests.find(p => p.id === props.id)
 )
+// First-party plugin.json descriptions are English; use the translated text
+// the Plugins page already shows when one exists.
+const pluginDescription = computed(() => {
+  const key = `plugins.descriptions.${props.id.replace(/^nks\.wdc\./, '').replace(/\./g, '_')}`
+  return te(key) ? t(key) : (manifest.value?.description || t('plugins.page.noDescription'))
+})
 const daemonStore = useDaemonStore()
 // The daemon's fallback UI assumes every plugin owns a service. A plugin with
 // no service of that id (deploy, ssl) must not get status/log panels, which
