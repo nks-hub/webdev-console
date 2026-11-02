@@ -116,7 +116,7 @@
     "searchPlaceholder": "Hledat weby, služby a akce"
   },
   "autostart": {
-    "label": "Spouštět se spuštěním WDC"
+    "label": "Spustit spolu s WDC"
   },
   "login": {
     "subtitle": "Místní vývojová konzole",
@@ -760,7 +760,7 @@
         "startBtn": "Spustit Apache"
       },
       "recent": {
-        "title": "Nedávné weby",
+        "title": "Weby",
         "viewAll": "Zobrazit vše"
       },
       "empty": {
@@ -1635,6 +1635,7 @@
     "binaryMissing": "Chybí binárka, služba se zatím nespustí.",
     "enableAria": "Plugin {name} zapnutý",
     "disabledHint": "Vypnuto. Zapnete ho přepínačem nahoře.",
+    "platformUnsupported": "Na tomto systému nefunguje (jen {platforms})",
     "noneLoaded": "Nejsou načtené žádné pluginy",
     "byAuthor": "Autor: {author}",
     "noMatching": "Žádný plugin neodpovídá „{q}“",
@@ -2069,6 +2070,7 @@
     "bindUnavailable": "uloženo, teď nedostupné",
     "tunnelLabel": "Zpřístupnit web přes tunel Cloudflare",
     "tunnelNotConfigured": "Na stránce Cloudflare chybí tunel. Vyberte ho tam.",
+    "zoneNotConfigured": "Na stránce Cloudflare chybí výchozí zóna. Bez ní nejde tomuto webu nastavit adresu v tunelu.",
     "tunnelSiteNotConfigured": "Tunel je nastavený, ale tomuto webu chybí subdoména a zóna. Nastavíte je na stránce Cloudflare.",
     "cloudflareUnknown": "Nastavení Cloudflare se nepodařilo načíst. Zkontrolujte ho na stránce Cloudflare.",
     "openCloudflare": "Otevřít Cloudflare",

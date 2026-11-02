@@ -25,7 +25,7 @@
       <!-- Header: title + category + version + meta -->
       <div class="plugin-page-header">
         <div class="plugin-page-identity">
-          <h2 class="plugin-page-title">{{ manifest.name }}</h2>
+          <h2 class="plugin-page-title">{{ pluginName(manifest) }}</h2>
           <span class="plugin-page-id mono">{{ manifest.id }}</span>
         </div>
         <div class="plugin-page-badges">
@@ -43,6 +43,15 @@
         </div>
       </div>
 
+      <el-alert
+        v-if="platformWarning(manifest)"
+        type="warning"
+        :closable="false"
+        show-icon
+        :title="platformWarning(manifest)"
+        style="margin-bottom: var(--wdc-space-3)"
+      />
+
       <!-- Description card — always visible even when the plugin has no
            schema-driven UI. This is the primary UX for "what does this
            plugin do" without forcing users to hunt through docs. -->
@@ -54,7 +63,7 @@
         <div class="plugin-desc-meta">
           <span v-if="manifest.author">
             <span class="meta-label">{{ $t('plugins.page.author') }}</span>
-            <span class="meta-val">{{ manifest.author }}</span>
+            <span class="meta-val">{{ authorName(manifest.author) }}</span>
           </span>
           <span v-if="manifest.license">
             <span class="meta-label">{{ $t('plugins.page.license') }}</span>
@@ -115,6 +124,7 @@ import { usePluginsStore } from '../../stores/plugins'
 import { useDaemonStore } from '../../stores/daemon'
 import SchemaRenderer from '../../plugins/SchemaRenderer.vue'
 import PluginAutostartSwitch from '../shared/PluginAutostartSwitch.vue'
+import { usePluginText } from '../../utils/pluginText'
 
 const props = defineProps<{ id: string }>()
 
@@ -170,6 +180,7 @@ const PLUGIN_CUSTOM_ROUTES: Record<string, string> = {
 }
 
 const { t, te } = useI18n()
+const { pluginName, authorName, platformWarning } = usePluginText()
 const manifest = computed(() =>
   pluginsStore.manifests.find(p => p.id === props.id)
 )

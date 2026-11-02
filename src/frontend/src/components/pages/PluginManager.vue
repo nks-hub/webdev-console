@@ -188,6 +188,13 @@
           </div>
         </div>
 
+        <el-alert
+          v-if="platformWarning(plugin)"
+          type="warning"
+          :closable="false"
+          show-icon
+          :title="platformWarning(plugin)"
+        />
         <!-- A service plugin cannot start without its binary; say so and
              link to the module instead of offering auto-start. -->
         <div v-if="plugin.enabled && missingBinary(plugin)" class="pm-binary-missing">
@@ -251,6 +258,7 @@ import { ArrowRight } from '@element-plus/icons-vue'
 import { usePluginsStore } from '../../stores/plugins'
 import ServiceIcon from '../shared/ServiceIcon.vue'
 import { errorMessage } from '../../utils/errors'
+import { usePluginText } from '../../utils/pluginText'
 import {
   fetchMarketplace,
   installPluginFromMarketplace,
@@ -358,15 +366,7 @@ watch(activeTab, (tab) => {
   }
 })
 
-// First-party plugins ship English plugin.json descriptions; show the
-// translated one for known ids and the manifest text for anything else.
-function pluginName(p: { id: string; name: string }): string {
-  const key = `plugins.names.${p.id.replace(/^nks\.wdc\./, '').replace(/\./g, '_')}`
-  return te(key) ? t(key) : p.name
-}
-
-// The built-in catalogue says "NKS", plugin manifests say "NKS Hub".
-const authorName = (a: string): string => (a === 'NKS' ? 'NKS Hub' : a)
+const { pluginName, authorName, platformWarning } = usePluginText()
 
 function pluginDescription(p: { id: string; description?: string | null }): string {
   const key = `plugins.descriptions.${p.id.replace(/^nks\.wdc\./, '').replace(/\./g, '_')}`
@@ -604,11 +604,12 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: var(--wdc-space-2-5);
-  flex-wrap: wrap;
   min-width: 0;
 }
 
 .pm-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 1.05rem;
   font-weight: 600;
   color: var(--wdc-text);

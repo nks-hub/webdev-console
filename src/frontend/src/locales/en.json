@@ -116,7 +116,7 @@
     "searchPlaceholder": "Search sites, services and actions"
   },
   "autostart": {
-    "label": "Auto-start when WDC launches"
+    "label": "Start together with WDC"
   },
   "login": {
     "subtitle": "Local development console",
@@ -760,7 +760,7 @@
         "startBtn": "Start Apache"
       },
       "recent": {
-        "title": "Recent sites",
+        "title": "Sites",
         "viewAll": "View all"
       },
       "empty": {
@@ -1635,6 +1635,7 @@
     "binaryMissing": "Binary missing, the service will not start yet.",
     "enableAria": "Plugin {name} enabled",
     "disabledHint": "Off. Turn it on with the switch above.",
+    "platformUnsupported": "Does not work on this system ({platforms} only)",
     "noneLoaded": "No plugins loaded",
     "byAuthor": "By {author}",
     "noMatching": "No plugins matching ‘{q}’",
@@ -2069,6 +2070,7 @@
     "bindUnavailable": "saved, not available now",
     "tunnelLabel": "Make the site reachable through a Cloudflare tunnel",
     "tunnelNotConfigured": "The Cloudflare page has no tunnel yet. Choose one there.",
+    "zoneNotConfigured": "The Cloudflare page has no default zone. Without it this site cannot get a tunnel address.",
     "tunnelSiteNotConfigured": "The tunnel is set up, but this site has no subdomain and zone yet. Set them on the Cloudflare page.",
     "cloudflareUnknown": "The Cloudflare settings could not be read. Check them on the Cloudflare page.",
     "openCloudflare": "Open Cloudflare",
