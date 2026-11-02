@@ -952,4 +952,6 @@ html:not(.dark) .call-row .dur { color: var(--wdc-text-2); }
 .mono { font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace; }
 .muted { color: var(--el-text-color-secondary); }
 .time-range { margin-left: auto; }
+/* Light theme: danger red on its light tint was 4.46:1, just under AA. */
+html:not(.dark) .count-pill.destructive { color: oklch(40% 0.17 27); }
 </style>

@@ -949,4 +949,6 @@ async function autoVerifyToken() {
 .expose-tag {
   flex-shrink: 0;
 }
+/* Icons sat ~3 px above the text in the tab labels. */
+.tab-label { display: inline-flex; align-items: center; gap: var(--wdc-space-1); }
 </style>

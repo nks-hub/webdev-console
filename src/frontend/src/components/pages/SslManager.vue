@@ -467,7 +467,7 @@ onMounted(() => {
 .cert-card.cert-orphan .cert-lock,
 .cert-card.cert-orphan .cert-name,
 .cert-card.cert-orphan .cert-meta,
-.cert-card.cert-orphan .cert-paths { opacity: 0.7; }
+.cert-card.cert-orphan .cert-paths { color: var(--wdc-text-2); }
 .cert-badge { margin-left: var(--wdc-space-2); }
-.cert-fingerprint { font-size: 0.7rem; opacity: 0.7; word-break: break-all; }
+.cert-fingerprint { font-size: 0.7rem; color: var(--wdc-text-2); word-break: break-all; }
 </style>
