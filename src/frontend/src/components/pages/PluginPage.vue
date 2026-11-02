@@ -108,7 +108,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, shallowRef, watch, markRaw, type Component } from 'vue'
+import { computed, onActivated, ref, shallowRef, watch, markRaw, type Component } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePluginsStore } from '../../stores/plugins'
 import { useDaemonStore } from '../../stores/daemon'
@@ -194,13 +194,17 @@ watch(
 
 // Watch the id, not onMounted: the page is kept alive, so going from one
 // /plugin/<id> to another reuses the instance and would skip the redirect.
-watch(() => props.id, async (id) => {
-  // Redirect to custom page if this plugin has one
+function redirectIfCustom(id: string): boolean {
   const customRoute = PLUGIN_CUSTOM_ROUTES[id]
-  if (customRoute) {
-    void router.replace(customRoute)
-    return
-  }
+  if (customRoute) void router.replace(customRoute)
+  return Boolean(customRoute)
+}
+// A second visit to the same id reuses the cached instance and the id watch
+// below does not fire, so redirect on every activation too.
+onActivated(() => { redirectIfCustom(props.id) })
+
+watch(() => props.id, async (id) => {
+  if (redirectIfCustom(id)) return
 
   if (!manifest.value || !uiDef.value) {
     loading.value = true
