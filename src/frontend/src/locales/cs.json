@@ -4163,6 +4163,7 @@
     "servicesRunningOne": "Běží {running} z {total} služby",
     "servicesRunningMany": "Běží {running} z {total} služeb",
     "daemonUnavailable": "Démon neodpovídá",
+    "daemonStarting": "Démon se spouští…",
     "startDaemon": "Spustit démona",
     "openDashboard": "Otevřít Přehled",
     "openSites": "Otevřít Weby",

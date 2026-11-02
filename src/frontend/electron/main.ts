@@ -183,6 +183,8 @@ let win: BrowserWindow | null = null
 let tray: Tray | null = null
 let daemon: ChildProcess | null = null
 let daemonConnected = false
+// What the tray last rendered; can lag daemonConnected when /api/services failed.
+let trayShowsConnected = false
 let isQuitting = false
 // Tray label of the updater: a key of mainMenu.updaterState plus its parameters.
 let updaterStatus: { key: string; params: Record<string, string | number> } = { key: 'idle', params: {} }
@@ -512,7 +514,9 @@ async function healthTick() {
     healthFailures = 0
     monitorPausedUntil = 0
     autoRestartSuspended = false
-    if (!daemonConnected) {
+    // The tray is otherwise redrawn only on state changes; one whose last
+    // snapshot failed (daemon still busy starting) kept saying "unavailable".
+    if (!daemonConnected || !trayShowsConnected) {
       daemonConnected = true
       void updateTray()
     }
@@ -762,7 +766,8 @@ async function spawnDaemonInner() {
     }
   })
 
-  // Poll until port file appears
+  // Poll until port file appears. A cold start with many plugins and sites
+  // takes 15-20 s before Kestrel binds; the health monitor covers anything slower.
   let attempts = 0
   const check = setInterval(() => {
     if (existsSync(PORT_FILE)) {
@@ -770,7 +775,7 @@ async function spawnDaemonInner() {
       updateTray()
       clearInterval(check)
     }
-    if (++attempts > 30) clearInterval(check)
+    if (++attempts > 120) clearInterval(check)
   }, 500)
 }
 
@@ -1312,12 +1317,14 @@ async function updateTray() {
   const snapshot = await loadTraySnapshot()
   if (!activeTray || activeTray.isDestroyed()) return
   activeTray.setImage(createTrayIcon(trayIconColor(snapshot)))
+  trayShowsConnected = snapshot.connected
 
   const trayMenuLabel = menuText(snapshot.connected ? 'headerConnected' : 'headerOffline')
+  const starting = daemonSpawning || (daemon !== null && daemon.exitCode === null && !daemonConnected)
   const summary = snapshot.connected
     ? menuText(snapshot.services.length === 1 ? 'servicesRunningOne' : 'servicesRunningMany',
       { running: snapshot.running, total: snapshot.services.length })
-    : menuText('daemonUnavailable')
+    : menuText(starting ? 'daemonStarting' : 'daemonUnavailable')
   activeTray.setToolTip(menuText('tooltip', { summary }))
 
   const canStartDaemon = !snapshot.connected && !daemon && !daemonSpawning

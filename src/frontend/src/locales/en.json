@@ -4163,6 +4163,7 @@
     "servicesRunningOne": "{running} of {total} service running",
     "servicesRunningMany": "{running} of {total} services running",
     "daemonUnavailable": "Daemon unavailable",
+    "daemonStarting": "Daemon is starting…",
     "startDaemon": "Start daemon",
     "openDashboard": "Open Overview",
     "openSites": "Open Sites",
