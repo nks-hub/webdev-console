@@ -18,7 +18,7 @@
         />
       </el-form-item>
       <div class="sync-actions">
-        <el-button type="primary" size="small" :loading="loading" @click="emit('login')">
+        <el-button type="primary" size="small" :loading="loading" :disabled="!email || !password" @click="emit('login')">
           {{ t('common.login') }}
         </el-button>
         <el-button size="small" :loading="loading" @click="emit('register')">
