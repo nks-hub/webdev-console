@@ -213,16 +213,17 @@ const serviceCommands = computed<Command[]>(() => daemonStore.visibleServices.fl
     return [command('install', t('commandPalette.installService', { name }), Download,
       () => { void router.push({ path: '/binaries', query: { app: svc.binaryApp ?? svc.id } }) })]
   }
-  const out: Command[] = []
+  // Listed first so Enter on a bare service name opens its page instead of stopping it.
+  const manage = manageRouteOf(svc.id)
+  const out: Command[] = manage
+    ? [command('manage', t('commandPalette.manageService', { name }), Setting, () => { void router.push(manage) })]
+    : []
   if (state === 'stopped' || state === 'crashed') {
     out.push(command('start', t('commandPalette.startService', { name }), VideoPlay, () => { void runServiceAction(svc, 'start') }))
   } else if (isRunning(svc)) {
     out.push(command('stop', t('commandPalette.stopService', { name }), VideoPause, () => { void runServiceAction(svc, 'stop') }))
     out.push(command('restart', t('commandPalette.restartService', { name }), Refresh, () => { void runServiceAction(svc, 'restart') }))
   }
-  // The page that holds the service's settings, logs and versions.
-  const manage = manageRouteOf(svc.id)
-  if (manage) out.push(command('manage', t('commandPalette.manageService', { name }), Setting, () => { void router.push(manage) }))
   return out
 }))
 
