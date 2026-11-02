@@ -518,11 +518,11 @@
   "mcpActivity": {
     "stats": {
       "totalCalls": "Calls in 24 h",
-      "reads": "Reads",
-      "mutates": "Changes",
-      "destructives": "Irreversible",
-      "errors": "Errors",
-      "sessions": "Sessions",
+      "reads": "Reads in 24 h",
+      "mutates": "Changes in 24 h",
+      "destructives": "Irreversible in 24 h",
+      "errors": "Errors in 24 h",
+      "sessions": "Sessions in 24 h",
       "clickToFilter": "Click to filter by this level",
       "clickToClear": "Click to clear filter"
     },

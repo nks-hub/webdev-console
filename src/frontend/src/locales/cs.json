@@ -518,11 +518,11 @@
   "mcpActivity": {
     "stats": {
       "totalCalls": "Volání za 24 h",
-      "reads": "Čtení",
-      "mutates": "Změny",
-      "destructives": "Nevratné",
-      "errors": "Chyby",
-      "sessions": "Relace",
+      "reads": "Čtení za 24 h",
+      "mutates": "Změny za 24 h",
+      "destructives": "Nevratné za 24 h",
+      "errors": "Chyby za 24 h",
+      "sessions": "Relace za 24 h",
       "clickToFilter": "Kliknutím zobrazíte jen tuto úroveň",
       "clickToClear": "Kliknutím zrušíte filtr"
     },
