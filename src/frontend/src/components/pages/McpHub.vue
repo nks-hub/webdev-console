@@ -10,7 +10,12 @@
       </ul>
       <!-- One line is not a list. -->
       <p v-else class="hub-glossary hub-glossary--single">
-        <strong>{{ t('mcpHub.tabs.requests') }}</strong>: {{ t('mcpHub.glossary.requests') }}
+        <template v-if="activeTab === 'intents'">
+          <strong>{{ t('mcpHub.tabs.requests') }}</strong>: {{ t('mcpHub.glossary.requests') }}
+        </template>
+        <template v-else>
+          <strong>{{ t('mcpHub.tabs.activity') }}</strong>: {{ t('mcpHub.glossary.activity') }}
+        </template>
       </p>
     </div>
 
