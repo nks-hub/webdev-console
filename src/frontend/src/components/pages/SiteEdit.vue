@@ -448,6 +448,10 @@ watch(() => route.query.tab, () => {
   else if (route.query.tab === 'errors') logsView.value = 'errors'
   if (tab !== activeTab.value) activeTab.value = tab
 })
+// The page instance is reused between sites; the Logs view must not carry over.
+watch(() => route.params.domain, (domain) => {
+  if (domain) logsView.value = route.query.tab === 'access' ? 'access' : 'errors'
+})
 watch(activeTab, (tab) => {
   if (!route.params.domain || tab === queryTab()) return
   const query = { ...route.query }
