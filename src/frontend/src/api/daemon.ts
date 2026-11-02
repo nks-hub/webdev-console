@@ -1520,6 +1520,12 @@ function sseClose(): void {
 
 function sseConnect(): void {
   if (sseSource || sseHandlers.size === 0) return
+  // No token yet (daemon starting or restarting): an EventSource would only
+  // collect a 401. Try again later, same as after a dropped stream.
+  if (window.daemonApi && !daemonToken()) {
+    sseScheduleReconnect()
+    return
+  }
   try {
     sseSource = new EventSource(sseUrl())
   } catch {

@@ -26,6 +26,13 @@ function refreshConnectionInfo(): void {
   try {
     const info = ipcRenderer.sendSync('daemon-connection-info') as { port?: unknown; token?: unknown } | null
     if (!info) return
+    // Main reports port 0 while no port file exists (daemon restarting). The
+    // cached token belongs to the old daemon and only earns 401s from the new one.
+    if (info.port === 0) {
+      cachedPort = 0
+      cachedToken = ''
+      return
+    }
     // Port must be a valid 16-bit TCP port (1..65535).
     if (typeof info.port === 'number' && Number.isInteger(info.port) && info.port > 0 && info.port <= 65535) {
       cachedPort = info.port

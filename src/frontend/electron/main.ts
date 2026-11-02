@@ -2189,9 +2189,11 @@ ipcMain.on('daemon-connection-info', (event) => {
       return
     }
     const info = readPortFile()
+    // No port file = no daemon right now (stopped, restarting). Say so with port 0
+    // so the preload drops the old token instead of sending it to the next daemon.
     event.returnValue = info && Number.isInteger(info.port) && info.port > 0 && info.port <= 65535
       ? { port: info.port, token: info.token.trim() }
-      : null
+      : { port: 0, token: '' }
   } catch {
     event.returnValue = null
   }
