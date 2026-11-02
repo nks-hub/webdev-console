@@ -119,13 +119,19 @@ export class DaemonError extends Error {
 }
 
 const PRELOAD_REFRESH_MS = 300 // a bit over preload.ts REFRESH_MS
+const TOKEN_WAIT_MS = 20_000 // daemon cold start writes the port file in ~5-15 s
 
 async function json<T>(path: string, init?: RequestInit): Promise<T> {
   // In Electron the token comes only from the port file. Until the daemon has
-  // written it, a request would carry no token and come back 401, which the UI
-  // then showed as an auth error on every start. Fail like an unreachable daemon.
+  // written it, a request would carry no token and come back 401. A page that
+  // mounts during daemon start waits for the token instead of showing an error;
+  // only a daemon that stays down past TOKEN_WAIT_MS fails like an unreachable one.
   if (window.daemonApi && !daemonToken()) {
-    throw new TypeError('Failed to fetch: daemon not ready (no port file yet)')
+    const deadline = Date.now() + TOKEN_WAIT_MS
+    while (!daemonToken() && Date.now() < deadline) {
+      await new Promise(res => setTimeout(res, PRELOAD_REFRESH_MS))
+    }
+    if (!daemonToken()) throw new TypeError('Failed to fetch: daemon not ready (no port file yet)')
   }
   const send = () => fetch(`${daemonBaseUrl()}${path}`, {
     ...init,

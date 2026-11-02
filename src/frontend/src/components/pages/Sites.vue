@@ -280,6 +280,10 @@ onActivated(() => {
 onDeactivated(() => window.removeEventListener('keydown', onKeydown))
 onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 
+// App.vue reloads the list on every daemon (re)connect; a successful load clears an
+// error this page kept from a request made while the daemon was down.
+watch(() => sitesStore.sites, () => { loadError.value = false })
+
 // Re-scan when the set of sites or any document root changes.
 watch(
   () => sitesStore.sites.map(s => `${s.domain}::${s.documentRoot}`).join('|'),

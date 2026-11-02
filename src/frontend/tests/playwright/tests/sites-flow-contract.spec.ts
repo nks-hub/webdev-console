@@ -21,6 +21,10 @@ test.describe('Sites flow contract', () => {
     expect(source).toMatch(/const sitesSummary = computed\(\(\) => \{\s+if \(loadError\.value\) return ''/)
     expect(source).toContain('loadErrorStatus.value = e instanceof DaemonError ? e.status : 0')
     expect(source).toContain("$t('sites.list.loadFailedStatus', { status: loadErrorStatus })")
+    // A reload by App.vue after the daemon (re)connects clears the error kept from startup.
+    expect(source).toContain('watch(() => sitesStore.sites, () => { loadError.value = false })')
+    // Requests made while the daemon starts wait for its token instead of failing at once.
+    expect(read('api', 'daemon.ts')).toMatch(/while \(!daemonToken\(\) && Date\.now\(\) < deadline\)/)
     for (const locale of ['cs', 'en']) {
       const sites = (JSON.parse(read('locales', `${locale}.json`)) as { sites: { list: Record<string, string> } }).sites.list
       expect(sites.loadFailedStatus, locale).toContain('{status}')
