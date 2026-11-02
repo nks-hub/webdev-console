@@ -717,6 +717,8 @@ async function spawnDaemonInner() {
   log.info(`[daemon] spawned pid=${daemon.pid}`)
   daemonSpawnedAt = Date.now()
   connectedSinceSpawn = false
+  // A restart (exit 99) drew "unavailable" when the old child exited; say "starting" now.
+  void updateTray()
   const child = daemon
   expectedDaemonExit = false
   if (crashStableTimer) clearTimeout(crashStableTimer)
@@ -1117,7 +1119,12 @@ async function loadTraySnapshot(): Promise<TraySnapshot> {
   }
 
   try {
+    // Count only services of enabled plugins, like the Services page and the
+    // status bar do ("7 of 7"), not the 11 the daemon knows about.
+    const plugins = await daemonGet<Array<{ serviceId?: string | null; enabled?: boolean }>>('/api/plugins').catch(() => [])
+    const hidden = new Set(plugins.filter(p => p.serviceId && p.enabled === false).map(p => p.serviceId as string))
     const services = (await daemonGet<RawTrayService[]>('/api/services'))
+      .filter(s => !hidden.has(s.id))
       .map(normalizeTrayService)
       .sort((a, b) => serviceOrder(a.id) - serviceOrder(b.id) || a.label.localeCompare(b.label))
 
