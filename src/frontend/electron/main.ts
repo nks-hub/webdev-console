@@ -188,6 +188,8 @@ let trayShowsConnected = false
 let lastTraySummary = ''
 let probeFailuresInRow = 0
 let trayUpdatedAt = 0
+let trayHiddenServices = new Set<string>()
+let lastGoodTraySnapshot: TraySnapshot | null = null
 const TRAY_REFRESH_MS = 15_000
 let daemonSpawnedAt = 0
 let connectedSinceSpawn = false
@@ -540,6 +542,8 @@ async function healthTick() {
   // miss the 2 s budget) flipped the tray to "unavailable" every 15 s. Our own
   // child's death is reported by its exit event anyway.
   if (daemonConnected && ++probeFailuresInRow >= 2) {
+    probeFailuresInRow = 0
+    lastGoodTraySnapshot = null
     daemonConnected = false
     void updateTray()
   }
@@ -660,6 +664,7 @@ async function spawnDaemonInner() {
   if (await isDaemonAlive()) {
     console.log('[daemon] already running (port file exists and responds), reusing')
     daemonConnected = true
+    probeFailuresInRow = 0
     healthFailures = 0
     updateTray()
     return
@@ -742,6 +747,8 @@ async function spawnDaemonInner() {
     // only clear state that still belongs to this child.
     if (daemon !== child) return
     daemonConnected = false
+    probeFailuresInRow = 0
+    lastGoodTraySnapshot = null
     daemon = null
     if (crashStableTimer) { clearTimeout(crashStableTimer); crashStableTimer = null }
     const deliberate = expectedDaemonExit
@@ -793,6 +800,7 @@ async function spawnDaemonInner() {
   const check = setInterval(() => {
     if (existsSync(PORT_FILE)) {
       daemonConnected = true
+      probeFailuresInRow = 0
       updateTray()
       clearInterval(check)
     }
@@ -1121,14 +1129,19 @@ async function loadTraySnapshot(): Promise<TraySnapshot> {
   try {
     // Count only services of enabled plugins, like the Services page and the
     // status bar do ("7 of 7"), not the 11 the daemon knows about.
-    const plugins = await daemonGet<Array<{ serviceId?: string | null; enabled?: boolean }>>('/api/plugins').catch(() => [])
-    const hidden = new Set(plugins.filter(p => p.serviceId && p.enabled === false).map(p => p.serviceId as string))
+    // A failed or odd /api/plugins answer keeps the last known set, so the
+    // total does not jump between "3 of 11" and "3 of 7".
+    const plugins = await daemonGet<unknown>('/api/plugins').catch(() => null)
+    if (Array.isArray(plugins)) {
+      trayHiddenServices = new Set((plugins as Array<{ serviceId?: string | null; enabled?: boolean }>)
+        .filter(p => p.serviceId && p.enabled === false).map(p => p.serviceId as string))
+    }
     const services = (await daemonGet<RawTrayService[]>('/api/services'))
-      .filter(s => !hidden.has(s.id))
+      .filter(s => !trayHiddenServices.has(s.id))
       .map(normalizeTrayService)
       .sort((a, b) => serviceOrder(a.id) - serviceOrder(b.id) || a.label.localeCompare(b.label))
 
-    return {
+    lastGoodTraySnapshot = {
       connected: true,
       services,
       running: services.filter(s => s.running).length,
@@ -1137,8 +1150,12 @@ async function loadTraySnapshot(): Promise<TraySnapshot> {
       stopped: services.filter(s => s.state === 0).length,
       disabled: services.filter(s => s.disabled).length,
     }
+    return lastGoodTraySnapshot
   } catch (error) {
     log.warn('[tray] unable to load service snapshot:', error instanceof Error ? error.message : String(error))
+    // The health probe says the daemon is up; a slow /api/services (busy
+    // re-applying sites) must not grey the tray out. Keep the last good view.
+    if (lastGoodTraySnapshot) return lastGoodTraySnapshot
     return { connected: false, services: [], running: 0, failed: 0, transitioning: 0, stopped: 0, disabled: 0 }
   }
 }
@@ -1340,6 +1357,8 @@ async function updateTray() {
   if (!tray || tray.isDestroyed()) return
 
   const activeTray = tray
+  // Stamp first: a snapshot slower than the 5 s tick must not start a second one.
+  trayUpdatedAt = Date.now()
   const snapshot = await loadTraySnapshot()
   if (!activeTray || activeTray.isDestroyed()) return
   activeTray.setImage(createTrayIcon(trayIconColor(snapshot)))
