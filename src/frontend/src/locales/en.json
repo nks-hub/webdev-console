@@ -135,8 +135,8 @@
     "emailPlaceholder": "you{'@'}example.com",
     "passwordAgain": "Repeat password",
     "createAccount": "Create account",
-    "haveAccount": "I have an account",
-    "noAccount": "I have no account",
+    "haveAccount": "Sign in",
+    "noAccount": "Register",
     "errors": {
       "desktopOnly": "Signing in with an NKS account only works in the desktop app.",
       "emptyToken": "Sign-in ended without an access token. Please try again.",
@@ -1639,6 +1639,11 @@
     "byAuthor": "By {author}",
     "noMatching": "No plugins matching ‘{q}’",
     "marketplaceBuiltIn": "The online plugin catalog is not available right now. Showing the plugins that ship with WDC.",
+    "names": {
+      "php": "PHP (multi-version)",
+      "hosts": "Hosts file manager",
+      "deploy_localrsync": "Local rsync deploy"
+    },
     "descriptions": {
       "apache": "Apache 2.4 web server. Runs httpd, creates virtual hosts for your sites and checks the configuration.",
       "caddy": "Caddy web server, an alternative to Apache with automatic HTTPS. Creates a Caddyfile for your sites.",
@@ -2941,7 +2946,7 @@
     },
     "sso": {
       "title": "Sign in with SSO",
-      "signIn": "Sign in with SSO",
+      "signIn": "Sign in with your NKS account",
       "signOut": "Sign out",
       "signedIn": "Signed in",
       "signedInAt": "Signed in to {url}.",

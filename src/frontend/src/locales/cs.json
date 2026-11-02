@@ -135,8 +135,8 @@
     "emailPlaceholder": "vas{'@'}email.cz",
     "passwordAgain": "Heslo znovu",
     "createAccount": "Vytvořit účet",
-    "haveAccount": "Už mám účet",
-    "noAccount": "Nemám účet",
+    "haveAccount": "Přihlásit se",
+    "noAccount": "Registrovat",
     "errors": {
       "desktopOnly": "Přihlášení účtem NKS funguje jen v desktopové aplikaci.",
       "emptyToken": "Přihlášení skončilo bez přístupového tokenu. Zkuste to znovu.",
@@ -1639,6 +1639,11 @@
     "byAuthor": "Autor: {author}",
     "noMatching": "Žádný plugin neodpovídá „{q}“",
     "marketplaceBuiltIn": "Online katalog pluginů teď není dostupný. Zobrazují se pluginy dodané s WDC.",
+    "names": {
+      "php": "PHP (více verzí)",
+      "hosts": "Správce souboru hosts",
+      "deploy_localrsync": "Lokální nasazení přes rsync"
+    },
     "descriptions": {
       "apache": "Webový server Apache 2.4. Spouští httpd, vytváří virtuální hosty pro weby a kontroluje konfiguraci.",
       "caddy": "Webový server Caddy, alternativa k Apache s automatickým HTTPS. Pro weby vytváří Caddyfile.",
@@ -2941,7 +2946,7 @@
     },
     "sso": {
       "title": "Přihlášení přes SSO",
-      "signIn": "Přihlásit přes SSO",
+      "signIn": "Přihlásit se účtem NKS",
       "signOut": "Odhlásit",
       "signedIn": "Přihlášeno",
       "signedInAt": "Přihlášeno k {url}.",
