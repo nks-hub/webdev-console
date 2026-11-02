@@ -80,6 +80,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { formatBytes as formatBytesLocale } from '../../../utils/format'
 import { Refresh, Search, Loading, CaretRight, Coin, Grid } from '@element-plus/icons-vue'
 import type { DatabaseSummary, TableSummary } from './types'
 
@@ -98,7 +99,7 @@ const emit = defineEmits<{
   (e: 'select', payload: { db: string; table?: string }): void
 }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const filter = ref('')
 const expanded = ref(new Set<string>())
@@ -120,10 +121,7 @@ function toggleDb(name: string) {
 }
 
 function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
-  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
+  return formatBytesLocale(bytes, locale.value)
 }
 </script>
 

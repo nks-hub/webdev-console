@@ -51,6 +51,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { formatBytes as formatBytesLocale } from '../../utils/format'
 import { Refresh } from '@element-plus/icons-vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -69,7 +70,7 @@ use([CanvasRenderer, LineChart, GridComponent, TooltipComponent, DataZoomCompone
  * on demand ("Refresh"); there is no background polling.
  */
 const props = defineProps<{ domain: string; active: boolean }>()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const palette = useChartPalette()
 
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -125,9 +126,7 @@ watch(() => props.domain, () => { data.value = null; if (props.active) void load
 onMounted(() => { if (props.active) void load() })
 
 function formatBytes(v: number): string {
-  if (v < 1024) return `${Math.round(v)} B`
-  if (v < 1024 ** 2) return `${(v / 1024).toFixed(0)} KB`
-  return `${(v / 1024 ** 2).toFixed(1)} MB`
+  return formatBytesLocale(v, locale.value)
 }
 
 const chartOption = computed(() => {

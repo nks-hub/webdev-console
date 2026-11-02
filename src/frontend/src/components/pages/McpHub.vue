@@ -64,7 +64,7 @@
         </span>
         <span v-activate class="stat clickable-stat" @click="onActiveClick">
           <strong>{{ grantsStats.active }}</strong>
-          <span class="muted">{{ t('mcpHub.stats.active') }}</span>
+          <span class="muted">{{ t('mcpHub.stats.active', grantsStats.active) }}</span>
         </span>
         <span
           v-if="grantsStats.deadweight > 0"
@@ -75,11 +75,11 @@
         >
           <el-icon aria-hidden="true"><Warning /></el-icon>
           <strong>{{ grantsStats.deadweight }}</strong>
-          <span class="muted">{{ t('mcpHub.stats.deadweight') }}</span>
+          <span class="muted">{{ t('mcpHub.stats.deadweight', grantsStats.deadweight) }}</span>
         </span>
         <span v-activate class="stat clickable-stat" @click="onTotalMatchesClick">
           <strong>{{ grantsStats.totalMatches }}</strong>
-          <span class="muted">{{ t('mcpHub.stats.totalMatches') }}</span>
+          <span class="muted">{{ t('mcpHub.stats.totalMatches', grantsStats.totalMatches) }}</span>
         </span>
         <span v-if="grantsStats.lastMatchAt" class="stat">
           <span class="muted">{{ t('mcpHub.stats.lastMatch') }}</span>

@@ -84,8 +84,9 @@ import { browseFolder } from '../../api/daemon'
 import type { FsBrowseResponse, FsEntry } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import { useI18n } from 'vue-i18n'
+import { formatBytes as formatBytesLocale } from '../../utils/format'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const props = defineProps<{
   modelValue: boolean
@@ -137,9 +138,7 @@ function confirm() {
 }
 
 function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+  return formatBytesLocale(bytes, locale.value)
 }
 
 // Initial load + reload when dialog opens

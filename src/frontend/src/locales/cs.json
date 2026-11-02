@@ -233,7 +233,6 @@
       "overdue": "Poslední záloha je starší než plánovaný interval ({h} h). Spusťte zálohu ručně.",
       "inHours": "za {h} h {m} min",
       "inMinutes": "za {m} min",
-      "ago": "před {d}",
       "justNow": "právě teď",
       "backupNow": "Zálohovat nyní",
       "openFolder": "Otevřít složku záloh",
@@ -407,10 +406,10 @@
       "catalog": "Schvalované akce"
     },
     "stats": {
-      "active": "aktivní pravidla",
-      "deadweight": "nepoužitá pravidla",
+      "active": "aktivní pravidlo | aktivní pravidla | aktivních pravidel",
+      "deadweight": "nepoužité pravidlo | nepoužitá pravidla | nepoužitých pravidel",
       "deadweightHint": "Pravidla starší než 7 dní, která AI ještě nepoužila. Nejspíš je můžete odvolat.",
-      "totalMatches": "žádostí schváleno pravidly",
+      "totalMatches": "žádost schválená pravidlem | žádosti schválené pravidly | žádostí schválených pravidly",
       "lastMatch": "naposledy:",
       "alwaysConfirm": "akcí se vždy ptá",
       "justNow": "právě teď",
@@ -851,8 +850,8 @@
           "mysql": "Port MySQL",
           "redis": "Port Redis",
           "postgresql": "Port PostgreSQL",
-          "mailpitSmtp": "Mailpit SMTP",
-          "mailpitHttp": "Mailpit HTTP",
+          "mailpitSmtp": "Port Mailpit SMTP",
+          "mailpitHttp": "Port Mailpit HTTP",
           "phpFpmBase": "Základní port PHP-FPM"
         },
         "general": {
@@ -1019,10 +1018,10 @@
       "bytes": "Velikost",
       "userAgent": "UA",
       "empty": "Žádné záznamy pro zvolené období",
-      "lines": "Záznamů",
+      "lines": "Řádků",
       "since": "Od",
       "refresh": "Obnovit",
-      "autoRefresh": "Automaticky",
+      "autoRefresh": "Automaticky obnovovat",
       "ipTooltip": "Skutečná IP klienta (přednost má CF-Connecting-IP nebo X-Forwarded-For, jinak adresa spojení)"
     },
     "composer": {
@@ -1275,7 +1274,8 @@
       "startMysql": "Spustit MySQL",
       "mysqlStarting": "MySQL se spouští, za chvíli půjde databázi vytvořit.",
       "creating": "Web se vytváří a Apache se restartuje, může to trvat několik sekund.",
-      "tunnelNotReady": "Tunel zatím není nastavený. Tunel a výchozí zónu zvolíte na stránce Cloudflare."
+      "tunnelNotReady": "Na stránce Cloudflare chybí tunel. Vyberte ho tam.",
+      "zoneNotReady": "Na stránce Cloudflare chybí výchozí zóna. Nový web z ní vezme doménu pro tunel."
     }
   },
   "uiMode": {
@@ -2062,7 +2062,8 @@
     "portsHint": "Výchozí jsou porty 80 pro HTTP a 443 pro HTTPS.",
     "bindUnavailable": "uloženo, teď nedostupné",
     "tunnelLabel": "Zpřístupnit web přes tunel Cloudflare",
-    "tunnelNotConfigured": "Tunel zatím není nastavený. Zónu a subdoménu zvolíte na stránce Cloudflare.",
+    "tunnelNotConfigured": "Na stránce Cloudflare chybí tunel. Vyberte ho tam.",
+    "tunnelSiteNotConfigured": "Tunel běží, ale tomuto webu chybí subdoména a zóna. Nastavíte je na stránce Cloudflare.",
     "openCloudflare": "Otevřít Cloudflare",
     "frameworkPlaceholder": "wordpress, laravel, nextjs…",
     "autoDetect": "Rozpoznat",
@@ -3103,8 +3104,8 @@
       "httpsPort": "Port HTTPS",
       "mysqlPort": "Port MySQL",
       "redisPort": "Port Redis",
-      "mailpitSmtp": "Mailpit SMTP",
-      "mailpitHttp": "Mailpit HTTP",
+      "mailpitSmtp": "Port Mailpit SMTP",
+      "mailpitHttp": "Port Mailpit HTTP",
       "phpFpmBase": "Základní port PHP-FPM",
       "phpFpmFormula": "Port každé verze PHP se spočítá jako základ + hlavní verze × 10 + vedlejší verze. Například základ 9000 a PHP 8.4 dají port 9084. Platí jen pro PHP-FPM na macOS a Linuxu. Ve Windows spouští Apache PHP přes mod_fcgid a weby tento port nepoužívají.",
       "postgresqlPort": "Port PostgreSQL",
@@ -3179,7 +3180,7 @@
       "revokedRetentionHint": "Zrušená pravidla zůstanou v historii tolik dní. 0 = smazat hned po zrušení.",
       "toolCallRetentionLabel": "Uchovávat historii volání",
       "toolCallRetentionHint": "Záznamy v Aktivitě (co AI volala) se po tolika dnech smažou. Delší historie zabírá víc místa na disku. Výchozí je 30 dní.",
-      "daysSuffix": "dní"
+      "daysSuffix": "den | dny | dní"
     },
     "deploySubsystem": {
       "title": "Deploy (nasazení na server)",

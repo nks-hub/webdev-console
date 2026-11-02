@@ -34,6 +34,7 @@
           :aria-label="$t('sites.access.since')"
           clearable
           :placeholder="$t('sites.access.since')"
+          :format="dateFormat"
           @change="fetchLogs"
         />
       </div>
@@ -189,13 +190,16 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
+import { formatBytes as formatBytesLocale } from '../../utils/format'
 import { getAccessLogs } from '../../api/daemon'
 import type { AccessLogEntry } from '../../api/types'
 import { errorMessage } from '../../utils/errors'
 
 const props = defineProps<{ domain: string }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
+
+const dateFormat = computed(() => (locale.value === 'cs' ? 'D. M. YYYY HH:mm:ss' : 'YYYY-MM-DD HH:mm:ss'))
 
 const LINE_OPTIONS = [50, 100, 200, 500, 1000] as const
 
@@ -248,7 +252,7 @@ function onAutoRefreshToggle(on: boolean | string | number): void {
 
 function formatTimestamp(iso: string): string {
   try {
-    return new Date(iso).toLocaleString()
+    return new Date(iso).toLocaleString(locale.value)
   } catch {
     return iso
   }
@@ -274,11 +278,7 @@ function statusType(status: number): '' | 'success' | 'warning' | 'danger' | 'in
 }
 
 function formatBytes(bytes: number): string {
-  if (bytes <= 0) return '0 B'
-  if (bytes < 1024) return `${bytes} B`
-  const kb = bytes / 1024
-  if (kb < 1024) return `${kb.toFixed(1)} KB`
-  return `${(kb / 1024).toFixed(1)} MB`
+  return formatBytesLocale(bytes, locale.value)
 }
 
 onMounted(() => void fetchLogs())
@@ -305,6 +305,11 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: var(--wdc-space-1-5);
+}
+
+/* The small picker's wrapper is 32 px but its outer box stays 24 px, which pushed it below its label. */
+.toolbar-group :deep(.el-date-editor.el-input) {
+  height: 32px;
 }
 
 .toolbar-label {

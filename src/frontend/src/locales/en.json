@@ -233,7 +233,6 @@
       "overdue": "The latest backup is older than the scheduled interval ({h} h). Run a backup manually.",
       "inHours": "in {h} h {m} min",
       "inMinutes": "in {m} min",
-      "ago": "{d} ago",
       "justNow": "just now",
       "backupNow": "Back up now",
       "openFolder": "Open backup folder",
@@ -407,8 +406,8 @@
       "catalog": "Actions to approve"
     },
     "stats": {
-      "active": "active rules",
-      "deadweight": "unused rules",
+      "active": "active rule | active rules",
+      "deadweight": "unused rule | unused rules",
       "deadweightHint": "Rules older than 7 days that no AI has used yet. You can probably revoke them.",
       "totalMatches": "approved by rules",
       "lastMatch": "last:",
@@ -851,8 +850,8 @@
           "mysql": "MySQL port",
           "redis": "Redis port",
           "postgresql": "PostgreSQL port",
-          "mailpitSmtp": "Mailpit SMTP",
-          "mailpitHttp": "Mailpit HTTP",
+          "mailpitSmtp": "Mailpit SMTP Port",
+          "mailpitHttp": "Mailpit HTTP Port",
           "phpFpmBase": "PHP-FPM base port"
         },
         "general": {
@@ -1022,7 +1021,7 @@
       "lines": "Lines",
       "since": "Since",
       "refresh": "Refresh",
-      "autoRefresh": "Auto",
+      "autoRefresh": "Auto-refresh",
       "ipTooltip": "Real client IP (prefers CF-Connecting-IP / XFF, falls back to socket)"
     },
     "composer": {
@@ -1275,7 +1274,8 @@
       "startMysql": "Start MySQL",
       "mysqlStarting": "MySQL is starting; you can create the database in a moment.",
       "creating": "The site is being created and Apache restarts, which can take a few seconds.",
-      "tunnelNotReady": "The tunnel is not set up yet. Choose the tunnel and the default zone on the Cloudflare page."
+      "tunnelNotReady": "The Cloudflare page has no tunnel yet. Choose one there.",
+      "zoneNotReady": "The Cloudflare page has no default zone yet. A new site takes its tunnel domain from it."
     }
   },
   "uiMode": {
@@ -2062,7 +2062,8 @@
     "portsHint": "The defaults are 80 for HTTP and 443 for HTTPS.",
     "bindUnavailable": "saved, not available now",
     "tunnelLabel": "Make the site reachable through a Cloudflare tunnel",
-    "tunnelNotConfigured": "The tunnel is not set up yet. Choose the zone and subdomain on the Cloudflare page.",
+    "tunnelNotConfigured": "The Cloudflare page has no tunnel yet. Choose one there.",
+    "tunnelSiteNotConfigured": "The tunnel runs, but this site has no subdomain and zone yet. Set them on the Cloudflare page.",
     "openCloudflare": "Open Cloudflare",
     "frameworkPlaceholder": "wordpress, laravel, nextjs…",
     "autoDetect": "Detect",
@@ -3103,8 +3104,8 @@
       "httpsPort": "HTTPS Port",
       "mysqlPort": "MySQL Port",
       "redisPort": "Redis Port",
-      "mailpitSmtp": "Mailpit SMTP",
-      "mailpitHttp": "Mailpit HTTP",
+      "mailpitSmtp": "Mailpit SMTP Port",
+      "mailpitHttp": "Mailpit HTTP Port",
       "phpFpmBase": "PHP-FPM base port",
       "phpFpmFormula": "Each PHP version listens on base + major × 10 + minor, so base 9000 and PHP 8.4 give port 9084. Only PHP-FPM on macOS and Linux uses it. On Windows, Apache runs PHP through mod_fcgid and sites do not use this port.",
       "postgresqlPort": "PostgreSQL Port",
@@ -3179,7 +3180,7 @@
       "revokedRetentionHint": "Revoked rules stay in the history for this many days. 0 = delete right after revoking.",
       "toolCallRetentionLabel": "Keep the call history for",
       "toolCallRetentionHint": "Activity entries (what the AI called) are deleted after this many days. Longer history takes more disk space. The default is 30 days.",
-      "daysSuffix": "days"
+      "daysSuffix": "day | days"
     },
     "deploySubsystem": {
       "title": "Deploys",
