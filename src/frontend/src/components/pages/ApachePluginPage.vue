@@ -26,7 +26,7 @@
           </el-table-column>
           <el-table-column :label="t('common.actions')" width="180" align="center">
             <template #default="{ row }">
-              <el-button size="small" text @click="openUrl(siteUrl(row))">{{ t('common.open') }}</el-button>
+              <el-button size="small" text :disabled="row.enabled === false" @click="openUrl(siteUrl(row))">{{ t('common.open') }}</el-button>
               <el-button size="small" text @click="router.push(`/sites/${row.domain}/edit`)">
                 {{ t('common.edit') }}
               </el-button>
