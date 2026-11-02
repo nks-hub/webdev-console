@@ -108,7 +108,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, shallowRef, watch, markRaw, type Component } from 'vue'
+import { computed, ref, shallowRef, watch, markRaw, type Component } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePluginsStore } from '../../stores/plugins'
 import { useDaemonStore } from '../../stores/daemon'
@@ -192,9 +192,11 @@ watch(
   { immediate: true },
 )
 
-onMounted(async () => {
+// Watch the id, not onMounted: the page is kept alive, so going from one
+// /plugin/<id> to another reuses the instance and would skip the redirect.
+watch(() => props.id, async (id) => {
   // Redirect to custom page if this plugin has one
-  const customRoute = PLUGIN_CUSTOM_ROUTES[props.id]
+  const customRoute = PLUGIN_CUSTOM_ROUTES[id]
   if (customRoute) {
     void router.replace(customRoute)
     return
@@ -211,7 +213,7 @@ onMounted(async () => {
       loading.value = false
     }
   }
-})
+}, { immediate: true })
 </script>
 
 <style scoped>
