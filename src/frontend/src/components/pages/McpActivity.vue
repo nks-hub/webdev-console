@@ -946,6 +946,9 @@ onBeforeUnmount(() => {
 }
 .dur, .at, .dur-range { font-size: 11px; }
 .activity-pagination { display: flex; justify-content: flex-end; }
+/* Light theme: small text on the pink destructive row needs >= 4.5:1. */
+html:not(.dark) .call-row.danger-destructive .el-tag--danger { color: oklch(40% 0.17 27); }
+html:not(.dark) .call-row .dur { color: var(--wdc-text-2); }
 .mono { font-family: ui-monospace, 'JetBrains Mono', Consolas, monospace; }
 .muted { color: var(--el-text-color-secondary); }
 .time-range { margin-left: auto; }

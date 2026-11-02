@@ -1129,9 +1129,21 @@ html.dark .nav-item-tunnel .nav-label {
   color: var(--wdc-text) !important;
 }
 
+/* Off state: white track, 3:1+ outline and knob (the grey card used to swallow it). */
+html:not(.dark) .el-switch:not(.is-checked) .el-switch__core {
+  background: var(--wdc-surface) !important;
+  border-color: oklch(58% 0.02 255) !important;
+  box-shadow: inset 0 0 0 1px oklch(58% 0.02 255) !important;
+}
+
 html:not(.dark) .el-switch__core .el-switch__action {
   background: #ffffff !important;
   box-shadow: 0 1px 4px rgba(12, 16, 32, 0.26) !important;
+}
+
+html:not(.dark) .el-switch:not(.is-checked) .el-switch__core .el-switch__action {
+  background: oklch(58% 0.02 255) !important;
+  box-shadow: none !important;
 }
 
 html:not(.dark) .el-switch.is-checked .el-switch__core .el-switch__action {
@@ -1261,7 +1273,7 @@ html:not(.dark) .el-switch.is-checked .el-switch__core .el-switch__action {
 }
 
 .el-input-number .el-input__wrapper {
-  background: var(--wdc-surface-2) !important;
+  background: var(--wdc-surface) !important;
 }
 
 /* Scrollbar */
@@ -1407,6 +1419,10 @@ html:not(.dark) ::-webkit-scrollbar-thumb:hover {
 }
 
 /* Czech page-size option ("50 na str.") is clipped at Element's default 100px. */
-.el-pagination .el-select .el-select__wrapper {
+.el-pagination {
+  flex-wrap: wrap;
+  row-gap: var(--wdc-space-2);
+}
+.el-pagination .el-pagination__sizes .el-select {
   min-width: 128px;
 }

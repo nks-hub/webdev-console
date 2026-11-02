@@ -14,7 +14,7 @@
       :href="`https://${site.cloudflare.subdomain}.${site.cloudflare.zoneName}`"
       target="_blank"
       @click.stop
-      :title="cloudflaredRunning ? $t('sites.list.tunnelOpen') : $t('sites.list.tunnelOfflineTitle')"
+      :title="`${site.cloudflare.subdomain}.${site.cloudflare.zoneName} - ${cloudflaredRunning ? $t('sites.list.tunnelOpen') : $t('sites.list.tunnelOfflineTitle')}`"
     >{{ site.cloudflare.subdomain }}.{{ site.cloudflare.zoneName }}</a>
     <span v-if="!cloudflaredRunning" class="tunnel-badge-offline">{{ $t('sites.list.tunnelOffline') }}</span>
   </div>
@@ -45,10 +45,18 @@ const cloudflaredRunning = computed(() =>
   line-height: 18px;
   padding: var(--wdc-space-0-5) var(--wdc-space-2);
   background: rgba(243, 128, 32, 0.12);
-  color: var(--wdc-brand-cloudflare);
+  color: var(--wdc-tunnel-text);
   border: 1px solid rgba(243, 128, 32, 0.3);
   border-radius: var(--wdc-radius-md);
   font-size: 0.72rem;
+  max-width: 100%;
+  min-width: 0;
+  white-space: nowrap;
+}
+.col-tunnel a {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .col-tunnel-offline { opacity: 0.55; }
 .col-tunnel a { color: inherit; text-decoration: none; }
