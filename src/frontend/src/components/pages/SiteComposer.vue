@@ -531,12 +531,13 @@ async function loadOutdated(): Promise<void> {
     // latest differs from installed (ignoring a leading "v") are outdated.
     const norm = (v?: string | null) => (v ?? '').replace(/^v/i, '')
     for (const entry of result.installed) {
-      if (entry.name && entry.latest) {
+      // Offline, Composer reports no "latest": still show the installed version.
+      if (entry.name) {
         map[entry.name] = {
           version: entry.version ?? undefined,
-          latest: entry.latest,
+          latest: entry.latest ?? '',
           status: entry.latestStatus ?? '',
-          outdated: entry.latestStatus !== 'up-to-date' && norm(entry.version) !== norm(entry.latest),
+          outdated: !!entry.latest && entry.latestStatus !== 'up-to-date' && norm(entry.version) !== norm(entry.latest),
         }
       }
     }
