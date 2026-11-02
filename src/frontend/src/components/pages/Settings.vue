@@ -2918,7 +2918,7 @@ async function save() {
   padding: var(--wdc-space-5) 0;
 }
 
-/* Columns, not a grid: grid rows tied short panels to the height of tall neighbours and left holes. */
+/* Two independent column stacks: a plain grid tied short panels to tall neighbours and left holes. */
 .simple-settings-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

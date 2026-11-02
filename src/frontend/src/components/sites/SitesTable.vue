@@ -86,7 +86,7 @@
                 <span v-else class="web-url is-off">{{ row.url }}</span>
               </div>
               <div class="web-folder" :title="displayPath(row.site.documentRoot)">
-                <span class="narrow-runtime">{{ row.runtime.label }} · </span>{{ displayPath(row.site.documentRoot) }}
+                <span class="narrow-runtime" :class="{ 'is-missing': row.runtime.missing }" :title="row.runtime.title">{{ row.runtime.label }}<template v-if="row.runtime.missing"> – {{ $t('sites.list.missing') }}</template> · </span>{{ displayPath(row.site.documentRoot) }}
               </div>
             </td>
 
@@ -431,7 +431,8 @@ a.web-url:hover { color: var(--wdc-accent-ink); text-decoration: underline; text
 }
 
 .runtime { display: inline-flex; align-items: center; gap: var(--wdc-space-1); color: var(--wdc-text); font-size: 0.87rem; }
-.runtime.is-missing { color: var(--wdc-status-starting); }
+.runtime.is-missing,
+.narrow-runtime.is-missing { color: var(--wdc-status-starting); }
 .folder-path {
   display: block;
   max-width: 240px;

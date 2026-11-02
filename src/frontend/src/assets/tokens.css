@@ -1418,11 +1418,11 @@ html:not(.dark) ::-webkit-scrollbar-thumb:hover {
   color: var(--wdc-accent);
 }
 
-/* Czech page-size option ("50 na str.") is clipped at Element's default 100px. */
+/* The Czech page-size option ("50 na stránku") is clipped at Element's default 100px. */
 .el-pagination {
   flex-wrap: wrap;
   row-gap: var(--wdc-space-2);
 }
 .el-pagination .el-pagination__sizes .el-select {
-  min-width: 128px;
+  min-width: 150px; /* fits "100 na stránku" */
 }
