@@ -1277,7 +1277,7 @@
       "mysqlStarting": "MySQL is starting; you can create the database in a moment.",
       "creating": "The site is being created and Apache restarts, which can take a few seconds.",
       "tunnelNotReady": "The Cloudflare page has no tunnel yet. Choose one there.",
-      "zoneNotReady": "The Cloudflare page has no default zone yet. A new site takes its tunnel domain from it."
+      "zoneNotReady": "The Cloudflare page has no default zone, so a new site cannot get a tunnel address yet. Set one on the Cloudflare page."
     }
   },
   "uiMode": {
