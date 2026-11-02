@@ -464,7 +464,10 @@ onMounted(() => {
    quick glance across many certs highlights what needs attention. */
 .cert-card.cert-expiring { border-left: 3px solid var(--wdc-warning); }
 .cert-card.cert-expired { border-left: 3px solid var(--wdc-status-error); }
-.cert-card.cert-orphan { opacity: 0.7; }
+.cert-card.cert-orphan .cert-lock,
+.cert-card.cert-orphan .cert-name,
+.cert-card.cert-orphan .cert-meta,
+.cert-card.cert-orphan .cert-paths { opacity: 0.7; }
 .cert-badge { margin-left: var(--wdc-space-2); }
 .cert-fingerprint { font-size: 0.7rem; opacity: 0.7; word-break: break-all; }
 </style>
