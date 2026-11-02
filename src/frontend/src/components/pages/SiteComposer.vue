@@ -256,6 +256,7 @@
                 type="warning"
                 size="small"
               >{{ $t('sites.composer.statusOutdated') }}</el-tag>
+              <span v-else-if="!versionMap[row.name]?.version" class="mono">—</span>
               <el-tag
                 v-else
                 type="success"
