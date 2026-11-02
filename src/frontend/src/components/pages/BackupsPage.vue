@@ -37,7 +37,7 @@
               </div>
               <div class="stat-card" :class="{ 'stat-card--warn': overdue }">
                 <div class="stat-label">{{ $t('backupsPage.overview.next') }}</div>
-                <div class="stat-value">{{ loaded ? nextScheduledLabel : '—' }}</div>
+                <div class="stat-value">{{ loaded && settingsLoaded ? nextScheduledLabel : '—' }}</div>
               </div>
             </div>
 
