@@ -951,6 +951,7 @@ watch(() => route.query.tab, value => {
 .database-loading { padding: 18px 0; }
 .database-workspace { display: grid; grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); gap: 16px; align-items: start; }
 .database-list { display: flex; flex-direction: column; gap: 6px; max-height: min(560px, 60vh); overflow: auto; padding-right: 4px; }
+@media (max-width: 960px) { .database-list { max-height: none; overflow: visible; } }
 .database-list-item { width: 100%; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; border: 1px solid var(--wdc-border); background: var(--wdc-surface); color: var(--wdc-text); border-radius: var(--wdc-radius-sm); padding: 10px 14px; text-align: left; cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s, background 0.15s; }
 .database-list-item:hover { border-color: var(--wdc-accent-glow); box-shadow: var(--wdc-shadow-sm); }
 .database-list-item.active { border-color: var(--wdc-accent); background: var(--wdc-accent-dim); box-shadow: 0 0 0 1px var(--wdc-accent-glow); }
