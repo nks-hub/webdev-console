@@ -237,7 +237,7 @@ async function loadCerts() {
     const r = await fetch(`${daemonBaseUrl()}/api/ssl/certs`, { headers: authHeaders() })
     if (r.ok) {
       const data = await r.json()
-      certs.value = data.certs ?? []
+      certs.value = [...(data.certs ?? [])].sort((a, b) => a.domain.localeCompare(b.domain))
       pluginLoaded.value = data.pluginLoaded ?? true
       mkcertInstalled.value = data.mkcertInstalled ?? false
       caInstalled.value = data.caInstalled ?? false

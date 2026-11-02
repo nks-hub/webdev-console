@@ -8,6 +8,9 @@ import type { SiteInfo } from '../api/types'
 const APPLY_STEP_WARNING = /^(ssl|phpIni|vhost|php|reload|node|hosts|cloudflare): /
 const withoutApplySteps = (warnings?: string[]) => (warnings ?? []).filter(w => !APPLY_STEP_WARNING.test(w))
 
+// One alphabetical order for every list that shows sites (the daemon returns them unsorted).
+const byDomain = (list: SiteInfo[]) => [...list].sort((a, b) => a.domain.localeCompare(b.domain))
+
 export const useSitesStore = defineStore('sites', () => {
   const sites = ref<SiteInfo[]>([])
   const loading = ref(false)
@@ -20,7 +23,7 @@ export const useSitesStore = defineStore('sites', () => {
 
   async function load() {
     loading.value = true
-    try { sites.value = await fetchSites() } finally { loading.value = false }
+    try { sites.value = byDomain(await fetchSites()) } finally { loading.value = false }
   }
 
   async function create(data: Partial<SiteInfo>) {
@@ -35,14 +38,14 @@ export const useSitesStore = defineStore('sites', () => {
     lastCreateWarnings.value = withoutApplySteps((raw as { warnings?: string[] }).warnings)
     lastCreateHints.value = (raw as { hints?: string[] }).hints ?? []
     // Optimistic push so the table updates instantly…
-    sites.value.push(site)
+    sites.value = byDomain([...sites.value, site])
     // …and an immediate refetch so any daemon-side enrichment (framework
     // detection, resolved phpVersion, SSL cert result) lands in the list
     // without requiring the user to reload. Prior code only pushed the
     // POST response; if that response was missing fields (older daemon
     // builds, partial JSON, or a rename normalisation), the table showed
     // a half-blank row until the user manually refreshed.
-    try { sites.value = await fetchSites() } catch { /* keep optimistic state */ }
+    try { sites.value = byDomain(await fetchSites()) } catch { /* keep optimistic state */ }
     return site
   }
 
