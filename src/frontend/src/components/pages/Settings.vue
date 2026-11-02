@@ -169,11 +169,11 @@
               :key="svc.id"
               class="about-sys-row"
             >
-              <span class="sys-label">
+              <span class="sys-label sys-label-dot">
                 <HealthStatusDot :level="serviceDot(svc)" />
                 {{ shortServiceName(svc) }}
               </span>
-              <span class="sys-value">{{ serviceStateLabel(svc) }}</span>
+              <span class="sys-value sys-state">{{ serviceStateLabel(svc) }}</span>
             </div>
           </div>
           <template #actions>
@@ -3198,6 +3198,9 @@ async function save() {
 .about-sys-row:last-child { border-bottom: none; }
 .sys-label { color: var(--wdc-text-2); }
 .sys-value { color: var(--wdc-text); font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
+/* Service rows: the dot needs air before the name; a state word is text, not a version. */
+.sys-label-dot { display: inline-flex; align-items: center; gap: var(--wdc-space-2); }
+.sys-state { font-family: inherit; font-size: inherit; }
 
 .about-links { display: flex; flex-wrap: wrap; gap: 4px 14px; }
 .about-link { color: var(--wdc-accent); text-decoration: none; font-size: 0.82rem; }
