@@ -23,23 +23,32 @@
             <div class="overview-grid">
               <div class="stat-card">
                 <div class="stat-label">{{ $t('backupsPage.overview.totalSize') }}</div>
-                <div class="stat-value">{{ formatSize(stats.totalSize) }}</div>
+                <div class="stat-value">{{ loaded ? formatSize(stats.totalSize) : '—' }}</div>
               </div>
               <div class="stat-card">
                 <div class="stat-label">{{ $t('backupsPage.overview.count') }}</div>
-                <div class="stat-value">{{ stats.count }}</div>
+                <div class="stat-value">{{ loaded ? stats.count : '—' }}</div>
               </div>
-              <div class="stat-card">
+              <div class="stat-card" :class="{ 'stat-card--warn': overdue }">
                 <div class="stat-label">{{ $t('backupsPage.overview.lastCreated') }}</div>
                 <div class="stat-value" :title="stats.lastCreatedUtc ? formatDate(stats.lastCreatedUtc) : undefined">
-                  {{ lastCreatedLabel }}
+                  {{ loaded ? lastCreatedLabel : '—' }}
                 </div>
               </div>
-              <div class="stat-card">
+              <div class="stat-card" :class="{ 'stat-card--warn': overdue }">
                 <div class="stat-label">{{ $t('backupsPage.overview.next') }}</div>
-                <div class="stat-value">{{ nextScheduledLabel }}</div>
+                <div class="stat-value">{{ loaded ? nextScheduledLabel : '—' }}</div>
               </div>
             </div>
+
+            <el-alert
+              v-if="overdue"
+              type="warning"
+              :closable="false"
+              show-icon
+              :title="$t('backupsPage.overview.overdue', { h: savedScheduleHours })"
+              style="margin-bottom: var(--wdc-space-4)"
+            />
 
             <div class="overview-actions">
               <el-button
@@ -296,6 +305,7 @@ interface BackupResult {
 
 const activeTab = ref('overview')
 const loading = ref(false)
+const loaded = ref(false)
 const saving = ref(false)
 const backingUp = ref(false)
 const errorMsg = ref('')
@@ -340,13 +350,17 @@ const lastCreatedLabel = computed(() => {
   return t('backupsPage.overview.ago', { d: formatDuration(seconds, locale.value) })
 })
 
+// Schedule is on and the newest backup is older than one interval.
+const overdue = computed(() => loaded.value && savedScheduleHours.value > 0 && !!stats.value.lastCreatedUtc
+  && new Date(stats.value.lastCreatedUtc).getTime() + savedScheduleHours.value * 3600_000 < now.value)
+
 const nextScheduledLabel = computed(() => {
   if (savedScheduleHours.value <= 0) return t('backupsPage.overview.off')
   if (!stats.value.lastCreatedUtc) return t('backupsPage.overview.soon')
   const last = new Date(stats.value.lastCreatedUtc).getTime()
   const nextMs = last + savedScheduleHours.value * 3600 * 1000
   const diff = nextMs - now.value
-  if (diff <= 0) return t('backupsPage.overview.soon')
+  if (diff <= 0) return t('backupsPage.overview.late')
   const hours = Math.floor(diff / 3600000)
   const mins = Math.floor((diff % 3600000) / 60000)
   return hours > 0 ? t('backupsPage.overview.inHours', { h: hours, m: mins }) : t('backupsPage.overview.inMinutes', { m: mins })
@@ -388,6 +402,7 @@ async function loadAll() {
       if (!res.ok) throw new Error(await responseError(res, `HTTP ${res.status}`))
     backups.value = (await listRes.json()).backups ?? []
     stats.value = await statsRes.json()
+    loaded.value = true
     now.value = Date.now()
   } catch (e) {
     errorMsg.value = t('backupsPage.toast.loadError', { err: e instanceof Error ? e.message : String(e) })
@@ -695,6 +710,7 @@ function formatDate(iso: string): string {
   border-radius: var(--wdc-radius);
   padding: var(--wdc-space-4) var(--wdc-space-4-5);
 }
+.stat-card--warn { border-color: var(--wdc-status-warning, var(--el-color-warning)); }
 .stat-label {
   font-size: 0.82rem;
   font-weight: 500;

@@ -226,6 +226,8 @@
       "none": "None",
       "off": "Off",
       "soon": "Soon",
+      "late": "Overdue",
+      "overdue": "The latest backup is older than the scheduled interval ({h} h). Run a backup manually.",
       "inHours": "in {h} h {m} min",
       "inMinutes": "in {m} min",
       "ago": "{d} ago",
@@ -1276,6 +1278,8 @@
   },
   "databases": {
     "title": "Databases",
+    "postgresNote": "This page manages MySQL databases only. PostgreSQL databases are on the PostgreSQL page (list, password).",
+    "openPostgres": "Open PostgreSQL",
     "create": "New Database",
     "drop": "Drop",
     "import": "Import SQL",
