@@ -257,6 +257,9 @@ internal static class PluginEndpoints
                     license = p.Manifest?.License ?? "MIT",
                     capabilities = p.Manifest?.Capabilities ?? Array.Empty<string>(),
                     supportedPlatforms = p.Manifest?.SupportedPlatforms ?? Array.Empty<string>(),
+                    // False when the manifest lists platforms and this OS is not one of them
+                    // (e.g. the rsync deploy backend on Windows): the UI says so.
+                    platformSupported = PluginPlatform.IsSupported(p.Manifest?.SupportedPlatforms),
                     // F87: dependency graph exposed to UI. dependencies mirrors
                     // the manifest verbatim; missingDependencies is the live
                     // diagnostic against enabledIds (empty = OK).
