@@ -2993,7 +2993,7 @@
     },
     "about": {
       "subtitle": "Local development server manager",
-      "description": "Manages local Apache, PHP, MySQL, Redis, Mailpit and SSL certificates for web development.",
+      "description": "Manages local Apache, PHP, MySQL, PostgreSQL, Redis, Mailpit, SSL certificates and Cloudflare tunnels for web development.",
       "runtime": "Runtime",
       "installedVersions": "Installed Versions",
       "daemonUptime": "Daemon uptime",

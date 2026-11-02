@@ -2993,7 +2993,7 @@
     },
     "about": {
       "subtitle": "Správa lokálního vývojového prostředí",
-      "description": "Spravuje lokální Apache, PHP, MySQL, Redis, Mailpit a SSL certifikáty pro vývoj webů.",
+      "description": "Spravuje lokální Apache, PHP, MySQL, PostgreSQL, Redis, Mailpit, SSL certifikáty a tunely Cloudflare pro vývoj webů.",
       "runtime": "Běhové prostředí",
       "installedVersions": "Nainstalované verze",
       "daemonUptime": "Doba běhu démona",
