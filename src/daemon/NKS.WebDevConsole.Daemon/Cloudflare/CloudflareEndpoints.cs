@@ -50,13 +50,20 @@ internal static class CloudflareEndpoints
             }
             catch (System.Reflection.TargetInvocationException tie) when (tie.InnerException is not null)
             {
-                return Results.BadRequest(new { error = tie.InnerException.Message });
+                return CloudflareFailure(tie.InnerException);
             }
             catch (Exception ex)
             {
-                return Results.BadRequest(new { error = ex.Message });
+                return CloudflareFailure(ex);
             }
         }
+
+        // Cloudflare being unreachable or slow is not the caller's fault: 502 with a
+        // code the UI can word ("try again"), instead of a raw 400 in English.
+        static IResult CloudflareFailure(Exception ex) =>
+            ex is HttpRequestException or TaskCanceledException or TimeoutException
+                ? Results.Json(new { error = ex.Message, code = "cloudflare_unreachable" }, statusCode: StatusCodes.Status502BadGateway)
+                : Results.BadRequest(new { error = ex.Message });
 
         // Settings: GET returns redacted config (secrets masked), PUT saves
         app.MapGet("/api/cloudflare/config", (IServiceProvider sp) =>

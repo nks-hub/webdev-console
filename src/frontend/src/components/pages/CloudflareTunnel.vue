@@ -91,7 +91,7 @@
       <div class="status-card">
         <el-icon class="status-icon"><Location /></el-icon>
         <div class="status-body">
-          <div class="status-title">{{ $t('cloudflare.status.zoneCount', { n: zones.length }) }}</div>
+          <div class="status-title">{{ zonesLoadFailed && !zones.length ? $t('cloudflare.status.zonesUnknown') : $t('cloudflare.status.zoneCount', { n: zones.length }) }}</div>
           <div class="status-meta">{{ config.defaultZoneId ? $t('cloudflare.status.defaultSelected') : config.apiToken ? $t('cloudflare.status.pickDefaultZone') : $t('cloudflare.status.zonesNeedToken') }}</div>
         </div>
       </div>
@@ -589,13 +589,19 @@ interface CfZone {
 const zones = ref<CfZone[]>([])
 const loadingZones = ref(false)
 
+// Set when the last zone load failed, so the status card does not claim "0 zones".
+const zonesLoadFailed = ref(false)
 async function loadZones() {
   loadingZones.value = true
   try {
     const res = await fetchCloudflareZones()
     zones.value = res?.result ?? []
+    zonesLoadFailed.value = false
   } catch (e) {
-    ElMessage.error(t('cloudflare.toast.listZonesFailed', { err: errorMessage(e) }))
+    zonesLoadFailed.value = true
+    ElMessage.error(e instanceof DaemonError && e.code === 'cloudflare_unreachable'
+      ? t('cloudflare.toast.cloudflareUnreachable')
+      : t('cloudflare.toast.listZonesFailed', { err: errorMessage(e) }))
   } finally {
     loadingZones.value = false
   }
