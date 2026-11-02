@@ -404,12 +404,13 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { formatDuration } from '../../utils/format'
 import {
   Setting, Check, Share, Right, Postcard, Link,
   CircleCheckFilled, CircleClose, Key, Connection, Location,
 } from '@element-plus/icons-vue'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useDaemonStore } from '../../stores/daemon'
 import { useSitesStore } from '../../stores/sites'
@@ -757,10 +758,7 @@ function formatUptime(value: number | string | undefined): string {
     secs = m ? Number(m[1] ?? 0) * 86400 + Number(m[2]) * 3600 + Number(m[3]) * 60 + Number(m[4]) : Number(value) || 0
   }
   if (!secs || secs < 1) return '—'
-  const h = Math.floor(secs / 3600)
-  const m = Math.floor((secs % 3600) / 60)
-  if (h > 0) return `${h}h ${m}m`
-  return `${m}m`
+  return formatDuration(secs, locale.value)
 }
 
 onMounted(async () => {

@@ -47,7 +47,7 @@
       <div class="svc-meta">
         <span class="meta-item">
           <span class="meta-label">{{ t('servicesPage.facts.uptime') }}</span>
-          <span class="meta-val">{{ formatUptime(service.uptimeSeconds ?? 0) }}</span>
+          <span class="meta-val">{{ formatDuration(service.uptimeSeconds ?? 0, locale) }}</span>
         </span>
         <span class="meta-item" v-if="service.pid">
           <span class="meta-label">pid</span>
@@ -111,8 +111,9 @@ import { ElMessage, ElNotification } from 'element-plus'
 import { useServicesStore } from '../../stores/services'
 import type { ServiceInfo } from '../../api/types'
 import { useI18n } from 'vue-i18n'
+import { formatDuration } from '../../utils/format'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const props = defineProps<{ service: ServiceInfo }>()
 const servicesStore = useServicesStore()
@@ -184,14 +185,6 @@ function formatMem(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
   return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
-}
-
-function formatUptime(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  return `${h}h ${m}m`
 }
 </script>
 
