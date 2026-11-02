@@ -131,7 +131,7 @@ public sealed class SitePhpIniWriter
                 var name = Path.GetFileName(d);
                 return name == requested || name.StartsWith(requested + ".");
             })
-            .OrderByDescending(d => Path.GetFileName(d), StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(d => Path.GetFileName(d), NKS.WebDevConsole.Core.Services.SemverVersionComparer.Instance)
             .Select(d => Path.Combine(d, "php.ini"))
             .FirstOrDefault(File.Exists);
         return candidate;

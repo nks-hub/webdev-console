@@ -536,7 +536,7 @@ public sealed class SiteManager : ISiteRegistry
                         var name = Path.GetFileName(d);
                         return name == requested || name.StartsWith(requested + ".");
                     })
-                    .OrderByDescending(d => Path.GetFileName(d), StringComparer.OrdinalIgnoreCase)
+                    .OrderByDescending(d => Path.GetFileName(d), NKS.WebDevConsole.Core.Services.SemverVersionComparer.Instance)
                     .Select(d => Path.Combine(d, "php-cgi.exe"))
                     .FirstOrDefault(File.Exists);
                 if (candidate is not null) phpCgiPath = candidate;
