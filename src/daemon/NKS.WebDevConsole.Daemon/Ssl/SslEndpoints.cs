@@ -130,7 +130,10 @@ internal static class SslEndpoints
                 string? issuer = t.GetProperty("Issuer")?.GetValue(cert) as string;
                 string? fingerprint = t.GetProperty("Fingerprint")?.GetValue(cert) as string;
 
-                if (notAfterUtc is null && File.Exists(certPath))
+                // Always read the file: "created" must be the certificate's NotBefore.
+                // The plugin reports the file time (or "now" right after generating),
+                // so the same certificate showed different dates between list calls.
+                if (File.Exists(certPath))
                 {
                     try
                     {
@@ -140,9 +143,10 @@ internal static class SslEndpoints
                         // a kernel certificate context per SSL list call.
                         using var x509 = System.Security.Cryptography.X509Certificates.X509CertificateLoader
                             .LoadCertificateFromFile(certPath);
-                        notAfterUtc = x509.NotAfter.ToUniversalTime();
-                        issuer = x509.Issuer;
-                        fingerprint = x509.Thumbprint;
+                        createdUtc = x509.NotBefore.ToUniversalTime();
+                        notAfterUtc ??= x509.NotAfter.ToUniversalTime();
+                        issuer ??= x509.Issuer;
+                        fingerprint ??= x509.Thumbprint;
                     }
                     catch { /* cert unreadable — surface without metadata */ }
                 }
