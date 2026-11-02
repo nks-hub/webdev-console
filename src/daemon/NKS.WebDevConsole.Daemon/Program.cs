@@ -1422,6 +1422,15 @@ if (autoStartEnabled)
         }
         try
         {
+            // Started already (plugin init brought it up, or it survived a daemon
+            // restart). StartAsync would throw "already Running" and the tracker
+            // would show a failure for a healthy service.
+            var before = await module.GetStatusAsync(CancellationToken.None);
+            if (before.State == ServiceState.Running)
+            {
+                Console.WriteLine($"[auto-start] {module.ServiceId}: already running");
+                return;
+            }
             // Mirror the plugin-start dual-guard (F51f): a module whose
             // StartAsync never returns (MySQL pid-file wait, Redis PONG,
             // Cloudflared tunnel-ready) must not wedge Task.WhenAll and
