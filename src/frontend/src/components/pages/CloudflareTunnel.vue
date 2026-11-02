@@ -819,9 +819,13 @@ async function autoVerifyToken() {
 
 .status-strip {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--wdc-space-3);
   padding: var(--wdc-space-4-5) 0 var(--wdc-space-1);
+}
+/* Four cards wrap 2+2, never 3+1. */
+@media (max-width: 1100px) {
+  .status-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .status-card {
   display: flex;

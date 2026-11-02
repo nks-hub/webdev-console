@@ -708,9 +708,13 @@ function formatDate(iso: string): string {
 /* ── Overview ── */
 .overview-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--wdc-space-3);
   margin-bottom: var(--wdc-space-4-5);
+}
+/* Four cards wrap 2+2, never 3+1. */
+@media (max-width: 1100px) {
+  .overview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 .stat-card {
