@@ -1822,7 +1822,7 @@
     },
     "tabDatabases": "Databáze",
     "tabLogs": "Log",
-    "databaseTools": "Databáze",
+    "databaseTools": "Databáze na serveru",
     "noDatabases": "Zatím tu nejsou žádné databáze.",
     "resetPassword": "Reset hesla uživatele postgres",
     "resetWarning": "Změní heslo lokálního PostgreSQL uživatele postgres. Databáze nemaže.",

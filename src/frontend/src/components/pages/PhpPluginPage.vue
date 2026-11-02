@@ -37,7 +37,7 @@
             </span>
             <span class="ver-full mono">{{ ver.version }}</span>
             <span class="ver-path mono">{{ ver.path }}</span>
-            <el-button v-if="!isActive(ver)" size="small" text :loading="settingDefault === ver.version" @click="setDefault(ver.version)">
+            <el-button v-if="ver.majorMinor !== defaultMajorMinor" size="small" text :loading="settingDefault === ver.version" @click="setDefault(ver.version)">
               {{ t('php.setDefault') }}
             </el-button>
           </div>
@@ -110,10 +110,14 @@ const settingDefault = ref('')
 
 const installed = computed(() => stateOf(daemonStore.services.find(s => s.id === 'php')) !== 'notInstalled')
 // The daemon marks the version new sites get as `isActive`; `isDefault` is the older field.
+// The default is stored as major.minor, so two installs of 8.5.x both come back
+// flagged: only the first (newest) one is shown as the default.
+const defaultVersion = computed(() =>
+  versions.value.find(v => v.isActive ?? v.isDefault ?? false)?.version ?? '')
+const defaultMajorMinor = computed(() => defaultVersion.value.split('.').slice(0, 2).join('.'))
 function isActive(ver: PhpVersion): boolean {
-  return !!(ver.isActive ?? ver.isDefault)
+  return ver.version === defaultVersion.value
 }
-const defaultVersion = computed(() => versions.value.find(isActive)?.version ?? '')
 
 async function loadVersions() {
   loading.value = true

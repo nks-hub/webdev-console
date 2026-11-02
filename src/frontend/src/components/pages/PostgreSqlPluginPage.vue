@@ -152,6 +152,7 @@ watch(running, (isRunning) => { if (isRunning) void loadDatabases() })
 
 <style scoped>
 .block { display: grid; gap: var(--wdc-space-3); padding-bottom: var(--wdc-space-5); }
+.block:first-child { padding-top: var(--wdc-space-4); }
 .block + .block { padding-top: var(--wdc-space-5); border-top: 1px solid var(--wdc-border); }
 .block-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--wdc-space-3); }
 .section-title { font-size: 1.1rem; }
