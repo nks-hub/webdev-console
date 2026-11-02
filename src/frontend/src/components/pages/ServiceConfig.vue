@@ -441,6 +441,8 @@ onMounted(() => { void load() })
   gap: var(--wdc-space-3);
   padding-top: var(--wdc-space-3);
 }
+/* The editor's min-height squeezed the notice above it to one clipped line. */
+.editor-wrap > .el-alert { flex-shrink: 0; }
 
 .file-meta {
   display: flex;
