@@ -6,7 +6,6 @@
     <div class="sd-activity-block">
       <div class="sd-activity-label">
         {{ t('sites.detail.simple.activity.errors.countLabel', { count: errorLines.length }) }}
-        <span v-if="errorLines.length > 0" class="sd-err-badge">{{ errorLines.length }}</span>
       </div>
       <ul v-if="errorLines.length > 0" class="sd-err-list">
         <li
@@ -15,7 +14,7 @@
           class="sd-err-line"
         >
           <span class="sd-err-ts mono">{{ formatErrorTime(line.timestamp) }}</span>
-          <span class="sd-err-msg">{{ line.message }}</span>
+          <span class="sd-err-msg" :title="line.message">{{ line.message }}</span>
         </li>
       </ul>
       <div v-else class="sd-activity-empty">
@@ -132,19 +131,6 @@ defineExpose({ reload: load })
   display: flex;
   align-items: center;
   gap: var(--wdc-space-2);
-}
-.sd-err-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  padding: 0 var(--wdc-space-1-5);
-  height: 18px;
-  background: var(--el-color-danger);
-  color: white;
-  border-radius: var(--wdc-radius);
-  font-size: 11px;
-  font-weight: 600;
 }
 .sd-err-list {
   list-style: none;

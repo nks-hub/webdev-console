@@ -36,6 +36,9 @@
 
     <div class="chart-wrap">
       <div v-if="loading" class="chart-overlay">{{ $t('metrics.historical.loading') }}</div>
+      <div v-else-if="loadError" class="chart-overlay" role="alert">
+        <strong>{{ $t('siteEditToast.historicalMetricsFailed', { err: loadError }) }}</strong>
+      </div>
       <div v-else-if="isEmptyDay" class="chart-overlay">
         <strong>{{ $t('metrics.historical.emptyDay') }}</strong>
         <span>{{ $t('siteEdit.metricsEmpty') }}</span>
@@ -48,7 +51,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ElMessage } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -83,6 +85,7 @@ const GRANULARITIES = [
   { value: '1h', label: '1 h' },
 ]
 const loading = ref(false)
+const loadError = ref('')
 const data = ref<HistoricalMetrics | null>(null)
 
 const seriesOptions = [
@@ -103,10 +106,11 @@ const isFutureDate = (d: Date) => d > new Date(new Date().setHours(23, 59, 59, 9
 
 async function load() {
   loading.value = true
+  loadError.value = ''
   try {
     data.value = await getHistoricalMetrics(props.domain, { date: date.value, granularity: granularity.value })
   } catch (e) {
-    ElMessage.error(t('siteEditToast.historicalMetricsFailed', { err: errorMessage(e) }))
+    loadError.value = errorMessage(e)
     data.value = null
   } finally {
     loading.value = false
@@ -119,6 +123,12 @@ const isEmptyDay = computed(() => !!data.value && data.value.series.every(s => s
 watch(() => props.active, (on) => { if (on && !data.value) void load() })
 watch(() => props.domain, () => { data.value = null; if (props.active) void load() })
 onMounted(() => { if (props.active) void load() })
+
+function formatBytes(v: number): string {
+  if (v < 1024) return `${Math.round(v)} B`
+  if (v < 1024 ** 2) return `${(v / 1024).toFixed(0)} KB`
+  return `${(v / 1024 ** 2).toFixed(1)} MB`
+}
 
 const chartOption = computed(() => {
   const p = palette.value
@@ -138,11 +148,13 @@ const chartOption = computed(() => {
       const found = data.value?.series.find(sr => sr.name === s.key)
       const color = seriesColor[s.key]
       return {
-        name: s.key,
+        name: t(s.labelKey),
+        yAxisIndex: s.key === 'bytes' ? 1 : 0,
         type: 'line' as const,
         data: found ? found.data.map(pt => pt.value) : labels.map(() => 0),
         smooth: 0.2,
         symbol: 'none',
+        ...(s.key === 'bytes' ? { tooltip: { valueFormatter: (v: number) => formatBytes(v) } } : {}),
         lineStyle: { color, width: 1.75 },
       }
     })
@@ -155,7 +167,7 @@ const chartOption = computed(() => {
       borderColor: rgba(p.borderStrong),
       textStyle: { color: rgba(p.text), fontSize: 12 },
     },
-    grid: { top: 12, right: 16, bottom: 44, left: 48 },
+    grid: { top: 12, right: activeSeries.value.includes('bytes') && activeSeries.value.length > 1 ? 56 : 16, bottom: 44, left: 48 },
     dataZoom: [
       { type: 'inside', start: 0, end: 100 },
       { type: 'slider', height: 18, bottom: 4, borderColor: rgba(p.border), fillerColor: rgba(p.accent, 0.14), textStyle: { color: axisText } },
@@ -168,7 +180,7 @@ const chartOption = computed(() => {
       axisLine: { lineStyle: { color: rgba(p.borderStrong) } },
       splitLine: { show: false },
     },
-    yAxis: {
+    yAxis: [{
       type: 'value',
       min: 0,
       // Counts and bytes are whole numbers; without this a day with one request gets ticks 0, 0.25, 0.5 shown as 0 0 1 1 1.
@@ -178,7 +190,17 @@ const chartOption = computed(() => {
       splitLine: { lineStyle: { color: rgba(p.border), type: 'dashed' } },
       axisLine: { show: false },
       axisTick: { show: false },
-    },
+    }, {
+      // Bytes run orders of magnitude above request counts; sharing one axis would flatten the requests line.
+      type: 'value',
+      min: 0,
+      show: activeSeries.value.includes('bytes') && activeSeries.value.length > 1,
+      splitNumber: 3,
+      axisLabel: { fontSize: 11, color: axisText, formatter: formatBytes },
+      splitLine: { show: false },
+      axisLine: { show: false },
+      axisTick: { show: false },
+    }],
     series,
   }
 })

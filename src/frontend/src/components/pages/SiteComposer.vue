@@ -34,7 +34,9 @@
       show-icon
       :closable="false"
       class="composer-alert"
-    />
+    >
+      <el-button size="small" @click="loadStatus">{{ $t('common.retry') }}</el-button>
+    </el-alert>
 
     <!-- No composer.json detected -->
     <div v-else-if="status && !status.hasComposerJson" class="composer-empty">
@@ -137,6 +139,7 @@
             :icon="Refresh"
             :loading="loading"
             :title="$t('common.refresh')"
+            :aria-label="$t('common.refresh')"
             @click="loadStatus"
           />
         </div>
@@ -169,8 +172,11 @@
                   <template #reference>
                     <span
                       class="pkg-name-link mono"
+                      role="link"
+                      tabindex="0"
                       :title="t('sites.composer.openOnPackagist', { name: row.name })"
                       @click.stop="openPackagist(row.raw)"
+                      @keydown.enter="openPackagist(row.raw)"
                     >{{ row.name }}</span>
                   </template>
                   <div v-if="pkgInfoLoading[row.name]" class="pkg-info-loading">{{ $t('common.loading') }}</div>
@@ -529,13 +535,13 @@ async function loadOutdated(): Promise<void> {
 async function loadStatus(): Promise<void> {
   loading.value = true
   loadError.value = null
-  currentOperation.value = 'Loading composer status from composer.json…'
+  currentOperation.value = t('sites.composer.loadingStatus')
   try {
     status.value = await composerStatus(props.domain)
     composerMissing.value = status.value.composerAvailable === false
     // Nothing to compare in a folder without composer.json.
     if (status.value.hasComposerJson) {
-      currentOperation.value = 'Checking for outdated packages…'
+      currentOperation.value = t('sites.composer.checkingOutdated')
       await loadOutdated()
     }
   } catch (err: unknown) {
@@ -644,7 +650,7 @@ async function runInstall(): Promise<void> {
   }
 
   running.value = true
-  currentOperation.value = 'Running composer install — downloading dependencies…'
+  currentOperation.value = t('sites.composer.installing')
   try {
     const result = await composerInstall(props.domain)
     lastResult.value = result

@@ -6,7 +6,6 @@
         size="small"
         :loading="loading"
         :icon="Refresh"
-        :aria-label="t('common.refresh')"
         @click="fetchLogs"
       >
         {{ $t('sites.access.refresh') }}
@@ -46,7 +45,12 @@
     </div>
 
     <!-- Loading skeleton -->
-    <el-skeleton v-if="loading && entries.length === 0" :rows="8" animated style="padding: var(--wdc-space-4) 0" />
+    <el-skeleton v-if="loading && entries.length === 0 && !loadError" :rows="8" animated style="padding: var(--wdc-space-4) 0" />
+
+    <div v-else-if="loadError" class="load-error" role="alert">
+      <span>{{ $t('logs.viewer.loadFailed', { err: loadError }) }}</span>
+      <el-button size="small" @click="fetchLogs">{{ $t('common.retry') }}</el-button>
+    </div>
 
     <!-- Empty state -->
     <el-empty
@@ -184,7 +188,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import { getAccessLogs } from '../../api/daemon'
 import type { AccessLogEntry } from '../../api/types'
@@ -198,6 +201,7 @@ const LINE_OPTIONS = [50, 100, 200, 500, 1000] as const
 
 const entries = ref<AccessLogEntry[]>([])
 const loading = ref(false)
+const loadError = ref('')
 const selectedLines = ref<number>(100)
 
 function defaultSinceDate(): Date {
@@ -219,13 +223,14 @@ const sinceIso = computed<string | undefined>(() => {
 
 async function fetchLogs(): Promise<void> {
   loading.value = true
+  loadError.value = ''
   try {
     entries.value = await getAccessLogs(props.domain, {
       lines: selectedLines.value,
       since: sinceIso.value,
     })
   } catch (e) {
-    ElMessage.error(`${t('sites.access.refresh')}: ${errorMessage(e)}`)
+    loadError.value = errorMessage(e)
   } finally {
     loading.value = false
   }
@@ -320,7 +325,7 @@ onBeforeUnmount(() => {
 }
 
 .mono {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--wdc-font-mono);
   font-size: 0.78rem;
 }
 
@@ -329,14 +334,14 @@ onBeforeUnmount(() => {
 }
 
 .method-tag {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--wdc-font-mono);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.03em;
 }
 
 .status-tag {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--wdc-font-mono);
   font-size: 0.78rem;
   font-weight: 600;
 }
@@ -361,5 +366,17 @@ onBeforeUnmount(() => {
   white-space: nowrap;
   font-size: 0.78rem;
   cursor: default;
+}
+
+.load-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--wdc-space-3);
+  padding: var(--wdc-space-3) var(--wdc-space-4);
+  border: 1px solid var(--wdc-status-error);
+  border-radius: var(--wdc-radius-lg);
+  color: var(--wdc-text);
+  overflow-wrap: anywhere;
 }
 </style>
