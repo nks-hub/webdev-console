@@ -6,7 +6,6 @@
         size="small"
         :loading="loading"
         :icon="Refresh"
-        :aria-label="t('common.refresh')"
         @click="fetchLogs"
       >
         {{ $t('logs.errors.refresh') }}
@@ -46,7 +45,12 @@
     </div>
 
     <!-- Loading skeleton -->
-    <el-skeleton v-if="loading && entries.length === 0" :rows="8" animated style="padding: var(--wdc-space-4) 0" />
+    <el-skeleton v-if="loading && entries.length === 0 && !loadError" :rows="8" animated style="padding: var(--wdc-space-4) 0" />
+
+    <div v-else-if="loadError" class="load-error" role="alert">
+      <span>{{ $t('logs.viewer.loadFailed', { err: loadError }) }}</span>
+      <el-button size="small" @click="fetchLogs">{{ $t('common.retry') }}</el-button>
+    </div>
 
     <!-- Empty state -->
     <el-empty
@@ -116,6 +120,7 @@
               class="message-truncated"
               role="button"
               tabindex="0"
+              :aria-expanded="false"
               :aria-label="$t('logs.errors.expandRow')"
               @click="toggleExpand(row._idx)"
               @keydown.enter="toggleExpand(row._idx)"
@@ -128,6 +133,7 @@
               class="message-expanded"
               role="button"
               tabindex="0"
+              :aria-expanded="true"
               :aria-label="$t('logs.errors.collapseRow')"
               @click="toggleExpand(row._idx)"
               @keydown.enter="toggleExpand(row._idx)"
@@ -167,7 +173,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import { getErrorLogs } from '../../api/daemon'
 import type { SiteErrorLogEntry } from '../../api/types'
@@ -181,6 +186,7 @@ const LINE_OPTIONS = [50, 100, 200, 500, 1000] as const
 
 const entries = ref<(SiteErrorLogEntry & { _idx: number })[]>([])
 const loading = ref(false)
+const loadError = ref('')
 const selectedLines = ref<number>(100)
 function defaultSinceDate(): Date {
   const d = new Date()
@@ -202,6 +208,7 @@ const sinceIso = computed<string | undefined>(() => {
 
 async function fetchLogs(): Promise<void> {
   loading.value = true
+  loadError.value = ''
   try {
     const raw = await getErrorLogs(props.domain, {
       lines: selectedLines.value,
@@ -210,7 +217,7 @@ async function fetchLogs(): Promise<void> {
     entries.value = raw.map((e, i) => ({ ...e, _idx: i }))
     expandedRows.value.clear()
   } catch (e) {
-    ElMessage.error(`${t('logs.errors.refresh')}: ${errorMessage(e)}`)
+    loadError.value = errorMessage(e)
   } finally {
     loading.value = false
   }
@@ -326,7 +333,7 @@ onBeforeUnmount(() => {
 }
 
 .mono {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--wdc-font-mono);
   font-size: 0.78rem;
 }
 
@@ -335,7 +342,7 @@ onBeforeUnmount(() => {
 }
 
 .severity-tag {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--wdc-font-mono);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.03em;
@@ -372,5 +379,17 @@ onBeforeUnmount(() => {
 
 .logs-table :deep(.row-warn td) {
   background: rgba(245, 158, 11, 0.05) !important;
+}
+
+.load-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--wdc-space-3);
+  padding: var(--wdc-space-3) var(--wdc-space-4);
+  border: 1px solid var(--wdc-status-error);
+  border-radius: var(--wdc-radius-lg);
+  color: var(--wdc-text);
+  overflow-wrap: anywhere;
 }
 </style>
