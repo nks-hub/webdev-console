@@ -237,7 +237,7 @@ test.describe('Shell services contract', () => {
     const keys = [...listed.matchAll(/"([A-Za-z_.]+)"/g)].map(m => m[1])
     expect(keys.length).toBeGreaterThan(20)
     const dashboard = read('components', 'pages', 'Dashboard.vue')
-    expect(dashboard).toMatch(/filter\(row => row\.entityType !== 'setting' \|\| settingLabel\(row\.entityName\)\)/)
+    expect(dashboard).toMatch(/row\.entityType === 'setting' && !settingLabel\(row\.entityName\)\) continue/)
     for (const locale of ['cs', 'en']) {
       const settings = (JSON.parse(read('locales', `${locale}.json`)) as {
         dashboard: { activity: { setting: Record<string, unknown>; serviceAutoStart: string } }

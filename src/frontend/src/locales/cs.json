@@ -194,7 +194,8 @@
     "problemStartFailed": "Služba {name} se nespustila",
     "problemExited": "Služba {name} spadla",
     "mcpOff": "vypnuto",
-    "mcpPending": "Čeká na schválení: {n}"
+    "mcpPending": "Čeká na schválení: {n}",
+    "cloudflareExposed": "Přes tunel je dostupný {n} web | Přes tunel jsou dostupné {n} weby | Přes tunel je dostupných {n} webů"
   },
   "versions": {
     "active": "Aktivní",
@@ -698,6 +699,8 @@
     "title": "Přehled",
     "subtitle": "Stav systému a služeb",
     "startAll": "Spustit vše",
+    "nothingToStart": "Není co spouštět, všechny nainstalované služby běží.",
+    "nothingToStop": "Žádná služba neběží.",
     "stopAll": "Zastavit vše",
     "recentActivity": "Nedávná aktivita",
     "connectingTitle": "Připojování k démonu…",
@@ -745,7 +748,7 @@
       "quickActions": {
         "newSite": "Nový web",
         "mailpit": "Otevřít Mailpit",
-        "backup": "Zálohování"
+        "backup": "Otevřít zálohy"
       },
       "apacheStopped": {
         "title": "Webový server je zastavený",
@@ -3751,7 +3754,7 @@
       "apacheStopped": "Webový server je zastavený, weby se nenačtou.",
       "startApache": "Spustit Apache",
       "backupNever": "Zatím neexistuje žádná záloha.",
-      "backupOld": "Poslední záloha je starší než {days} dní.",
+      "backupOld": "Poslední záloha je stará {n} den. | Poslední záloha je stará {n} dny. | Poslední záloha je stará {n} dní.",
       "openBackups": "Otevřít zálohy",
       "update": "Verze {version} je připravená k instalaci.",
       "openUpdate": "Otevřít aktualizaci",

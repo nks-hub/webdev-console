@@ -7,16 +7,20 @@
       </div>
       <div class="head-actions">
         <template v-if="uiMode.isAdvanced">
-          <el-button
-            :loading="startingAll"
-            :disabled="startable.length === 0 || !daemonStore.connected"
-            @click="startAll"
-          >{{ $t('dashboard.startAll') }}</el-button>
-          <el-button
-            :loading="stoppingAll"
-            :disabled="running.length === 0 || !daemonStore.connected"
-            @click="stopAll"
-          >{{ $t('dashboard.stopAll') }}</el-button>
+          <span :title="startable.length === 0 && daemonStore.connected ? $t('dashboard.nothingToStart') : undefined">
+            <el-button
+              :loading="startingAll"
+              :disabled="startable.length === 0 || !daemonStore.connected"
+              @click="startAll"
+            >{{ $t('dashboard.startAll') }}</el-button>
+          </span>
+          <span :title="running.length === 0 && daemonStore.connected ? $t('dashboard.nothingToStop') : undefined">
+            <el-button
+              :loading="stoppingAll"
+              :disabled="running.length === 0 || !daemonStore.connected"
+              @click="stopAll"
+            >{{ $t('dashboard.stopAll') }}</el-button>
+          </span>
         </template>
         <el-button type="primary" @click="$router.push({ path: '/sites', query: { create: '1' } })">
           {{ $t('dashboard.newSite') }}
@@ -275,8 +279,19 @@ function settingLabel(name: string | undefined): string {
   const key = `dashboard.activity.setting.${name}`
   return te(key) ? t(key) : ''
 }
-const visibleActivity = computed(() =>
-  activity.value.filter(row => row.entityType !== 'setting' || settingLabel(row.entityName)))
+// The daemon logs a settings save as one row per key, so a single save shows up as
+// a run of identical lines; collapse a run into one row.
+const visibleActivity = computed(() => {
+  const out: ActivityRow[] = []
+  let lastKey = ''
+  for (const row of activity.value) {
+    if (row.entityType === 'setting' && !settingLabel(row.entityName)) continue
+    const key = [operationOf(row), row.entityType, row.entityName, row.changedFields, row.source, new Date(row.createdAt).toDateString()].join('|')
+    if (key !== lastKey) out.push(row)
+    lastKey = key
+  }
+  return out
+})
 const entityNameOf = (row: ActivityRow) => row.entityType === 'setting' ? settingLabel(row.entityName) : row.entityName
 // A setting row is first written when the user saves it for the first time: that is a change, not a creation.
 const operationOf = (row: ActivityRow) =>

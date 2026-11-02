@@ -43,7 +43,7 @@
                 v-if="item.count !== undefined"
                 class="nav-count mono"
                 :class="{ 'is-pending': item.pending }"
-                :title="item.pending ? $t('nav.mcpPending', { n: item.count }) : undefined"
+                :title="item.pending ? $t('nav.mcpPending', { n: item.count }) : item.countTitle"
               >{{ item.count }}</span>
             </template>
           </a>
@@ -142,6 +142,8 @@ interface NavItem {
   tag?: string
   /** The count is a queue waiting for the user, so it stands out. */
   pending?: boolean
+  /** Tooltip that says what the count counts. */
+  countTitle?: string
   problems?: { count: number; label: string; detail: string }
   tunnelLive?: boolean
 }
@@ -206,6 +208,7 @@ function toolItems(): NavItem[] {
     ? {
       ...i,
       count: exposedSiteCount.value > 0 ? exposedSiteCount.value : undefined,
+      countTitle: t('nav.cloudflareExposed', { n: exposedSiteCount.value }, exposedSiteCount.value),
       tunnelLive: cloudflareRunning.value,
     }
     : i)
