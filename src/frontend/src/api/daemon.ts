@@ -118,11 +118,27 @@ export class DaemonError extends Error {
   }
 }
 
+const PRELOAD_REFRESH_MS = 300 // a bit over preload.ts REFRESH_MS
+
 async function json<T>(path: string, init?: RequestInit): Promise<T> {
-  const r = await fetch(`${daemonBaseUrl()}${path}`, {
+  // In Electron the token comes only from the port file. Until the daemon has
+  // written it, a request would carry no token and come back 401, which the UI
+  // then showed as an auth error on every start. Fail like an unreachable daemon.
+  if (window.daemonApi && !daemonToken()) {
+    throw new TypeError('Failed to fetch: daemon not ready (no port file yet)')
+  }
+  const send = () => fetch(`${daemonBaseUrl()}${path}`, {
     ...init,
     headers: daemonAuthHeaders(init?.headers),
   })
+  let r = await send()
+  // A 401 right after a daemon restart means our token is from the old port
+  // file; once preload re-reads it the same request goes through.
+  if (r.status === 401 && window.daemonApi) {
+    const stale = daemonToken()
+    await new Promise(res => setTimeout(res, PRELOAD_REFRESH_MS))
+    if (daemonToken() !== stale) r = await send()
+  }
   if (!r.ok) {
     // Extract the real error from the response body when available.
     // Daemon endpoints consistently return { error: "..." } or plain JSON
