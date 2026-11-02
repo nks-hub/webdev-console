@@ -111,8 +111,9 @@ import { ElMessage, ElNotification } from 'element-plus'
 import { useServicesStore } from '../../stores/services'
 import type { ServiceInfo } from '../../api/types'
 import { useI18n } from 'vue-i18n'
+import { formatBytes as formatBytesLocale } from '../../utils/format'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const props = defineProps<{ service: ServiceInfo }>()
 const servicesStore = useServicesStore()
@@ -181,9 +182,7 @@ async function act(action: 'start' | 'stop' | 'restart') {
 }
 
 function formatMem(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
-  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
+  return formatBytesLocale(bytes, locale.value)
 }
 
 function formatUptime(seconds: number): string {

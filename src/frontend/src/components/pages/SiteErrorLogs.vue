@@ -34,6 +34,7 @@
           :aria-label="$t('logs.errors.since')"
           clearable
           :placeholder="$t('logs.errors.since')"
+          :format="dateFormat"
           @change="fetchLogs"
         />
       </div>
@@ -180,7 +181,9 @@ import { errorMessage } from '../../utils/errors'
 
 const props = defineProps<{ domain: string }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
+
+const dateFormat = computed(() => (locale.value === 'cs' ? 'D. M. YYYY HH:mm:ss' : 'YYYY-MM-DD HH:mm:ss'))
 
 const LINE_OPTIONS = [50, 100, 200, 500, 1000] as const
 
@@ -243,7 +246,7 @@ function toggleExpand(idx: number): void {
 
 function formatTimestamp(iso: string): string {
   try {
-    return new Date(iso).toLocaleString()
+    return new Date(iso).toLocaleString(locale.value)
   } catch {
     return iso
   }
@@ -314,6 +317,11 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: var(--wdc-space-1-5);
+}
+
+/* The small picker's wrapper is 32 px but its outer box stays 24 px, which pushed it below its label. */
+.toolbar-group :deep(.el-date-editor.el-input) {
+  height: 32px;
 }
 
 .toolbar-label {

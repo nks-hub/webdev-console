@@ -261,6 +261,7 @@
 import { computed, onActivated, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { formatBytes as formatBytesLocale } from '../../utils/format'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh, Plus, Key, Upload, Download, Delete, Grid, DataLine, List, Operation } from '@element-plus/icons-vue'
 import { daemonBaseUrl, daemonAuthHeaders as authHeaders, startService, DaemonError } from '../../api/daemon'
@@ -275,7 +276,7 @@ import type {
   DataColumn, BrowseResult, QueryExecutionResult, QueryResultSet, DetailView,
 } from './databases/types'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const router = useRouter()
 const daemon = useDaemonStore()
 // This page talks to MySQL only; tell users who run PostgreSQL where its databases are.
@@ -406,10 +407,7 @@ async function httpError(r: Response): Promise<Error> {
 }
 
 function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
-  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
+  return formatBytesLocale(bytes, locale.value)
 }
 
 // ── Database list

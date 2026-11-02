@@ -500,14 +500,14 @@
                   <el-input-number v-model="mcpExpiredRetentionDays"
                     :min="0" :max="365" controls-position="right" style="width: 120px"
                     @change="(v: number | undefined) => saveMcpNumber('mcp.grant_expired_retention_days', v)" />
-                  <span class="hint" style="margin-left: var(--wdc-space-2)">{{ $t('settings.mcp.daysSuffix') }}</span>
+                  <span class="hint" style="margin-left: var(--wdc-space-2)">{{ $t('settings.mcp.daysSuffix', mcpExpiredRetentionDays) }}</span>
                   <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.expiredRetentionHint') }}</div>
                 </el-form-item>
                 <el-form-item :label="$t('settings.mcp.revokedRetentionLabel')">
                   <el-input-number v-model="mcpRevokedRetentionDays"
                     :min="0" :max="365" controls-position="right" style="width: 120px"
                     @change="(v: number | undefined) => saveMcpNumber('mcp.grant_revoked_retention_days', v)" />
-                  <span class="hint" style="margin-left: var(--wdc-space-2)">{{ $t('settings.mcp.daysSuffix') }}</span>
+                  <span class="hint" style="margin-left: var(--wdc-space-2)">{{ $t('settings.mcp.daysSuffix', mcpRevokedRetentionDays) }}</span>
                   <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.revokedRetentionHint') }}</div>
                 </el-form-item>
                 <!-- Phase 8 — mcp_tool_calls audit retention. Drives the
@@ -518,7 +518,7 @@
                   <el-input-number v-model="mcpToolCallRetentionDays"
                     :min="1" :max="365" controls-position="right" style="width: 120px"
                     @change="(v: number | undefined) => saveMcpNumber('mcp.toolCallRetentionDays', v)" />
-                  <span class="hint" style="margin-left: var(--wdc-space-2)">{{ $t('settings.mcp.daysSuffix') }}</span>
+                  <span class="hint" style="margin-left: var(--wdc-space-2)">{{ $t('settings.mcp.daysSuffix', mcpToolCallRetentionDays) }}</span>
                   <div class="hint" style="margin-top: var(--wdc-space-1)">{{ $t('settings.mcp.toolCallRetentionHint') }}</div>
                 </el-form-item>
               </el-form>

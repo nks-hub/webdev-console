@@ -107,11 +107,15 @@ export const useSiteStateStore = defineStore('siteState', () => {
 
   /** A new site can only get a tunnel when the tunnel and a default zone are set up on the Cloudflare page. */
   const cloudflareReady = ref(false)
+  /** What the Cloudflare page still lacks, so the hint can name it instead of claiming the tunnel is missing. */
+  const cloudflareMissing = ref<'tunnel' | 'zone' | null>(null)
   async function loadCloudflareReady() {
+    cloudflareMissing.value = null
     if (!cloudflareActive.value) { cloudflareReady.value = false; return }
     try {
       const cfg = await fetchCloudflareConfig()
       cloudflareReady.value = !!(cfg.tunnelId && cfg.defaultZoneId)
+      cloudflareMissing.value = cloudflareReady.value ? null : !cfg.tunnelId ? 'tunnel' : 'zone'
     } catch { cloudflareReady.value = false }
   }
 
@@ -238,7 +242,7 @@ export const useSiteStateStore = defineStore('siteState', () => {
 
   return {
     prerequisites, phpVersions, starting, startError, installing,
-    webServer, apacheStartFailed, databaseServer, cloudflareActive, cloudflareReady,
+    webServer, apacheStartFailed, databaseServer, cloudflareActive, cloudflareReady, cloudflareMissing,
     refresh, loadPrerequisites, loadPhpVersions, stateOf, stepLabel, runtimeOf, startWebServer, startDatabase, install,
   }
 })

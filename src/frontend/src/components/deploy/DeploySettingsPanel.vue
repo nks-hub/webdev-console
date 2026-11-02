@@ -993,6 +993,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { formatBytes as formatBytesLocale } from '../../utils/format'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -1015,7 +1016,7 @@ import {
 } from '../../api/deploy'
 import type { DeployHostConfig, DeployHookConfig, DeploySnapshotEntry, DeploySettings, TestHostConnectionResult } from '../../api/deploy'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const props = defineProps<{ domain: string }>()
 
 const store = useDeploySettingsStore()
@@ -1710,9 +1711,7 @@ function formatDate(iso: string): string {
 }
 
 function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  return formatBytesLocale(bytes, locale.value)
 }
 
 // Expose for parent, if needed

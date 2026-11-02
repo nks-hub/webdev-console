@@ -128,7 +128,7 @@
         </label>
         <div v-if="!siteState.cloudflareReady" class="inline-callout">
           <el-icon aria-hidden="true"><WarningFilled /></el-icon>
-          <span>{{ $t('sites.new.tunnelNotReady') }}</span>
+          <span>{{ $t(siteState.cloudflareMissing === 'tunnel' ? 'sites.new.tunnelNotReady' : 'sites.new.zoneNotReady') }}</span>
           <el-button size="small" @click="goToCloudflare">{{ $t('siteEdit.openCloudflare') }}</el-button>
         </div>
       </div>

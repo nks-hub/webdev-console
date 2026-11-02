@@ -166,7 +166,7 @@ import PluginSlot from '../shared/PluginSlot.vue'
 import { useI18n } from 'vue-i18n'
 import { isRunning, serviceViewState, shortServiceName } from '../../utils/serviceState'
 import { runServiceBatch } from '../../utils/serviceActions'
-import { formatBytes, formatDuration, formatPercent } from '../../utils/format'
+import { formatAgo, formatBytes, formatDuration, formatPercent } from '../../utils/format'
 import { lastBackup, loadLastBackup } from '../../utils/lastBackup'
 import { openMailpit } from '../../utils/mailpit'
 
@@ -238,11 +238,9 @@ const now = useNow({ interval: 30_000 })
 const lastBackupAge = computed(() => {
   const at = lastBackup.value.createdAt
   if (at === null) return ''
-  const minutes = Math.max(0, Math.floor((now.value.getTime() - at) / 60000))
-  const rtf = new Intl.RelativeTimeFormat(localeName.value, { numeric: 'auto' })
-  if (minutes < 1) return t('common.justNow')
-  if (minutes < 60) return rtf.format(-minutes, 'minute')
-  return minutes < 1440 ? rtf.format(-Math.floor(minutes / 60), 'hour') : rtf.format(-Math.floor(minutes / 1440), 'day')
+  const seconds = Math.max(0, (now.value.getTime() - at) / 1000)
+  if (seconds < 60) return t('common.justNow')
+  return formatAgo(seconds, localeName.value)
 })
 
 // Recent activity timeline — Phase 4 plan item. Backed by /api/activity

@@ -251,7 +251,7 @@ import { ref, computed, h, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { errorMessage } from '../../utils/errors'
-import { formatBytes, formatDuration } from '../../utils/format'
+import { formatAgo, formatBytes } from '../../utils/format'
 import { backupContentKeys, backupContentLabel as contentLabel } from '../../utils/backupContent'
 import { Loading } from '@element-plus/icons-vue'
 import {
@@ -351,7 +351,7 @@ const lastCreatedLabel = computed(() => {
   if (!stats.value.lastCreatedUtc) return t('backupsPage.overview.none')
   const seconds = (now.value - new Date(stats.value.lastCreatedUtc).getTime()) / 1000
   if (seconds < 60) return t('backupsPage.overview.justNow')
-  return t('backupsPage.overview.ago', { d: formatDuration(seconds, locale.value) })
+  return formatAgo(seconds, locale.value)
 })
 
 // Schedule is on and the newest backup is older than one interval.

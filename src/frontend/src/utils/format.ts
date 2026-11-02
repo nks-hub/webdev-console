@@ -15,14 +15,23 @@ export function formatPercent(value: number, locale: string): string {
 }
 
 export function formatBytes(bytes: number, locale: string): string {
+  if (bytes < 1024) return unit(locale, 'byte', bytes)
   if (bytes < 1024 * 1024) return unit(locale, 'kilobyte', bytes / 1024)
-  if (bytes < 1024 * 1024 * 1024) return unit(locale, 'megabyte', bytes / 1024 / 1024)
+  if (bytes < 1024 * 1024 * 1024) return formatMegabytes(bytes / 1024 / 1024, locale)
   return unit(locale, 'gigabyte', bytes / 1024 / 1024 / 1024, 1)
 }
 
 /** Megabytes with the unit, for chart axes and tooltips. */
 export function formatMegabytes(mb: number, locale: string): string {
   return unit(locale, 'megabyte', mb, mb < 10 ? 1 : 0)
+}
+
+/** Past time as one grammatical phrase in the locale: "před 5 minutami", "před 169 dny". */
+export function formatAgo(seconds: number, locale: string): string {
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
+  const minutes = Math.max(0, Math.floor(seconds / 60))
+  if (minutes < 60) return rtf.format(-minutes, 'minute')
+  return minutes < 1440 ? rtf.format(-Math.floor(minutes / 60), 'hour') : rtf.format(-Math.floor(minutes / 1440), 'day')
 }
 
 /** Two most significant parts of a duration: "50 s", "6 min", "1 h 5 min". */
