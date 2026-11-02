@@ -1486,6 +1486,11 @@ app.Lifetime.ApplicationStarted.Register(() =>
         try { await autoStartServicesAsync(); }
         catch (Exception ex) { bgLogger.LogError(ex, "Background service auto-start failed"); }
         try { await reapplySitesAsync(); }
+        catch (Exception ex) when (app.Lifetime.ApplicationStopping.IsCancellationRequested)
+        {
+            // A stop during the (long) startup re-apply disposes services under it.
+            bgLogger.LogInformation("Startup site re-apply interrupted by shutdown ({Error})", ex.GetType().Name);
+        }
         catch (Exception ex) { bgLogger.LogError(ex, "Background startup site re-apply failed"); }
     });
 });
@@ -1614,7 +1619,18 @@ TaskScheduler.UnobservedTaskException += (_, e) =>
 try { pluginLoader.WireEndpoints(app); }
 catch (Exception ex) { app.Logger.LogError(ex, "Plugin endpoint wiring failed"); }
 
-await app.RunAsync();
+try
+{
+    await app.RunAsync();
+}
+catch (Exception ex) when (app.Lifetime.ApplicationStopping.IsCancellationRequested)
+{
+    // Services are already stopped and the port file is gone. A plugin that
+    // throws from DisposeAsync during host teardown must not turn a clean stop
+    // into a crash code: the GUI would treat it as a crash and respawn us.
+    // The logger providers may already be disposed here.
+    Console.Error.WriteLine($"[daemon] ignoring an error during host teardown after shutdown: {ex.GetType().Name}: {ex.Message}");
+}
 
 record BindAddressOption(
     string Value,
