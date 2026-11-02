@@ -716,6 +716,9 @@ public sealed class SiteOrchestrator
         void AddOrSkipWildcard(string? d)
         {
             if (string.IsNullOrWhiteSpace(d)) return;
+            // An IP alias (e.g. 10.0.2.2 for the Android emulator) is a valid
+            // ServerAlias but no host name: "127.0.0.1 10.0.2.2" in hosts is junk.
+            if (System.Net.IPAddress.TryParse(d, out _)) return;
             if (d.Contains('*') || d.Contains('?'))
             {
                 skippedWildcards.Add(d);
