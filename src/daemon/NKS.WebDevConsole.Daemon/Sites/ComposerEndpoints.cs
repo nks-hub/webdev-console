@@ -194,8 +194,7 @@ internal static class ComposerEndpoints
             if (site is null) return Results.NotFound(new { error = $"Site '{domain}' not found" });
 
             var root = site.DocumentRoot;
-            if (!Directory.Exists(root))
-                return Results.NotFound(new { error = $"Document root for '{domain}' does not exist" });
+            // A missing folder simply has no composer.json; answering 404 only floods the console.
             var hasJson = File.Exists(Path.Combine(root, "composer.json"));
             var composerRoot = root;
             if (!hasJson)

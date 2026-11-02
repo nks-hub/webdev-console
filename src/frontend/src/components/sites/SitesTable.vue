@@ -464,6 +464,12 @@ a.web-url:hover { color: var(--wdc-accent-ink); text-decoration: underline; text
 @container (max-width: 760px) {
   .act-text { display: none; }
 }
+/* Network and tunnel columns push the buttons off the right edge (seen at a 900 px window). */
+@container (max-width: 920px) {
+  .has-extra-columns .act-text { display: none; }
+  .has-extra-columns .col-state { width: 120px; min-width: 110px; }
+  .has-extra-columns .col-tunnel { width: 150px; }
+}
 /* Phone width: runtime, network and tunnel move into the web cell or drop out. */
 @container (max-width: 700px) {
   .col-runtime,
