@@ -44,7 +44,8 @@
           </div>
           <div class="ver-full">{{ ver.version }}</div>
           <div class="ver-path mono" :title="ver.directory ?? ver.path">{{ ver.directory ?? ver.path }}</div>
-          <div class="ver-actions" v-if="ver.majorMinor !== defaultMajorMinor">
+          <div v-if="shadowedBy(ver)" class="ver-note">{{ $t('php.shadowed', { minor: ver.majorMinor, version: shadowedBy(ver) }) }}</div>
+          <div class="ver-actions" v-else-if="ver.majorMinor !== defaultMajorMinor">
             <el-button size="small" text @click.stop="setDefault(ver.version)">{{ $t('php.setDefault') }}</el-button>
           </div>
         </div>
@@ -147,6 +148,15 @@ const defaultVersion = computed(() =>
 const defaultMajorMinor = computed(() => defaultVersion.value.split('.').slice(0, 2).join('.'))
 function isActive(ver: PhpVersion): boolean {
   return ver.version === defaultVersion.value
+}
+// Sites pick PHP by major.minor and the daemon runs the newest patch of it, so an
+// older install of the same minor (8.5.6 next to 8.5.12) is never used.
+function shadowedBy(ver: PhpVersion): string {
+  const newest = versions.value
+    .filter(v => v.majorMinor === ver.majorMinor)
+    .map(v => v.version)
+    .sort((x, y) => y.localeCompare(x, undefined, { numeric: true }))[0]
+  return newest && newest !== ver.version ? newest : ''
 }
 
 function addVersion() {
@@ -475,4 +485,5 @@ onMounted(() => { void loadVersions() })
   white-space: pre-wrap;
   word-break: break-all;
 }
+.ver-note { margin-top: var(--wdc-space-2); color: var(--wdc-text-3); font-size: 0.8rem; }
 </style>

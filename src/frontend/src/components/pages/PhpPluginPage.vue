@@ -37,7 +37,8 @@
             </span>
             <span class="ver-full mono">{{ ver.version }}</span>
             <span class="ver-path mono">{{ ver.path }}</span>
-            <el-button v-if="ver.majorMinor !== defaultMajorMinor" size="small" text :loading="settingDefault === ver.version" @click="setDefault(ver.version)">
+            <span v-if="shadowedBy(ver)" class="ver-note">{{ t('php.shadowed', { minor: ver.majorMinor, version: shadowedBy(ver) }) }}</span>
+            <el-button v-else-if="ver.majorMinor !== defaultMajorMinor" size="small" text :loading="settingDefault === ver.version" @click="setDefault(ver.version)">
               {{ t('php.setDefault') }}
             </el-button>
           </div>
@@ -115,6 +116,16 @@ const installed = computed(() => stateOf(daemonStore.services.find(s => s.id ===
 const defaultVersion = computed(() =>
   versions.value.find(v => v.isActive ?? v.isDefault ?? false)?.version ?? '')
 const defaultMajorMinor = computed(() => defaultVersion.value.split('.').slice(0, 2).join('.'))
+// Same rule as PhpManager: an older patch of an installed minor is never used.
+function shadowedBy(ver: { majorMinor?: string; version: string }): string {
+  if (!ver.majorMinor) return ''
+  const newest = versions.value
+    .filter(v => v.majorMinor === ver.majorMinor)
+    .map(v => v.version)
+    .sort((x, y) => y.localeCompare(x, undefined, { numeric: true }))[0]
+  return newest && newest !== ver.version ? newest : ''
+}
+
 function isActive(ver: PhpVersion): boolean {
   return ver.version === defaultVersion.value
 }
@@ -269,4 +280,5 @@ onActivated(() => { void loadVersions() })
   white-space: pre-wrap;
   word-break: break-all;
 }
+.ver-note { color: var(--wdc-text-3); font-size: 0.8rem; }
 </style>

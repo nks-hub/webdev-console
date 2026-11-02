@@ -1500,6 +1500,7 @@
     "refreshConfig": "Obnovit konfiguraci",
     "extensionsCount": "Rozšíření ({enabled}/{total} povoleno)",
     "default": "Pro nové weby",
+    "shadowed": "Nepoužívá se: weby s PHP {minor} běží na {version}.",
     "addVersion": "Přidat verzi",
     "configLoadFailed": "Soubor php.ini se nepodařilo načíst: {err}",
     "configNotFound": "Pro PHP {version} se nenašel soubor php.ini. Zkuste stránku načíst znovu; pokud to nepomůže, verzi v Binárkách přeinstalujte.",

@@ -1499,6 +1499,7 @@
     "noVersions": "No PHP version is installed yet.",
     "refreshConfig": "Refresh Config",
     "extensionsCount": "Extensions ({enabled}/{total} enabled)",
+    "shadowed": "Not used: sites on PHP {minor} run on {version}.",
     "default": "For new sites",
     "addVersion": "Add version",
     "configLoadFailed": "Could not load php.ini: {err}",
