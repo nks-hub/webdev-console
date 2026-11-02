@@ -604,53 +604,6 @@
               </el-form-item>
             </el-form>
 
-            <!-- Plan §5.advanced (item 486) — rare/destructive controls
-                 behind explicit progressive disclosure. The danger zone
-                 was previously always-expanded which encouraged accidental
-                 scroll-past; now requires explicit toggle to reveal both
-                 reset and factory-reset actions. -->
-            <el-collapse v-model="dangerZoneExpanded" class="danger-collapse">
-              <el-collapse-item name="danger">
-                <template #title>
-                  <span class="danger-collapse-title">
-                    <el-icon><Warning /></el-icon>
-                    {{ $t('settings.danger.title') }}
-                  </span>
-                </template>
-                <div class="danger-zone">
-                  <p class="danger-desc">
-                    {{ $t('settings.danger.desc') }}
-                  </p>
-                  <div class="danger-row">
-                <div class="danger-info">
-                  <strong>{{ $t('settings.danger.resetSettings') }}</strong>
-                  <span class="hint">
-                    {{ $t('settings.danger.resetSettingsHint') }}
-                  </span>
-                </div>
-                <el-button
-                  type="warning"
-                  :loading="resettingSettings"
-                  @click="confirmResetSettings"
-                >{{ $t('settings.danger.resetSettings') }}</el-button>
-              </div>
-              <div class="danger-row">
-                <div class="danger-info">
-                  <strong>{{ $t('settings.danger.factoryResetHeading') }}</strong>
-                  <span class="hint">
-                    {{ $t('settings.danger.factoryResetHint') }}
-                  </span>
-                </div>
-                <el-button
-                  type="danger"
-                  :loading="resettingFactory"
-                  @click="confirmFactoryReset"
-                >{{ $t('settings.danger.factoryReset') }}</el-button>
-                </div>
-                </div>
-              </el-collapse-item>
-            </el-collapse>
-
             <!-- Phase 7.1a — deploy subsystem toggle. Default ON since
                  most users install WDC FOR site management with deploy.
                  OFF hides Deploy tab in SiteEdit + plugin REST endpoints
@@ -766,6 +719,53 @@
                 </template>
               </el-form>
             </div>
+
+            <!-- Plan §5.advanced (item 486) — rare/destructive controls
+                 behind explicit progressive disclosure. The danger zone
+                 was previously always-expanded which encouraged accidental
+                 scroll-past; now requires explicit toggle to reveal both
+                 reset and factory-reset actions. -->
+            <el-collapse v-model="dangerZoneExpanded" class="danger-collapse">
+              <el-collapse-item name="danger">
+                <template #title>
+                  <span class="danger-collapse-title">
+                    <el-icon><Warning /></el-icon>
+                    {{ $t('settings.danger.title') }}
+                  </span>
+                </template>
+                <div class="danger-zone">
+                  <p class="danger-desc">
+                    {{ $t('settings.danger.desc') }}
+                  </p>
+                  <div class="danger-row">
+                <div class="danger-info">
+                  <strong>{{ $t('settings.danger.resetSettings') }}</strong>
+                  <span class="hint">
+                    {{ $t('settings.danger.resetSettingsHint') }}
+                  </span>
+                </div>
+                <el-button
+                  type="warning"
+                  :loading="resettingSettings"
+                  @click="confirmResetSettings"
+                >{{ $t('settings.danger.resetSettings') }}</el-button>
+              </div>
+              <div class="danger-row">
+                <div class="danger-info">
+                  <strong>{{ $t('settings.danger.factoryResetHeading') }}</strong>
+                  <span class="hint">
+                    {{ $t('settings.danger.factoryResetHint') }}
+                  </span>
+                </div>
+                <el-button
+                  type="danger"
+                  :loading="resettingFactory"
+                  @click="confirmFactoryReset"
+                >{{ $t('settings.danger.factoryReset') }}</el-button>
+                </div>
+                </div>
+              </el-collapse-item>
+            </el-collapse>
           </div>
         </section>
 
@@ -2943,6 +2943,11 @@ async function save() {
 
 .settings-tabs {
   --el-tabs-header-height: 40px;
+}
+
+/* Element's form-item content is a flex row: without this a short hint sat next to the input instead of below it. */
+:deep(.el-form-item__content > .hint) {
+  flex-basis: 100%;
 }
 
 .tab-content {

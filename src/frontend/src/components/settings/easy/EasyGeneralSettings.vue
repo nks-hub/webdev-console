@@ -1,5 +1,7 @@
 <template>
-  <div class="tab-content">
+  <!-- Not .tab-content: Settings.vue styles that class as a grid whose row
+       gaps stacked on the heading margins. -->
+  <div class="general-settings">
     <!-- Simple-mode panel header already renders settings.general.tabDesc
          as its subtitle (Settings.vue), so duplicating it inside the
          component produced the same sentence twice. The advanced tab is
@@ -149,7 +151,7 @@ function onModeChange(value: boolean): void {
 </script>
 
 <style scoped>
-.tab-content {
+.general-settings {
   min-width: 0;
 }
 

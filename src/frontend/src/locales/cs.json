@@ -404,7 +404,7 @@
       "active": "aktivní pravidla",
       "deadweight": "nepoužitá pravidla",
       "deadweightHint": "Pravidla starší než 7 dní, která AI ještě nepoužila. Nejspíš je můžete odvolat.",
-      "totalMatches": "schváleno pravidly",
+      "totalMatches": "žádostí schváleno pravidly",
       "lastMatch": "naposledy:",
       "alwaysConfirm": "akcí se vždy ptá",
       "justNow": "právě teď",
