@@ -1615,6 +1615,7 @@
       "notFound": "Plugin „{id}“ nenalezen.",
       "enabled": "Zapnuto",
       "disabled": "Vypnuto",
+      "unsupported": "Nepodporováno",
       "about": "O pluginu",
       "noDescription": "Žádný popis.",
       "author": "Autor",
@@ -3143,7 +3144,7 @@
         "error": "Chyba, podrobnosti níže."
       },
       "checkFailed": "Kontrola aktualizací selhala (GitHub odpověděl kódem {status}).",
-      "autoUpdate": "Automatická aktualizace",
+      "autoUpdate": "Stav aktualizací",
       "rateLimited": "GitHub dočasně omezil počet dotazů. Zkuste to znovu za hodinu.",
       "state": {
         "downloaded": "Verze {v} je připravená k instalaci",

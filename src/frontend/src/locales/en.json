@@ -1615,6 +1615,7 @@
       "notFound": "Plugin '{id}' not found.",
       "enabled": "Enabled",
       "disabled": "Disabled",
+      "unsupported": "Unsupported",
       "about": "About",
       "noDescription": "No description provided.",
       "author": "Author",
@@ -3143,7 +3144,7 @@
         "error": "Error, details below."
       },
       "checkFailed": "The update check failed (GitHub answered with code {status}).",
-      "autoUpdate": "Automatic update",
+      "autoUpdate": "Update status",
       "rateLimited": "GitHub is limiting requests for now. Try again in an hour.",
       "state": {
         "downloaded": "Version {v} is ready to install",
