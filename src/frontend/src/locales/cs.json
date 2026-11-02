@@ -453,6 +453,7 @@
     "title": "Kolik toho smí AI udělat bez ptaní?",
     "hint": "Vyberte profil. Pravidla pak můžete upravit níže.",
     "dismiss": "Přeskočit",
+    "active": "Právě aktivní",
     "recommended": "doporučeno",
     "applied": "Profil {profile} je nastavený",
     "minimalApplied": "Profil Minimální: AI se ptá na všechno, co se musí schválit",

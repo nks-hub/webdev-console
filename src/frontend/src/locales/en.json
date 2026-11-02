@@ -453,6 +453,7 @@
     "title": "How much may an AI do without asking?",
     "hint": "Pick a profile. You can change the rules below afterwards.",
     "dismiss": "Skip",
+    "active": "Currently active",
     "recommended": "recommended",
     "applied": "Profile {profile} is set",
     "minimalApplied": "Minimal profile: the AI asks about everything that needs approval",

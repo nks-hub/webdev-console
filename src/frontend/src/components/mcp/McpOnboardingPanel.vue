@@ -41,14 +41,14 @@
         </ul>
         <el-button
           size="small"
-          :type="profile.id === DEFAULT_PROFILE ? 'primary' : profile.id === 'permissive' ? 'warning' : 'default'"
+          :type="isActive(profile) ? 'default' : profile.id === DEFAULT_PROFILE ? 'primary' : profile.id === 'permissive' ? 'warning' : 'default'"
           :plain="profile.id === 'permissive'"
           :loading="pending === profile.id"
-          :disabled="pending !== null && pending !== profile.id"
+          :disabled="isActive(profile) || (pending !== null && pending !== profile.id)"
           class="profile-cta"
           @click="apply(profile)"
         >
-          {{ t(`mcpOnboarding.profiles.${profile.id}.cta`) }}
+          {{ isActive(profile) ? t('mcpOnboarding.active') : t(`mcpOnboarding.profiles.${profile.id}.cta`) }}
         </el-button>
       </div>
     </div>
@@ -144,6 +144,9 @@ async function apply(profile: McpProfileDefinition): Promise<void> {
     pending.value = null
   }
 }
+
+// The panel only shows with no grants, which is exactly the Minimal profile.
+const isActive = (p: McpProfileDefinition) => p.grants.length === 0
 
 const cardProfiles = MCP_PROFILES.filter((p) => p.id !== 'custom')
 
