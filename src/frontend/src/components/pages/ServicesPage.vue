@@ -156,7 +156,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, type Component } from 'vue'
+import { computed, onActivated, ref, watch, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Check, Close, Download, Loading, Remove, WarningFilled } from '@element-plus/icons-vue'
@@ -212,6 +212,10 @@ const filter = ref<Filter>(queryFilter())
 watch(() => route.query.filter, () => {
   if (route.path === '/services') filter.value = queryFilter()
 })
+// keep-alive: coming back via a plain /services link leaves query.filter
+// unchanged (undefined → undefined), so the watch above never fires and an
+// old "Problems" filter stuck around, hiding every healthy service.
+onActivated(() => { filter.value = queryFilter() })
 function setFilter(f: Filter) {
   filter.value = f
   void router.replace({ query: { ...route.query, filter: f === 'all' ? undefined : f } })

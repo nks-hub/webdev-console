@@ -29,7 +29,7 @@
             :class="{ active: isActive(item), 'nav-item-tunnel': item.tunnelLive }"
             :aria-current="isActive(item) ? 'page' : undefined"
             :aria-describedby="item.problems ? `nav-problems-${item.key}` : undefined"
-            @click="navigate(item.route, item.problems ? { filter: 'problems' } : undefined)"
+            @click="navigate(item.route)"
           >
             <el-icon class="nav-icon" :size="16" aria-hidden="true"><component :is="item.icon" /></el-icon>
             <span class="nav-label">{{ item.label }}</span>
