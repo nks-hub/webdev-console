@@ -185,6 +185,8 @@ let daemon: ChildProcess | null = null
 let daemonConnected = false
 // What the tray last rendered; can lag daemonConnected when /api/services failed.
 let trayShowsConnected = false
+let daemonSpawnedAt = 0
+let connectedSinceSpawn = false
 let isQuitting = false
 // Tray label of the updater: a key of mainMenu.updaterState plus its parameters.
 let updaterStatus: { key: string; params: Record<string, string | number> } = { key: 'idle', params: {} }
@@ -698,6 +700,8 @@ async function spawnDaemonInner() {
     daemon = spawn(daemonExe, [], { stdio: 'pipe', detached: false, env: daemonEnv })
   }
   log.info(`[daemon] spawned pid=${daemon.pid}`)
+  daemonSpawnedAt = Date.now()
+  connectedSinceSpawn = false
   const child = daemon
   expectedDaemonExit = false
   if (crashStableTimer) clearTimeout(crashStableTimer)
@@ -1320,7 +1324,11 @@ async function updateTray() {
   trayShowsConnected = snapshot.connected
 
   const trayMenuLabel = menuText(snapshot.connected ? 'headerConnected' : 'headerOffline')
-  const starting = daemonSpawning || (daemon !== null && daemon.exitCode === null && !daemonConnected)
+  if (snapshot.connected) connectedSinceSpawn = true
+  // "Starting" only until the first successful snapshot of this child, and at
+  // most 90 s: a hung child would otherwise claim to be starting forever.
+  const starting = daemonSpawning || (daemon !== null && daemon.exitCode === null
+    && !connectedSinceSpawn && Date.now() - daemonSpawnedAt < 90_000)
   const summary = snapshot.connected
     ? menuText(snapshot.services.length === 1 ? 'servicesRunningOne' : 'servicesRunningMany',
       { running: snapshot.running, total: snapshot.services.length })
