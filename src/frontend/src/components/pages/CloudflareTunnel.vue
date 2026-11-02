@@ -952,4 +952,8 @@ async function autoVerifyToken() {
 /* Icons sat ~3 px above the text in the tab labels. */
 .tab-label { display: inline-flex; align-items: center; gap: var(--wdc-space-1); }
 .perm { white-space: nowrap; }
+/* Scoped copies of these live in the site tabs; this page needs its own. */
+.ssl-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 0; }
+.ssl-toggle-title { font-weight: 600; color: var(--wdc-text); font-size: 0.87rem; }
+.ssl-toggle-desc { font-size: 0.82rem; color: var(--wdc-text-3); margin-top: 2px; }
 </style>
