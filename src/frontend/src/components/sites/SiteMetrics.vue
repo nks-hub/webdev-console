@@ -142,6 +142,9 @@ const chartOption = computed(() => {
     const d = new Date(pt.ts)
     return `${pad(d.getHours())}:${pad(d.getMinutes())}`
   }) : []
+  // Bytes get their own axis only next to another series; alone they use axis 0.
+  const bytesOnOwnAxis = activeSeries.value.includes('bytes') && activeSeries.value.length > 1
+  const bytesOnly = activeSeries.value.length === 1 && activeSeries.value[0] === 'bytes'
   const series = seriesOptions
     .filter(s => activeSeries.value.includes(s.key))
     .map(s => {
@@ -149,7 +152,7 @@ const chartOption = computed(() => {
       const color = seriesColor[s.key]
       return {
         name: t(s.labelKey),
-        yAxisIndex: s.key === 'bytes' ? 1 : 0,
+        yAxisIndex: s.key === 'bytes' && bytesOnOwnAxis ? 1 : 0,
         type: 'line' as const,
         data: found ? found.data.map(pt => pt.value) : labels.map(() => 0),
         smooth: 0.2,
@@ -167,7 +170,7 @@ const chartOption = computed(() => {
       borderColor: rgba(p.borderStrong),
       textStyle: { color: rgba(p.text), fontSize: 12 },
     },
-    grid: { top: 12, right: activeSeries.value.includes('bytes') && activeSeries.value.length > 1 ? 56 : 16, bottom: 44, left: 48 },
+    grid: { top: 12, right: bytesOnOwnAxis ? 56 : 16, bottom: 44, left: bytesOnly ? 64 : 48 },
     dataZoom: [
       { type: 'inside', start: 0, end: 100 },
       { type: 'slider', height: 18, bottom: 4, borderColor: rgba(p.border), fillerColor: rgba(p.accent, 0.14), textStyle: { color: axisText } },
@@ -186,7 +189,7 @@ const chartOption = computed(() => {
       // Counts and bytes are whole numbers; without this a day with one request gets ticks 0, 0.25, 0.5 shown as 0 0 1 1 1.
       minInterval: 1,
       splitNumber: 3,
-      axisLabel: { fontSize: 11, color: axisText, formatter: (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(Math.round(v))) },
+      axisLabel: { fontSize: 11, color: axisText, formatter: bytesOnly ? formatBytes : (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(Math.round(v))) },
       splitLine: { lineStyle: { color: rgba(p.border), type: 'dashed' } },
       axisLine: { show: false },
       axisTick: { show: false },
@@ -194,7 +197,7 @@ const chartOption = computed(() => {
       // Bytes run orders of magnitude above request counts; sharing one axis would flatten the requests line.
       type: 'value',
       min: 0,
-      show: activeSeries.value.includes('bytes') && activeSeries.value.length > 1,
+      show: bytesOnOwnAxis,
       splitNumber: 3,
       axisLabel: { fontSize: 11, color: axisText, formatter: formatBytes },
       splitLine: { show: false },
