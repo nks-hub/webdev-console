@@ -1405,3 +1405,8 @@ html:not(.dark) ::-webkit-scrollbar-thumb:hover {
   background: color-mix(in srgb, var(--wdc-accent) 18%, transparent);
   color: var(--wdc-accent);
 }
+
+/* Czech page-size option ("50 na str.") is clipped at Element's default 100px. */
+.el-pagination .el-select .el-select__wrapper {
+  min-width: 128px;
+}

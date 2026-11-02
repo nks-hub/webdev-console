@@ -2915,20 +2915,24 @@ async function save() {
   padding: var(--wdc-space-5) 0;
 }
 
+/* Columns, not a grid: grid rows tied short panels to the height of tall neighbours and left holes. */
 .simple-settings-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
-  gap: var(--wdc-space-4);
-  align-items: start;
+  column-count: 2;
+  column-gap: var(--wdc-space-4);
+}
+
+.simple-settings-grid > * {
+  break-inside: avoid;
+  margin-bottom: var(--wdc-space-4);
+}
+
+.simple-settings-grid > .simple-hidden-tab {
+  column-span: all;
 }
 
 /* Panel chrome moved to SettingsPanel shared primitive (plan §6).
    Only the panel-main grid-span modifier remains, plus markup-driven
    helpers (.simple-runtime-grid, .simple-settings-actions, footer). */
-.simple-settings-panel-main {
-  grid-row: span 2;
-}
-
 .simple-settings-actions {
   display: flex;
   gap: var(--wdc-space-2);
@@ -2946,7 +2950,7 @@ async function save() {
 }
 
 /* Element's form-item content is a flex row: without this a short hint sat next to the input instead of below it. */
-:deep(.el-form-item__content > .hint) {
+:deep(.el-form-item__content > div.hint) {
   flex-basis: 100%;
 }
 
@@ -3057,11 +3061,7 @@ async function save() {
 
 @media (max-width: 980px) {
   .simple-settings-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .simple-settings-panel-main {
-    grid-row: auto;
+    column-count: 1;
   }
 }
 
