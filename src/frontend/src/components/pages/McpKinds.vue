@@ -73,9 +73,9 @@
     />
 
     <el-table v-else :data="filteredKinds" stripe size="small" class="kinds-table">
-      <el-table-column prop="id" :label="t('mcpKinds.col.id')" min-width="180">
+      <el-table-column prop="id" :label="t('mcpKinds.col.id')" min-width="230">
         <template #default="{ row }">
-          <code class="mono">{{ row.id }}</code>
+          <code class="mono" style="white-space: nowrap">{{ row.id }}</code>
         </template>
       </el-table-column>
       <el-table-column prop="label" :label="t('mcpKinds.col.label')" min-width="240">
