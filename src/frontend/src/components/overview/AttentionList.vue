@@ -180,7 +180,7 @@ const items = computed<AttentionItem[]>(() => {
         key: 'backup',
         tone: 'info',
         text: Number.isFinite(age)
-          ? t('overview.attention.backupOld', { days: BACKUP_STALE_DAYS })
+          ? t('overview.attention.backupOld', { n: Math.floor(age / 86_400_000) }, Math.floor(age / 86_400_000))
           : t('overview.attention.backupNever'),
         action: t('overview.attention.openBackups'),
         run: () => void router.push('/backups'),

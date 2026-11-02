@@ -194,7 +194,8 @@
     "problemStartFailed": "{name} did not start",
     "problemExited": "{name} crashed",
     "mcpOff": "off",
-    "mcpPending": "Waiting for approval: {n}"
+    "mcpPending": "Waiting for approval: {n}",
+    "cloudflareExposed": "{n} site is reachable through the tunnel | {n} sites are reachable through the tunnel"
   },
   "versions": {
     "active": "Active",
@@ -698,6 +699,8 @@
     "title": "Dashboard",
     "subtitle": "System overview & service health",
     "startAll": "Start All",
+    "nothingToStart": "Nothing to start, every installed service is running.",
+    "nothingToStop": "No service is running.",
     "stopAll": "Stop All",
     "recentActivity": "Recent activity",
     "connectingTitle": "Connecting to daemon…",
@@ -3751,7 +3754,7 @@
       "apacheStopped": "The web server is stopped, so your sites do not load.",
       "startApache": "Start Apache",
       "backupNever": "No backup has been made yet.",
-      "backupOld": "The last backup is more than {days} days old.",
+      "backupOld": "The last backup is {n} day old. | The last backup is {n} days old.",
       "openBackups": "Open backups",
       "update": "Version {version} is ready to install.",
       "openUpdate": "Open update",
