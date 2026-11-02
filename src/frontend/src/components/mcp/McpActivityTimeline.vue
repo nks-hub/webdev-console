@@ -189,7 +189,10 @@ function fillBuckets(raw: McpToolCallTimelineBucket[]): McpToolCallTimelineBucke
   for (const b of raw) map.set(b.hour, b)
   const out: McpToolCallTimelineBucket[] = []
   const now = new Date()
-  for (let i = withinHours - 1; i >= 0; i--) {
+  // The server window starts mid-hour, so the oldest hour bucket is the
+  // (withinHours)-th one back; dropping it made the chart disagree with the
+  // 24 h call counter.
+  for (let i = withinHours; i >= 0; i--) {
     const dt = new Date(now.getTime() - i * 60 * 60 * 1000)
     // Match SQLite strftime('%Y-%m-%dT%H', ...) format which uses UTC
     // when the column carries 'Z' suffix.
