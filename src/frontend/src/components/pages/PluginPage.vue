@@ -191,15 +191,7 @@ const pluginDescription = computed(() => {
   return te(key) ? t(key) : (manifest.value?.description || t('plugins.page.noDescription'))
 })
 const daemonStore = useDaemonStore()
-// The daemon's fallback UI assumes every plugin owns a service. A plugin with
-// no service of that id (deploy, ssl) must not get status/log panels, which
-// would only request /api/services/<id>/logs and 404.
-const uiDef = computed(() => {
-  const def = pluginsStore.getUi(props.id)
-  if (!def || daemonStore.services.length === 0 || daemonStore.services.some(s => s.id === props.id)) return def
-  const panels = def.panels.filter(p => p.props?.serviceId !== props.id)
-  return panels.length ? { ...def, panels } : undefined
-})
+const uiDef = computed(() => pluginsStore.getPanelUi(props.id, daemonStore.services.map(s => s.id)))
 
 // Task 26: watch manifest for pageBundleUrl and lazy-load when it shows up.
 // Using watch rather than onMounted-only so plugin reloads (hot-swap

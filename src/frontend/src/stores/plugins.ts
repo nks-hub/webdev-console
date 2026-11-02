@@ -113,6 +113,18 @@ export const usePluginsStore = defineStore('plugins', () => {
     return uiDefinitions.value.get(id)
   }
 
+  /**
+   * The panels a plugin page can render. The daemon's fallback UI assumes every plugin owns a service;
+   * a plugin with no service of its id (deploy, ssl) must not get status/log panels, which would only
+   * request /api/services/<id>/logs and 404. Used by both the page and the Plugins card button.
+   */
+  function getPanelUi(id: string, serviceIds: readonly string[]): PluginUiDefinition | undefined {
+    const def = uiDefinitions.value.get(id)
+    if (!def || serviceIds.length === 0 || serviceIds.includes(id)) return def
+    const panels = def.panels.filter(p => p.props?.serviceId !== id)
+    return panels.length ? { ...def, panels } : undefined
+  }
+
   const toolsNavEntries = computed(() => navEntries.value.filter(e => e.category === 'Tools'))
 
   // F91.2: generic "UI surface" system. A surface is any piece of UI that a
@@ -251,7 +263,7 @@ export const usePluginsStore = defineStore('plugins', () => {
     manifests, uiDefinitions, navEntries, toolsNavEntries,
     loading, navEntriesLoaded, enabledPlugins,
     ownedSurfaces, activeSurfaces, activeServiceIds,
-    loadAll, toggleEnable, getUi,
+    loadAll, toggleEnable, getUi, getPanelUi,
     isUiVisible, isRouteVisible, isPluginOwnedRoute,
     serviceIdsInCategory, isServiceVisible,
     contributionsForSlot,

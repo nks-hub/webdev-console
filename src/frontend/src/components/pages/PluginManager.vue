@@ -216,7 +216,7 @@
         <!-- Open plugin page button if has UI. Must be a full-width solid
              button for readable contrast — the old text-primary variant
              rendered as low-contrast blue-on-blue on the flat surface. -->
-        <div class="pm-card-actions" v-if="isUsable(plugin) && plugin.ui">
+        <div class="pm-card-actions" v-if="isUsable(plugin) && hasPanel(plugin.id)">
           <el-button
             size="small"
             type="primary"
@@ -260,6 +260,7 @@ import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import { ArrowRight } from '@element-plus/icons-vue'
 import { usePluginsStore } from '../../stores/plugins'
+import { useDaemonStore } from '../../stores/daemon'
 import ServiceIcon from '../shared/ServiceIcon.vue'
 import { errorMessage } from '../../utils/errors'
 import { usePluginText } from '../../utils/pluginText'
@@ -282,6 +283,11 @@ const { t, te } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const pluginsStore = usePluginsStore()
+const daemonStore = useDaemonStore()
+
+function hasPanel(id: string): boolean {
+  return !!pluginsStore.getPanelUi(id, daemonStore.services.map(s => s.id))
+}
 const search = ref('')
 const toggling = ref<Set<string>>(new Set())
 // F91.4: tracks in-flight uninstall calls so the button spins while the
