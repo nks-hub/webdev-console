@@ -185,6 +185,7 @@ let daemon: ChildProcess | null = null
 let daemonConnected = false
 // What the tray last rendered; can lag daemonConnected when /api/services failed.
 let trayShowsConnected = false
+let lastTraySummary = ''
 let daemonSpawnedAt = 0
 let connectedSinceSpawn = false
 let isQuitting = false
@@ -1334,6 +1335,10 @@ async function updateTray() {
       { running: snapshot.running, total: snapshot.services.length })
     : menuText(starting ? 'daemonStarting' : 'daemonUnavailable')
   activeTray.setToolTip(menuText('tooltip', { summary }))
+  if (summary !== lastTraySummary) {
+    lastTraySummary = summary
+    log.info(`[tray] ${summary}`)
+  }
 
   const canStartDaemon = !snapshot.connected && !daemon && !daemonSpawning
   const trayMenu = Menu.buildFromTemplate([
