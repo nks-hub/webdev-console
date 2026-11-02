@@ -29,7 +29,7 @@
         <section class="block">
           <h2 class="section-title">{{ t('postgresPlugin.resetPassword') }}</h2>
           <p class="hint">{{ t('postgresPlugin.resetWarning') }}</p>
-          <el-form label-width="180px" class="reset-form" @submit.prevent>
+          <el-form label-position="top" class="reset-form" @submit.prevent>
             <el-form-item :label="t('postgresPlugin.newPassword')">
               <el-input v-model="resetPasswordForm.newPassword" type="password" show-password />
             </el-form-item>
