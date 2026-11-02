@@ -179,6 +179,13 @@ internal static class ComposerEndpoints
             return File.Exists(candidate) ? candidate : null;
         }
 
+        // An empty or relative root would resolve against the daemon's working
+        // directory, so Composer could run (and write composer.json) there.
+        static IResult? DocRootProblem(string? docroot, string domain) =>
+            string.IsNullOrWhiteSpace(docroot) || !Path.IsPathFullyQualified(docroot)
+                ? Results.BadRequest(new { error = $"Site '{domain}' has no absolute document root" })
+                : null;
+
         static string ResolveComposerRoot(string docroot)
         {
             if (File.Exists(Path.Combine(docroot, "composer.json"))) return docroot;
@@ -192,8 +199,7 @@ internal static class ComposerEndpoints
         {
             var site = sm.Get(domain);
             if (site is null) return Results.NotFound(new { error = $"Site '{domain}' not found" });
-            // An empty root would run Composer in the daemon's working directory.
-            if (string.IsNullOrWhiteSpace(site.DocumentRoot)) return Results.BadRequest(new { error = $"Site '{domain}' has no document root" });
+            if (DocRootProblem(site.DocumentRoot, domain) is { } bad) return bad;
 
             var root = site.DocumentRoot;
             // A missing folder simply has no composer.json; answering 404 only floods the console.
@@ -271,8 +277,7 @@ internal static class ComposerEndpoints
         {
             var site = sm.Get(domain);
             if (site is null) return Results.NotFound(new { error = $"Site '{domain}' not found" });
-            // An empty root would run Composer in the daemon's working directory.
-            if (string.IsNullOrWhiteSpace(site.DocumentRoot)) return Results.BadRequest(new { error = $"Site '{domain}' has no document root" });
+            if (DocRootProblem(site.DocumentRoot, domain) is { } bad) return bad;
 
             var invoker = ResolveComposerInvoker(sp, pluginLoader);
             if (invoker is null)
@@ -302,8 +307,7 @@ internal static class ComposerEndpoints
         {
             var site = sm.Get(domain);
             if (site is null) return Results.NotFound(new { error = $"Site '{domain}' not found" });
-            // An empty root would run Composer in the daemon's working directory.
-            if (string.IsNullOrWhiteSpace(site.DocumentRoot)) return Results.BadRequest(new { error = $"Site '{domain}' has no document root" });
+            if (DocRootProblem(site.DocumentRoot, domain) is { } bad) return bad;
 
             var invoker = ResolveComposerInvoker(sp, pluginLoader);
             if (invoker is null)
@@ -347,8 +351,7 @@ internal static class ComposerEndpoints
         {
             var site = sm.Get(domain);
             if (site is null) return Results.NotFound(new { error = $"Site '{domain}' not found" });
-            // An empty root would run Composer in the daemon's working directory.
-            if (string.IsNullOrWhiteSpace(site.DocumentRoot)) return Results.BadRequest(new { error = $"Site '{domain}' has no document root" });
+            if (DocRootProblem(site.DocumentRoot, domain) is { } bad) return bad;
 
             var invoker = ResolveComposerInvoker(sp, pluginLoader);
             if (invoker is null)
@@ -392,8 +395,7 @@ internal static class ComposerEndpoints
         {
             var site = sm.Get(domain);
             if (site is null) return Results.NotFound(new { error = $"Site '{domain}' not found" });
-            // An empty root would run Composer in the daemon's working directory.
-            if (string.IsNullOrWhiteSpace(site.DocumentRoot)) return Results.BadRequest(new { error = $"Site '{domain}' has no document root" });
+            if (DocRootProblem(site.DocumentRoot, domain) is { } bad) return bad;
             var body = await ctx.Request.ReadFromJsonAsync<Dictionary<string, string>>(cancellationToken: ct);
             var invoker = ResolveComposerInvoker(sp, pluginLoader);
             if (invoker is null) return Results.Problem(title: "Composer plugin not loaded", statusCode: 503);
@@ -420,8 +422,7 @@ internal static class ComposerEndpoints
         {
             var site = sm.Get(domain);
             if (site is null) return Results.NotFound(new { error = $"Site '{domain}' not found" });
-            // An empty root would run Composer in the daemon's working directory.
-            if (string.IsNullOrWhiteSpace(site.DocumentRoot)) return Results.BadRequest(new { error = $"Site '{domain}' has no document root" });
+            if (DocRootProblem(site.DocumentRoot, domain) is { } bad) return bad;
             var invoker = ResolveComposerInvoker(sp, pluginLoader);
             if (invoker is null) return Results.Problem(title: "Composer plugin not loaded", statusCode: 503);
             if (ComposerNotInstalled(invoker) is { } notInstalled) return notInstalled;
@@ -449,8 +450,7 @@ internal static class ComposerEndpoints
         {
             var site = sm.Get(domain);
             if (site is null) return Results.NotFound(new { error = $"Site '{domain}' not found" });
-            // An empty root would run Composer in the daemon's working directory.
-            if (string.IsNullOrWhiteSpace(site.DocumentRoot)) return Results.BadRequest(new { error = $"Site '{domain}' has no document root" });
+            if (DocRootProblem(site.DocumentRoot, domain) is { } bad) return bad;
             var invoker = ResolveComposerInvoker(sp, pluginLoader);
             if (invoker is null) return Results.Problem(title: "Composer plugin not loaded", statusCode: 503);
             var composerRoot = ResolveComposerRoot(site.DocumentRoot);
