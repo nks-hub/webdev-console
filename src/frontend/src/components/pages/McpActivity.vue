@@ -739,9 +739,10 @@ onBeforeUnmount(() => {
 .kpi.danger { border-left-color: var(--el-color-danger); background: var(--el-color-danger-light-9); }
 .kpi-num { font-size: 18px; font-weight: 600; }
 .kpi-unit { font-size: 11px; color: var(--el-text-color-secondary); }
+/* Label sits right after the unit; pushed to the far edge it read as a separate cell. */
 .kpi-label {
-  margin-left: auto;
-  font-size: 10px;
+  margin-left: var(--wdc-space-1);
+  font-size: 11px;
   color: var(--el-text-color-secondary);
   letter-spacing: 0.3px;
   font-family: var(--wdc-font-display);

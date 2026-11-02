@@ -2950,7 +2950,7 @@ async function save() {
 }
 
 /* Element's form-item content is a flex row: without this a short hint sat next to the input instead of below it. */
-:deep(.el-form-item__content > .hint) {
+:deep(.el-form-item__content > div.hint) {
   flex-basis: 100%;
 }
 
