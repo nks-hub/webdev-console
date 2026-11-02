@@ -248,7 +248,8 @@ async function toggleMcp(enabled: boolean) {
 </script>
 
 <style scoped>
-.mcp-caps { display: grid; gap: var(--wdc-space-4); max-width: 72ch; }
+.mcp-caps { display: grid; gap: var(--wdc-space-4); }
+.caps-intro, .cap-desc { max-width: 72ch; }
 .caps-intro { margin: 0; font-size: 0.87rem; color: var(--wdc-text-2); }
 .caps-error { display: flex; align-items: center; gap: var(--wdc-space-3); color: var(--wdc-status-error); }
 
