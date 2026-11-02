@@ -304,6 +304,8 @@ export interface ComposerStatus {
   installSuggestion?: ComposerInstallSuggestion
   /** False when the Composer plugin has no executable that exists; absent from older daemons. */
   composerAvailable?: boolean
+  /** True when the site's document root folder does not exist on disk. */
+  docrootMissing?: boolean
 }
 
 export interface ComposerCommandResult {

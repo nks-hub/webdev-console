@@ -46,7 +46,7 @@
               type="warning"
               :closable="false"
               show-icon
-              :title="overdue ? $t('backupsPage.overview.overdue', { h: savedScheduleHours }) : $t('backupsPage.overview.staleOff')"
+              :title="overdue ? $t('backupsPage.overview.overdue', { h: savedScheduleHours }) : stats.lastCreatedUtc ? $t('backupsPage.overview.staleOff') : $t('backupsPage.overview.noneOff')"
               style="margin-bottom: var(--wdc-space-4)"
             >
               <el-button v-if="staleUnscheduled" size="small" @click="activeTab = 'schedule'">{{ $t('backupsPage.overview.openSchedule') }}</el-button>
@@ -320,6 +320,8 @@ const scheduleHours = ref(24)
 const retainCount = ref(10)
 // The overview shows the schedule the daemon runs, not unsaved edits.
 const savedScheduleHours = ref(24)
+// The warnings depend on the schedule; until it is read, 24 h is only a guess.
+const settingsLoaded = ref(false)
 // Ticks so "next backup in…" counts down while the page stays open.
 const now = ref(Date.now())
 let nowTimer: ReturnType<typeof setInterval> | null = null
@@ -353,11 +355,11 @@ const lastCreatedLabel = computed(() => {
 })
 
 // Schedule is on and the newest backup is older than one interval.
-const overdue = computed(() => loaded.value && savedScheduleHours.value > 0 && !!stats.value.lastCreatedUtc
+const overdue = computed(() => loaded.value && settingsLoaded.value && savedScheduleHours.value > 0 && !!stats.value.lastCreatedUtc
   && new Date(stats.value.lastCreatedUtc).getTime() + savedScheduleHours.value * 3600_000 < now.value)
 
 // Schedule is off and the newest backup is over a week old (or there is none).
-const staleUnscheduled = computed(() => loaded.value && savedScheduleHours.value <= 0
+const staleUnscheduled = computed(() => loaded.value && settingsLoaded.value && savedScheduleHours.value <= 0
   && (!stats.value.lastCreatedUtc || now.value - new Date(stats.value.lastCreatedUtc).getTime() > 7 * 86400_000))
 
 const nextScheduledLabel = computed(() => {
@@ -424,6 +426,7 @@ async function loadSettings() {
     const hours = parseInt(s['backup.scheduleHours'] ?? '')
     if (Number.isFinite(hours)) scheduleHours.value = Math.min(Math.max(hours, 0), 168)
     savedScheduleHours.value = scheduleHours.value
+    settingsLoaded.value = true
     const retain = parseInt(s['backup.retainCount'] ?? '')
     if (Number.isFinite(retain)) retainCount.value = Math.min(Math.max(retain, 1), 100)
     for (const flag of contentFlagDefs) {

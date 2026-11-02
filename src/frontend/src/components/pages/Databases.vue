@@ -279,7 +279,7 @@ const { t } = useI18n()
 const router = useRouter()
 const daemon = useDaemonStore()
 // This page talks to MySQL only; tell users who run PostgreSQL where its databases are.
-const hasPostgres = computed(() => daemon.services.some(s => s.id === 'postgresql'))
+const hasPostgres = computed(() => daemon.services.some(s => s.id === 'postgresql' && s.installed !== false))
 
 // ── Diagnostic state (auth/port banner)
 const isAuthError = computed(() => {

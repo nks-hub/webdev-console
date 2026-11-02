@@ -38,6 +38,11 @@
       <el-button size="small" @click="loadStatus">{{ $t('common.retry') }}</el-button>
     </el-alert>
 
+    <!-- The site folder itself is missing: nothing to initialise there. -->
+    <div v-else-if="status && !status.hasComposerJson && status.docrootMissing" class="composer-empty">
+      <el-empty :description="$t('sites.composer.docrootMissing')" />
+    </div>
+
     <!-- No composer.json detected -->
     <div v-else-if="status && !status.hasComposerJson" class="composer-empty">
       <el-empty :description="$t('sites.composer.noProject')">

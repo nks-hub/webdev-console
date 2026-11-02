@@ -164,7 +164,7 @@ import { useDaemonStore } from '../../stores/daemon'
 import { useServicesStore, type ServiceOp } from '../../stores/services'
 import { usePluginsStore } from '../../stores/plugins'
 import { useUiModeStore } from '../../stores/uiMode'
-import { fetchServiceLogs } from '../../api/daemon'
+import { DaemonError, fetchServiceLogs } from '../../api/daemon'
 import type { ServiceInfo } from '../../api/types'
 import PluginAutostartSwitch from '../shared/PluginAutostartSwitch.vue'
 import ServiceErrorNote from '../shared/ServiceErrorNote.vue'
@@ -308,7 +308,7 @@ async function loadLogs(id: string) {
   } catch (e) {
     logs.value = { ...logs.value, [id]: [] }
     // 404 = the service has no log file (yet): that is "empty", not a failure.
-    if (!/^HTTP 404/.test(errorMessage(e))) logErrors.value = { ...logErrors.value, [id]: cleanError(e) }
+    if (!(e instanceof DaemonError && e.status === 404)) logErrors.value = { ...logErrors.value, [id]: cleanError(e) }
   } finally {
     const next = new Set(loadingLogs.value)
     next.delete(id)

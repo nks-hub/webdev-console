@@ -194,7 +194,12 @@ internal static class ComposerEndpoints
             if (site is null) return Results.NotFound(new { error = $"Site '{domain}' not found" });
 
             var root = site.DocumentRoot;
+            // An empty root would make every path below relative to the daemon's working directory.
+            if (string.IsNullOrWhiteSpace(root))
+                return Results.NotFound(new { error = $"Site '{domain}' has no document root" });
             // A missing folder simply has no composer.json; answering 404 only floods the console.
+            // docrootMissing lets the UI say so instead of offering "Initialise Composer" there.
+            var docrootMissing = !Directory.Exists(root);
             var hasJson = File.Exists(Path.Combine(root, "composer.json"));
             var composerRoot = root;
             if (!hasJson)
@@ -260,7 +265,7 @@ internal static class ComposerEndpoints
             var invoker = ResolveComposerInvoker(sp, pluginLoader);
             bool? composerAvailable = invoker is null ? null : ComposerAvailable(invoker);
 
-            return Results.Ok(new { hasComposerJson = hasJson, hasLock, packages, phpVersion, framework = framework ?? "none", installSuggestion, composerRoot, composerAvailable });
+            return Results.Ok(new { hasComposerJson = hasJson, hasLock, packages, phpVersion, framework = framework ?? "none", installSuggestion, composerRoot, composerAvailable, docrootMissing });
         });
 
         app.MapPost("/api/sites/{domain}/composer/install", async (string domain, SiteManager sm, IServiceProvider sp, ILoggerFactory lf, CancellationToken ct) =>
