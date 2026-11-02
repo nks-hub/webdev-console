@@ -462,7 +462,7 @@ internal static class ComposerEndpoints
             {
                 var phpOverride = ResolveSitePhpBinary(site);
                 var (_, exitCode, stdout, _) = await InvokeComposerAsync(invoker, "RunAsync",
-                    [composerRoot, new[] { "outdated", "--direct", "--format=json", "--no-ansi" }, phpOverride, ct]);
+                    [composerRoot, new[] { "show", "--direct", "--latest", "--format=json", "--no-ansi" }, phpOverride, ct]);
                 System.Collections.Generic.List<object> installed = new();
                 if (!string.IsNullOrWhiteSpace(stdout))
                 {

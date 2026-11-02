@@ -225,14 +225,14 @@
               <span
                 class="mono"
                 :class="outdatedMap[row.name] ? 'version-outdated' : ''"
-              >{{ outdatedMap[row.name]?.version ?? '—' }}</span>
+              >{{ versionMap[row.name]?.version ?? '—' }}</span>
             </template>
           </el-table-column>
 
           <!-- Latest version -->
           <el-table-column :label="$t('sites.composer.colLatest')" width="150" prop="latest" sortable>
             <template #default="{ row }">
-              <span class="mono">{{ outdatedMap[row.name]?.latest ?? '—' }}</span>
+              <span class="mono">{{ versionMap[row.name]?.latest ?? '—' }}</span>
               <el-tooltip
                 v-if="outdatedMap[row.name] && isMajorJump(row.constraint, outdatedMap[row.name].latest)"
                 :content="$t('sites.composer.majorJump')"
@@ -478,7 +478,9 @@ function reportError(err: unknown): void {
 }
 
 // Outdated map keyed by package name
-const outdatedMap = ref<Record<string, { version?: string; latest: string; status: string }>>({})
+const versionMap = ref<Record<string, { version?: string; latest: string; status: string; outdated: boolean }>>({})
+// Only genuinely outdated packages
+const outdatedMap = computed(() => Object.fromEntries(Object.entries(versionMap.value).filter(([, v]) => v.outdated)))
 
 // Package info cache from packagist.org. `null` means "fetch failed, do not
 // retry this session"; a PkgInfo means "loaded successfully".
@@ -524,13 +526,21 @@ function dismissBanner(): void {
 async function loadOutdated(): Promise<void> {
   try {
     const result = await composerOutdated(props.domain)
-    const map: Record<string, { version?: string; latest: string; status: string }> = {}
+    const map: typeof versionMap.value = {}
+    // `composer show --latest` lists every direct package; only the ones where
+    // latest differs from installed (ignoring a leading "v") are outdated.
+    const norm = (v?: string | null) => (v ?? '').replace(/^v/i, '')
     for (const entry of result.installed) {
       if (entry.name && entry.latest) {
-        map[entry.name] = { version: entry.version ?? undefined, latest: entry.latest, status: entry.latestStatus ?? '' }
+        map[entry.name] = {
+          version: entry.version ?? undefined,
+          latest: entry.latest,
+          status: entry.latestStatus ?? '',
+          outdated: entry.latestStatus !== 'up-to-date' && norm(entry.version) !== norm(entry.latest),
+        }
       }
     }
-    outdatedMap.value = map
+    versionMap.value = map
     composerMissing.value = result.composerAvailable === false
   } catch {
     // Non-critical — silently ignore
