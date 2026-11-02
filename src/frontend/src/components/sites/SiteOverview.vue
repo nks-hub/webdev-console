@@ -116,7 +116,7 @@ const rows = computed<Row[]>(() => {
 /* Two columns fill the tab on wide windows and stack below ~860px. */
 .site-overview {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(26rem, 100%), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(30rem, 100%), 1fr));
   gap: var(--wdc-space-4);
   align-items: start;
 }

@@ -116,10 +116,10 @@
               />
               <div class="hint">
                 {{ $t('cloudflare.requiredScopes') }}
-                <code>Account &gt; Cloudflare Tunnel &gt; Edit</code>,
-                <code>Account &gt; Account Settings &gt; Read</code>,
-                <code>Zone &gt; Zone &gt; Read</code>,
-                <code>Zone &gt; DNS &gt; Edit</code>.
+                <code class="perm">Account &gt; Cloudflare Tunnel &gt; Edit</code>,
+                <code class="perm">Account &gt; Account Settings &gt; Read</code>,
+                <code class="perm">Zone &gt; Zone &gt; Read</code>,
+                <code class="perm">Zone &gt; DNS &gt; Edit</code>.
                 {{ $t('cloudflare.createTokenAt') }}
                 <a href="#" @click.prevent="openTokenPage">dash.cloudflare.com/profile/api-tokens</a>.
               </div>
@@ -951,4 +951,5 @@ async function autoVerifyToken() {
 }
 /* Icons sat ~3 px above the text in the tab labels. */
 .tab-label { display: inline-flex; align-items: center; gap: var(--wdc-space-1); }
+.perm { white-space: nowrap; }
 </style>

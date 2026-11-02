@@ -609,7 +609,6 @@ onMounted(async () => {
 .hosts-manager {
   display: flex;
   flex-direction: column;
-  height: 100%;
 }
 
 .page-header {
@@ -678,9 +677,9 @@ onMounted(async () => {
   cursor: help;
 }
 
+/* The page scrolls in the app's main area; an inner scroller showed only 4 rows at 900 px. */
 .page-body {
   flex: 1;
-  overflow-y: auto;
   padding: var(--wdc-space-4-5) 0;
   display: flex;
   flex-direction: column;

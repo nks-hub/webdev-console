@@ -73,7 +73,7 @@
     />
 
     <el-table v-else :data="filteredKinds" stripe size="small" class="kinds-table">
-      <el-table-column prop="id" :label="t('mcpKinds.col.id')" min-width="170">
+      <el-table-column prop="id" :label="t('mcpKinds.col.id')" min-width="170" show-overflow-tooltip>
         <template #default="{ row }">
           <code class="mono" style="white-space: nowrap">{{ row.id }}</code>
         </template>
