@@ -125,7 +125,7 @@ test.describe('Sites flow contract', () => {
     expect(store).toMatch(/declared\.some\(d => d\.slot === slot\) \? declared : hostContributions\(m\.id\)/)
     const edit = read('components', 'pages', 'SiteEdit.vue')
     expect(edit).toMatch(/<PluginSlot\s+v-if="uiMode\.isAdvanced"\s+name="site-edit-tabs"/)
-    expect(edit).toMatch(/pluginTabNames\.value\.includes\(tab\)\) \{\s+if \(uiMode\.isSimple\) activeTab\.value = 'overview'/)
+    expect(edit).toMatch(/pluginTabNames\.value\.includes\(tab\)\) \{\s+if \(uiMode\.isSimple\) \{\s+advancedTabBlocked\.value = true\s+activeTab\.value = 'overview'/)
   })
 
   test('closing the new site dialog empties it without validating the emptied fields', () => {

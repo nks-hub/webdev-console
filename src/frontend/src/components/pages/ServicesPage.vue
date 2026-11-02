@@ -79,7 +79,7 @@
         </table>
         <p v-if="hiddenCount > 0" class="hidden-note">
           {{ t('servicesPage.hiddenByPlugins', { n: hiddenCount }, hiddenCount) }}
-          <el-button text size="small" @click="router.push('/plugins')">{{ t('servicesPage.openPlugins') }}</el-button>
+          <el-button v-if="uiMode.isAdvanced" text size="small" @click="router.push('/plugins')">{{ t('servicesPage.openPlugins') }}</el-button>
         </p>
       </div>
 

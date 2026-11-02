@@ -947,7 +947,7 @@ watch(() => route.query.tab, value => {
 .database-toolbar-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .database-loading { padding: 18px 0; }
 .database-workspace { display: grid; grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); gap: 16px; align-items: start; }
-.database-list { display: flex; flex-direction: column; gap: 6px; max-height: 560px; overflow: auto; padding-right: 4px; }
+.database-list { display: flex; flex-direction: column; gap: 6px; }
 .database-list-item { width: 100%; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; border: 1px solid var(--wdc-border); background: var(--wdc-surface); color: var(--wdc-text); border-radius: var(--wdc-radius-sm); padding: 10px 14px; text-align: left; cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s, background 0.15s; }
 .database-list-item:hover { border-color: var(--wdc-accent-glow); box-shadow: var(--wdc-shadow-sm); }
 .database-list-item.active { border-color: var(--wdc-accent); background: var(--wdc-accent-dim); box-shadow: 0 0 0 1px var(--wdc-accent-glow); }
@@ -996,7 +996,6 @@ watch(() => route.query.tab, value => {
   .database-create-inline .el-button { width: 100%; }
   .database-toolbar-actions { justify-content: flex-start; }
   .database-workspace { grid-template-columns: 1fr; }
-  .database-list { max-height: 280px; }
   .database-detail { padding: 12px; }
   .database-detail-header { flex-direction: column; }
   .database-detail-actions { justify-content: flex-start; }

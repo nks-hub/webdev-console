@@ -82,7 +82,7 @@
           <div class="pm-card-header">
             <div class="pm-card-title">
               <ServiceIcon :service="mp.id" :active="true" />
-              <span class="pm-name">{{ mp.name }}</span>
+              <span class="pm-name">{{ pluginName(mp) }}</span>
               <el-tag v-if="mp.installed" size="small" type="success" effect="plain">{{ $t('plugins.installedTag') }}</el-tag>
             </div>
           </div>
@@ -90,7 +90,7 @@
           <div class="pm-card-footer">
             <div class="pm-meta">
               <span v-if="installedVersion(mp.id) ?? mp.version" class="pm-version">v{{ installedVersion(mp.id) ?? mp.version }}</span>
-              <span v-if="mp.author" class="pm-author">{{ $t('plugins.byAuthor', { author: mp.author }) }}</span>
+              <span v-if="mp.author" class="pm-author">{{ $t('plugins.byAuthor', { author: authorName(mp.author) }) }}</span>
               <span v-if="mp.license" class="pm-author">· {{ mp.license }}</span>
             </div>
             <!-- F91.7: surface why there's no install action.
@@ -163,7 +163,7 @@
         <div class="pm-card-header">
           <div class="pm-card-title">
             <ServiceIcon :service="plugin.id" :active="plugin.enabled" />
-            <span class="pm-name">{{ plugin.name }}</span>
+            <span class="pm-name">{{ pluginName(plugin) }}</span>
             <el-tag size="small" type="info" effect="plain" class="pm-type-tag">
               {{ plugin.type === 'service' ? $t('plugins.type.service') : $t('plugins.type.tool') }}
             </el-tag>
@@ -171,7 +171,7 @@
           <el-switch
             :model-value="plugin.enabled"
             :loading="toggling.has(plugin.id)"
-            :aria-label="$t('plugins.enableAria', { name: plugin.name })"
+            :aria-label="$t('plugins.enableAria', { name: pluginName(plugin) })"
             @change="toggle(plugin.id)"
             size="small"
           />
@@ -184,7 +184,7 @@
         <div class="pm-card-footer">
           <div class="pm-meta">
             <span class="pm-version">v{{ plugin.version }}</span>
-            <span v-if="plugin.author" class="pm-author">{{ $t('plugins.byAuthor', { author: plugin.author }) }}</span>
+            <span v-if="plugin.author" class="pm-author">{{ $t('plugins.byAuthor', { author: authorName(plugin.author) }) }}</span>
           </div>
         </div>
 
@@ -227,7 +227,7 @@
             type="danger"
             text
             :loading="uninstalling.has(plugin.id)"
-            @click="confirmUninstall(plugin.id, plugin.name)"
+            @click="confirmUninstall(plugin.id, pluginName(plugin))"
           >
             {{ $t('plugins.uninstall') }}
           </el-button>
@@ -360,6 +360,14 @@ watch(activeTab, (tab) => {
 
 // First-party plugins ship English plugin.json descriptions; show the
 // translated one for known ids and the manifest text for anything else.
+function pluginName(p: { id: string; name: string }): string {
+  const key = `plugins.names.${p.id.replace(/^nks\.wdc\./, '').replace(/\./g, '_')}`
+  return te(key) ? t(key) : p.name
+}
+
+// The built-in catalogue says "NKS", plugin manifests say "NKS Hub".
+const authorName = (a: string): string => (a === 'NKS' ? 'NKS Hub' : a)
+
 function pluginDescription(p: { id: string; description?: string | null }): string {
   const key = `plugins.descriptions.${p.id.replace(/^nks\.wdc\./, '').replace(/\./g, '_')}`
   return te(key) ? t(key) : (p.description || t('plugins.page.noDescription'))
@@ -620,11 +628,7 @@ onMounted(() => {
   font-size: 0.85rem;
   color: var(--wdc-text-dim);
   line-height: 1.5;
-  max-height: 3em;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  overflow-wrap: anywhere;
 }
 
 .pm-card-footer {

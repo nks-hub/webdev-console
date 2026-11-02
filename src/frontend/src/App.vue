@@ -20,12 +20,12 @@
 
       <div class="app-main">
       <AppHeader @open-menu="drawerOpen = true" />
+      <!-- Simple mode leaves these pages out of the menu; opened by link, shortcut or palette they say so. -->
+      <div v-if="uiMode.isSimple && route.meta.advancedNav" class="mode-note" role="note">
+        <span>{{ t('app.advancedPageNote') }}</span>
+        <el-button size="small" @click="uiMode.setUiMode('advanced')">{{ t('app.switchToAdvanced') }}</el-button>
+      </div>
       <main id="main" class="content-area" tabindex="-1">
-        <!-- Simple mode leaves these pages out of the menu; opened by link, shortcut or palette they say so. -->
-        <div v-if="uiMode.isSimple && route.meta.advancedNav" class="mode-note" role="note">
-          <span>{{ t('app.advancedPageNote') }}</span>
-          <el-button size="small" @click="uiMode.setUiMode('advanced')">{{ t('app.switchToAdvanced') }}</el-button>
-        </div>
         <!-- keep-alive caches mounted page components so clicking a nav
              item doesn't re-mount the whole tree AND re-run onMounted's
              fetch cascade every time. This is the biggest win for the
@@ -558,9 +558,7 @@ onUnmounted(() => {
   border-radius: var(--wdc-radius);
 }
 .mode-note {
-  position: sticky;
-  top: 0;
-  z-index: 5;
+  flex: none; /* sits above the scroll area, so pages keep their full height */
   display: flex;
   align-items: center;
   justify-content: space-between;

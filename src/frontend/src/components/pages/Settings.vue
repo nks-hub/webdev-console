@@ -22,6 +22,8 @@
             {{ $t('settings.simple.switchToAdvanced') }}
           </el-button>
         </el-alert>
+        <!-- Two fixed columns with panels dealt out by height; CSS columns left one side far shorter. -->
+        <div class="simple-col">
         <SettingsPanel
           id="simple-general"
           panel-class="simple-settings-panel-main"
@@ -87,15 +89,6 @@
           <NotificationSettings :t="t" />
         </SettingsPanel>
 
-        <SettingsPanel
-          id="simple-mcp"
-          :title="$t('settings.tabs.mcp')"
-          :subtitle="$t('settings.mcpTab.simpleSubtitle')"
-          :icon="Cpu"
-        >
-          <McpCapabilitiesSettings />
-        </SettingsPanel>
-
         <!-- Simple Network panel — read-only port snapshot + DNS flush
              shortcut. The full per-plugin port editor stays in Advanced;
              beginners just need to see "what listens where" without
@@ -127,6 +120,39 @@
           </template>
         </SettingsPanel>
 
+        <!-- Simple Backup panel — one-click "create a backup now". The
+             retention + scheduler controls live in Advanced; Simple just
+             surfaces the safety net. -->
+        <SettingsPanel
+          :title="$t('settings.simple.backup.title')"
+          :subtitle="$t('settings.simple.backup.subtitle')"
+          :icon="FolderOpened"
+        >
+          <template #actions>
+            <el-button
+              type="primary"
+              size="small"
+              :loading="creatingBackup"
+              @click="createBackupFromSimple"
+            >
+              {{ $t('settings.simple.backup.create') }}
+            </el-button>
+            <el-button size="small" @click="$router.push('/backups')">
+              {{ $t('settings.simple.backup.openManager') }} →
+            </el-button>
+          </template>
+        </SettingsPanel>
+        </div>
+        <div class="simple-col">
+        <SettingsPanel
+          id="simple-mcp"
+          :title="$t('settings.tabs.mcp')"
+          :subtitle="$t('settings.mcpTab.simpleSubtitle')"
+          :icon="Cpu"
+        >
+          <McpCapabilitiesSettings />
+        </SettingsPanel>
+
         <!-- Plan §4 (Easy Settings IA): Services — addresses user
              feedback "kde stav sluzeb". Lists running/stopped state per
              service with link to the per-service plugin page for full
@@ -153,29 +179,6 @@
           <template #actions>
             <el-button size="small" @click="$router.push('/dashboard')">
               {{ $t('settings.simple.services.manageOnDashboard') }} →
-            </el-button>
-          </template>
-        </SettingsPanel>
-
-        <!-- Simple Backup panel — one-click "create a backup now". The
-             retention + scheduler controls live in Advanced; Simple just
-             surfaces the safety net. -->
-        <SettingsPanel
-          :title="$t('settings.simple.backup.title')"
-          :subtitle="$t('settings.simple.backup.subtitle')"
-          :icon="FolderOpened"
-        >
-          <template #actions>
-            <el-button
-              type="primary"
-              size="small"
-              :loading="creatingBackup"
-              @click="createBackupFromSimple"
-            >
-              {{ $t('settings.simple.backup.create') }}
-            </el-button>
-            <el-button size="small" @click="$router.push('/backups')">
-              {{ $t('settings.simple.backup.openManager') }} →
             </el-button>
           </template>
         </SettingsPanel>
@@ -250,7 +253,7 @@
             </div>
           </div>
         </SettingsPanel>
-
+        </div>
       </div>
 
       <SettingsShell
@@ -2917,17 +2920,21 @@ async function save() {
 
 /* Columns, not a grid: grid rows tied short panels to the height of tall neighbours and left holes. */
 .simple-settings-grid {
-  column-count: 2;
-  column-gap: var(--wdc-space-4);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--wdc-space-4);
+  align-items: start;
 }
 
-.simple-settings-grid > * {
-  break-inside: avoid;
-  margin-bottom: var(--wdc-space-4);
+.simple-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wdc-space-4);
+  min-width: 0;
 }
 
 .simple-settings-grid > .simple-hidden-tab {
-  column-span: all;
+  grid-column: 1 / -1;
 }
 
 /* Panel chrome moved to SettingsPanel shared primitive (plan §6).
@@ -3061,7 +3068,7 @@ async function save() {
 
 @media (max-width: 980px) {
   .simple-settings-grid {
-    column-count: 1;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

@@ -135,8 +135,8 @@
     "emailPlaceholder": "you{'@'}example.com",
     "passwordAgain": "Repeat password",
     "createAccount": "Create account",
-    "haveAccount": "I have an account",
-    "noAccount": "I have no account",
+    "haveAccount": "Sign in",
+    "noAccount": "Register",
     "errors": {
       "desktopOnly": "Signing in with an NKS account only works in the desktop app.",
       "emptyToken": "Sign-in ended without an access token. Please try again.",
@@ -1639,6 +1639,11 @@
     "byAuthor": "By {author}",
     "noMatching": "No plugins matching ‘{q}’",
     "marketplaceBuiltIn": "The online plugin catalog is not available right now. Showing the plugins that ship with WDC.",
+    "names": {
+      "php": "PHP (multi-version)",
+      "hosts": "Hosts file manager",
+      "deploy_localrsync": "Local rsync deploy"
+    },
     "descriptions": {
       "apache": "Apache 2.4 web server. Runs httpd, creates virtual hosts for your sites and checks the configuration.",
       "caddy": "Caddy web server, an alternative to Apache with automatic HTTPS. Creates a Caddyfile for your sites.",
@@ -2016,6 +2021,7 @@
     "goToStep1": "Go to step 1"
   },
   "siteEdit": {
+    "advancedTabNote": "This tab belongs to Advanced mode, so Simple mode does not show it.",
     "composeUp": "Start",
     "composeDown": "Stop",
     "staticDesc": "Plain HTML and files, no PHP or Node.",
@@ -2941,7 +2947,7 @@
     },
     "sso": {
       "title": "Sign in with SSO",
-      "signIn": "Sign in with SSO",
+      "signIn": "Sign in with your NKS account",
       "signOut": "Sign out",
       "signedIn": "Signed in",
       "signedInAt": "Signed in to {url}.",
@@ -3099,7 +3105,7 @@
       "mampConfirm": "MAMP PRO sites found ({count}): {sites}. Import them?"
     },
     "ports": {
-      "description": "The ports your services listen on. After saving, the affected services reload on their own.",
+      "description": "The ports your services listen on. The Save settings button appears at the bottom once you change a port. The affected services then reload on their own.",
       "httpPort": "HTTP Port",
       "httpsPort": "HTTPS Port",
       "mysqlPort": "MySQL Port",
