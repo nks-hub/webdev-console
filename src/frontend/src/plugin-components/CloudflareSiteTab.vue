@@ -135,7 +135,7 @@
             </span>
           </div>
           <div v-if="hasCloudflareSetup" class="hint" style="margin-top: var(--wdc-space-2)">
-            {{ $t('cloudflareSite.applyHint') }}
+            {{ applyBlockedReason || $t('cloudflareSite.applyHint') }}
           </div>
         </div>
       </section>
@@ -229,6 +229,13 @@ const effectiveProtocol = computed<'http' | 'https'>(() => form.protocol || deri
 const canApply = computed(() =>
   Boolean(form.subdomain && form.zoneId)
 )
+
+// Says why the apply button is greyed out instead of leaving it unexplained.
+const applyBlockedReason = computed(() => {
+  if (!enabled.value) return t('cloudflareSite.applyBlockedOff')
+  if (!canApply.value) return t('cloudflareSite.applyBlockedMissing')
+  return ''
+})
 
 const publicUrl = computed(() => {
   if (!form.subdomain || !activeZoneName.value) return ''

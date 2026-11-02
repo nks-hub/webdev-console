@@ -1876,6 +1876,8 @@
     "applyNow": "Apply tunnel",
     "applyAgain": "Apply again",
     "applyHint": "Updates the per-site CNAME + ingress rule on Cloudflare. Independent of Save & Apply on the parent form.",
+    "applyBlockedOff": "Turn on publishing through the tunnel with the switch above first.",
+    "applyBlockedMissing": "Fill in the subdomain and pick a zone to apply the tunnel.",
     "notConfiguredTitle": "Cloudflare account is not configured",
     "notConfiguredBody": "Set the API token, account and tunnel in the Cloudflare page first.",
     "openSetup": "Open Cloudflare setup",

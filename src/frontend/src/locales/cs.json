@@ -1876,6 +1876,8 @@
     "applyNow": "Použít tunel",
     "applyAgain": "Použít znovu",
     "applyHint": "Hned upraví záznam CNAME a pravidlo tunelu pro tento web v Cloudflare. Nezávisí na tlačítku Uložit a použít.",
+    "applyBlockedOff": "Nejdřív zapněte zveřejnění webu přes tunel přepínačem výše.",
+    "applyBlockedMissing": "Vyplňte subdoménu a vyberte zónu, pak půjde tunel použít.",
     "notConfiguredTitle": "Účet Cloudflare není nastavený",
     "notConfiguredBody": "Nejdřív nastavte API token, účet a tunel na stránce Cloudflare.",
     "openSetup": "Otevřít nastavení Cloudflare",
