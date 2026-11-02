@@ -4,6 +4,7 @@
     <div class="page-header">
       <div class="header-left">
         <h1 class="page-title">{{ $t('databases.title') }}</h1>
+        <el-tag size="small" effect="plain">MySQL</el-tag>
         <el-tag size="small" type="info" effect="plain" v-if="databases.length > 0">
           {{ $t('databases.dbCountTag', { n: databases.length }, databases.length) }}
         </el-tag>
@@ -20,6 +21,10 @@
         </el-tooltip>
       </div>
     </div>
+
+    <el-alert v-if="hasPostgres" type="info" :closable="false" show-icon class="page-alert" :title="$t('databases.postgresNote')">
+      <el-button size="small" @click="router.push('/plugins/postgresql')">{{ $t('databases.openPostgres') }}</el-button>
+    </el-alert>
 
     <!-- No MySQL yet: explain and point at the module instead of a red error -->
     <div v-if="reason === 'mysql_not_installed'" class="db-missing">
@@ -260,6 +265,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh, Plus, Key, Upload, Download, Delete, Grid, DataLine, List, Operation } from '@element-plus/icons-vue'
 import { daemonBaseUrl, daemonAuthHeaders as authHeaders, startService, DaemonError } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
+import { useDaemonStore } from '../../stores/daemon'
 import DatabaseTreePane from './databases/DatabaseTreePane.vue'
 import TableBrowser from './databases/TableBrowser.vue'
 import TableStructure from './databases/TableStructure.vue'
@@ -271,6 +277,9 @@ import type {
 
 const { t } = useI18n()
 const router = useRouter()
+const daemon = useDaemonStore()
+// This page talks to MySQL only; tell users who run PostgreSQL where its databases are.
+const hasPostgres = computed(() => daemon.services.some(s => s.id === 'postgresql'))
 
 // ── Diagnostic state (auth/port banner)
 const isAuthError = computed(() => {

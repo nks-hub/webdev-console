@@ -203,7 +203,7 @@
              "no entries" placeholder and gave the operator no idea
              anything was wrong. -->
         <el-alert
-          v-else-if="isPlatformWindows"
+          v-else-if="isPlatformWindows && loaded && activeRows.length === 0"
           :title="$t('hosts.emptyHostsCorruptionTitle')"
           type="error"
           :closable="false"
@@ -282,7 +282,9 @@ let _idCounter = 0
 function makeId() { return `row-${++_idCounter}` }
 
 const rows = ref<Row[]>([])
-const loading = ref(false)
+// Starts true: the page loads on mount, and an unloaded page must not look like an empty file.
+const loading = ref(true)
+const loaded = ref(false)
 // Distinguishes "the fetch failed" (daemon unreachable / error) from "the
 // file genuinely parsed to 0 entries". Without this, any load failure left
 // rows empty and the template fired the scary Windows "corrupted" banner —
@@ -350,6 +352,7 @@ async function load() {
       _removed: false,
       _added: false,
     }))
+    loaded.value = true
   } catch (e) {
     // Mark the failure so the template shows a "could not load / retry"
     // state instead of misreading empty rows as a corrupted hosts file.

@@ -225,6 +225,8 @@
       "none": "Žádná",
       "off": "Vypnuto",
       "soon": "Brzy",
+      "late": "Zpožděna",
+      "overdue": "Poslední záloha je starší než plánovaný interval ({h} h). Spusťte zálohu ručně.",
       "inHours": "za {h} h {m} min",
       "inMinutes": "za {m} min",
       "ago": "před {d}",
@@ -1273,6 +1275,8 @@
   },
   "databases": {
     "title": "Databáze",
+    "postgresNote": "Tato stránka spravuje jen databáze MySQL. Databáze PostgreSQL najdete na stránce PostgreSQL (seznam, heslo).",
+    "openPostgres": "Otevřít PostgreSQL",
     "create": "Nová databáze",
     "drop": "Smazat",
     "import": "Importovat SQL",
