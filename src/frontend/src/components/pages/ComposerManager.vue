@@ -86,7 +86,7 @@
             </template>
           </el-table-column>
 
-          <el-table-column :label="$t('common.actions')" width="100" align="right">
+          <el-table-column :label="$t('common.actions')" width="120" align="right">
             <template #default="{ row }">
               <el-button
                 size="small"
@@ -134,7 +134,8 @@ interface SiteComposerRow {
 }
 
 const loading = ref(false)
-const versionLoading = ref(false)
+// Starts true: the version loads on mount, and an unloaded page must not claim Composer is missing.
+const versionLoading = ref(true)
 const composerVersion = ref<string | null>(null)
 const composerPath = ref<string | null>(null)
 const versionError = ref<string | null>(null)
@@ -309,6 +310,9 @@ onMounted(() => {
   flex-direction: column;
   gap: var(--wdc-space-4);
 }
+
+/* EditCard clips its overflow, so without this the version card is squeezed to its header by the long table. */
+.page-body > * { flex-shrink: 0; }
 
 .cm-loading {
   padding: var(--wdc-space-4);

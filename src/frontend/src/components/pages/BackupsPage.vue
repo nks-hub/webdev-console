@@ -29,7 +29,7 @@
                 <div class="stat-label">{{ $t('backupsPage.overview.count') }}</div>
                 <div class="stat-value">{{ loaded ? stats.count : '—' }}</div>
               </div>
-              <div class="stat-card" :class="{ 'stat-card--warn': overdue }">
+              <div class="stat-card" :class="{ 'stat-card--warn': overdue || staleUnscheduled }">
                 <div class="stat-label">{{ $t('backupsPage.overview.lastCreated') }}</div>
                 <div class="stat-value" :title="stats.lastCreatedUtc ? formatDate(stats.lastCreatedUtc) : undefined">
                   {{ loaded ? lastCreatedLabel : '—' }}
@@ -42,13 +42,15 @@
             </div>
 
             <el-alert
-              v-if="overdue"
+              v-if="overdue || staleUnscheduled"
               type="warning"
               :closable="false"
               show-icon
-              :title="$t('backupsPage.overview.overdue', { h: savedScheduleHours })"
+              :title="overdue ? $t('backupsPage.overview.overdue', { h: savedScheduleHours }) : $t('backupsPage.overview.staleOff')"
               style="margin-bottom: var(--wdc-space-4)"
-            />
+            >
+              <el-button v-if="staleUnscheduled" size="small" @click="activeTab = 'schedule'">{{ $t('backupsPage.overview.openSchedule') }}</el-button>
+            </el-alert>
 
             <div class="overview-actions">
               <el-button
@@ -353,6 +355,10 @@ const lastCreatedLabel = computed(() => {
 // Schedule is on and the newest backup is older than one interval.
 const overdue = computed(() => loaded.value && savedScheduleHours.value > 0 && !!stats.value.lastCreatedUtc
   && new Date(stats.value.lastCreatedUtc).getTime() + savedScheduleHours.value * 3600_000 < now.value)
+
+// Schedule is off and the newest backup is over a week old (or there is none).
+const staleUnscheduled = computed(() => loaded.value && savedScheduleHours.value <= 0
+  && (!stats.value.lastCreatedUtc || now.value - new Date(stats.value.lastCreatedUtc).getTime() > 7 * 86400_000))
 
 const nextScheduledLabel = computed(() => {
   if (savedScheduleHours.value <= 0) return t('backupsPage.overview.off')

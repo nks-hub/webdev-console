@@ -227,6 +227,8 @@
       "off": "Off",
       "soon": "Soon",
       "late": "Overdue",
+      "staleOff": "Automatic backups are off and the latest backup is over a week old. Turn the schedule on or run a backup manually.",
+      "openSchedule": "Open schedule",
       "overdue": "The latest backup is older than the scheduled interval ({h} h). Run a backup manually.",
       "inHours": "in {h} h {m} min",
       "inMinutes": "in {m} min",
