@@ -786,7 +786,10 @@ System.Threading.Timer? portFileWatchdog = null;
 // user, and FileMode.Create would then write the token into their file.
 // The rename retries briefly on Windows, where a reader holding the old file
 // used to make it fail (`EPERM: open nks-wdc-daemon.port` on CI runners).
-app.Lifetime.ApplicationStarted.Register(() =>
+// Registered last (just before RunAsync): ApplicationStarted callbacks run in
+// reverse registration order, and every request served before this runs is a
+// 401 for a client that only has the previous daemon's token.
+Action writePortFileOnStart = () =>
 {
     var address = app.Urls.FirstOrDefault() ?? "http://localhost:5000";
     var port = new Uri(address.Replace("+", "localhost")).Port;
@@ -846,7 +849,7 @@ app.Lifetime.ApplicationStarted.Register(() =>
         enabledCount,
         NKS.WebDevConsole.Core.Services.WdcPaths.Root,
         authToken.Length);
-});
+};
 
 // ---------------------------------------------------------------------------
 // Stale-deploy recovery (Phase 5 hardening item #1).
@@ -1618,6 +1621,9 @@ TaskScheduler.UnobservedTaskException += (_, e) =>
 // plugins that don't override RegisterEndpoints contribute zero endpoints.
 try { pluginLoader.WireEndpoints(app); }
 catch (Exception ex) { app.Logger.LogError(ex, "Plugin endpoint wiring failed"); }
+
+// Last registration = first to run; see writePortFileOnStart.
+app.Lifetime.ApplicationStarted.Register(writePortFileOnStart);
 
 try
 {
