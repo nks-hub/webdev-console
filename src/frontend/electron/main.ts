@@ -186,6 +186,7 @@ let daemonConnected = false
 // What the tray last rendered; can lag daemonConnected when /api/services failed.
 let trayShowsConnected = false
 let lastTraySummary = ''
+let probeFailuresInRow = 0
 let daemonSpawnedAt = 0
 let connectedSinceSpawn = false
 let isQuitting = false
@@ -320,6 +321,10 @@ configureNotificationIdentity()
 setNotificationWindowProvider(() => win)
 
 const PORT_FILE = join(tmpdir(), 'nks-wdc-daemon.port')
+// No keep-alive for the daemon: the default agent drops idle sockets after 5 s,
+// exactly the health-probe interval, so every few probes reused a socket that
+// was being closed, failed, and flipped the tray to "Daemon unavailable".
+const daemonAgent = new http.Agent({ keepAlive: false })
 
 // See preload.ts: on Unix only a port file we own with no group/other
 // permissions is trusted, so another local user cannot pre-create it.
@@ -352,7 +357,7 @@ function daemonGet<T>(path: string): Promise<T> {
   return new Promise((resolve, reject) => {
     const req = http.get(
       `http://localhost:${info.port}${path}`,
-      { headers: info.token ? { Authorization: `Bearer ${info.token}` } : {} },
+      { agent: daemonAgent, headers: info.token ? { Authorization: `Bearer ${info.token}` } : {} },
       (res) => {
         let body = ''
         res.on('data', (chunk: Buffer) => (body += chunk.toString()))
@@ -372,7 +377,7 @@ function daemonPost(path: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const req = http.request(
       `http://localhost:${info.port}${path}`,
-      { method: 'POST', headers: info.token ? { Authorization: `Bearer ${info.token}` } : {} },
+      { agent: daemonAgent, method: 'POST', headers: info.token ? { Authorization: `Bearer ${info.token}` } : {} },
       (res) => {
         res.on('data', () => {})
         res.on('end', () => resolve())
@@ -422,7 +427,7 @@ async function probeDaemonHealth(): Promise<boolean> {
   if (!info) return false
   try {
     const body = await new Promise<string>((resolve, reject) => {
-      const req = http.get(`http://localhost:${info.port}/healthz`, (res) => {
+      const req = http.get(`http://localhost:${info.port}/healthz`, { agent: daemonAgent }, (res) => {
         let buf = ''
         res.on('data', (chunk: Buffer) => { buf += chunk.toString() })
         res.on('end', () => resolve(buf))
@@ -432,7 +437,8 @@ async function probeDaemonHealth(): Promise<boolean> {
     })
     const parsed = JSON.parse(body) as { service?: string; ok?: boolean }
     return parsed.service === 'nks-wdc-daemon' && parsed.ok === true
-  } catch {
+  } catch (e) {
+    if (daemonConnected) log.info(`[daemon] health probe failed: ${e instanceof Error ? e.message : String(e)}`)
     return false
   }
 }
@@ -515,6 +521,7 @@ async function healthTick() {
     // Also covers a daemon the user started again from the CLI after we
     // stopped auto-restarting.
     healthFailures = 0
+    probeFailuresInRow = 0
     monitorPausedUntil = 0
     autoRestartSuspended = false
     // The tray is otherwise redrawn only on state changes; one whose last
@@ -525,7 +532,10 @@ async function healthTick() {
     }
     return
   }
-  if (daemonConnected) {
+  // One slow /healthz (the daemon re-applies every site after a start and can
+  // miss the 2 s budget) flipped the tray to "unavailable" every 15 s. Our own
+  // child's death is reported by its exit event anyway.
+  if (daemonConnected && ++probeFailuresInRow >= 2) {
     daemonConnected = false
     void updateTray()
   }
@@ -577,7 +587,7 @@ async function isDaemonAlive(): Promise<boolean> {
     // marker and treat a mismatch as "port file is stale, spawn a new
     // daemon and let it pick a fresh port".
     const body = await new Promise<string>((resolve, reject) => {
-      const req = http.get(`http://localhost:${info.port}/healthz`, (res) => {
+      const req = http.get(`http://localhost:${info.port}/healthz`, { agent: daemonAgent }, (res) => {
         let buf = ''
         res.on('data', (chunk: Buffer) => { buf += chunk.toString() })
         res.on('end', () => resolve(buf))
