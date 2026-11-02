@@ -649,6 +649,11 @@ h1, h2, h3, h4,
   min-height: 32px !important;
 }
 
+/* Small buttons share the 32px height of small inputs/selects in toolbars. */
+.el-button--small:not(.is-link):not(.is-text):not(.is-circle) {
+  min-height: 32px;
+}
+
 .el-radio-button__inner {
   min-height: 32px !important;
   line-height: 30px !important;

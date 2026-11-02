@@ -230,11 +230,7 @@ onUnmounted(() => {
 .log-viewer { display: flex; flex-direction: column; height: 100%; min-height: 240px; }
 .log-toolbar { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 12px; background: var(--wdc-surface); border-bottom: 1px solid var(--wdc-border); }
 .log-toolbar :deep(.el-button + .el-button) { margin-left: 0; }
-/* Select, search box and buttons came out at three different heights. */
 .log-toolbar { align-items: center; }
-.log-toolbar :deep(.el-select__wrapper),
-.log-toolbar :deep(.el-input__wrapper),
-.log-toolbar :deep(.el-button) { min-height: 28px; height: 28px; box-sizing: border-box; }
 .log-notice { margin: 0; padding: 8px 12px; color: var(--wdc-text-3); font-size: 0.82rem; background: var(--wdc-surface); }
 .terminal-container { flex: 1; min-height: 200px; padding: 6px 0 0 8px; background: var(--wdc-log-bg); }
 </style>
