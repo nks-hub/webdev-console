@@ -66,18 +66,36 @@ let resizeObserver: ResizeObserver | null = null
 let generation = 0
 let live = false
 
+// xterm hard-wraps at the column edge, which splits words; wrap at spaces first.
+function wrapWords(text: string, cols: number): string {
+  if (cols < 20 || text.length <= cols) return text
+  const indent = /^\s*/.exec(text)![0]
+  const out: string[] = []
+  let cur = indent
+  for (const word of text.slice(indent.length).split(' ')) {
+    if (cur.trim() && cur.length + 1 + word.length > cols) { out.push(cur); cur = word }
+    else cur = cur.trim() ? `${cur} ${word}` : cur + word
+  }
+  out.push(cur)
+  return out.join('\n')
+}
+
+function writeLine(line: string) {
+  terminal?.writeln(wrapWords(stripStreamTag(line), terminal.cols))
+}
+
 function append(line: string) {
   lines.push(line)
   hasLines.value = true
   if (lines.length > MAX_LINES) lines = lines.slice(-MAX_LINES)
-  if (matchesLogLevel(line, logLevel.value)) terminal?.writeln(stripStreamTag(line))
+  if (matchesLogLevel(line, logLevel.value)) writeLine(line)
 }
 
 function redraw() {
   if (!terminal) return
   terminal.clear()
   terminal.reset()
-  for (const line of lines) if (matchesLogLevel(line, logLevel.value)) terminal.writeln(stripStreamTag(line))
+  for (const line of lines) if (matchesLogLevel(line, logLevel.value)) writeLine(line)
 }
 watch(logLevel, redraw)
 
@@ -204,7 +222,11 @@ onMounted(() => {
   terminal.open(terminalRef.value)
   fitAddon.fit()
 
-  resizeObserver = new ResizeObserver(() => fitAddon?.fit())
+  let lastCols = terminal.cols
+  resizeObserver = new ResizeObserver(() => {
+    fitAddon?.fit()
+    if (terminal && terminal.cols !== lastCols) { lastCols = terminal.cols; redraw() }
+  })
   resizeObserver.observe(terminalRef.value)
 
   void start()
