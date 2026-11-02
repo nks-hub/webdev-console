@@ -44,7 +44,7 @@
            that only edits a folder should not do on load. -->
       <div v-if="advancedTabBlocked && activeTab === 'overview'" class="mode-tab-note" role="note">
         <span>{{ $t('siteEdit.advancedTabNote') }}</span>
-        <el-button size="small" @click="uiMode.setUiMode('advanced')">{{ $t('app.switchToAdvanced') }}</el-button>
+        <el-button size="small" @click="openBlockedTab">{{ $t('app.switchToAdvanced') }}</el-button>
       </div>
       <el-tabs v-model="activeTab" class="site-tabs">
         <!-- ── Overview: read-only ── -->
@@ -265,7 +265,7 @@
               </label>
               <div v-if="!tunnelConfigured" class="inline-callout">
                 <el-icon aria-hidden="true"><WarningFilled /></el-icon>
-                <span>{{ $t(siteState.cloudflareMissing === 'tunnel' ? 'siteEdit.tunnelNotConfigured' : 'siteEdit.tunnelSiteNotConfigured') }}</span>
+                <span>{{ $t(siteState.cloudflareMissing === 'tunnel' ? 'siteEdit.tunnelNotConfigured' : siteState.cloudflareMissing === 'zone' ? 'sites.new.zoneNotReady' : siteState.cloudflareMissing === 'unknown' ? 'siteEdit.cloudflareUnknown' : 'siteEdit.tunnelSiteNotConfigured') }}</span>
                 <el-button size="small" @click="router.push('/cloudflare')">{{ $t('siteEdit.openCloudflare') }}</el-button>
               </div>
               <div v-else-if="site.cloudflare?.enabled" class="hint mono">https://{{ site.cloudflare.subdomain }}.{{ site.cloudflare.zoneName }}</div>
@@ -460,6 +460,13 @@ watch(activeTab, (tab) => {
 // included) in Simple mode, Deploy with the deploy surface off, or an unknown ?tab= value.
 // Set when Simple mode swapped a requested Advanced tab for Overview, so the page can say why.
 const advancedTabBlocked = ref(false)
+// The tab Simple mode refused, so switching to Advanced can open it right away.
+let blockedTab = ''
+function openBlockedTab() {
+  const tab = blockedTab
+  uiMode.setUiMode('advanced')
+  if (tab) activeTab.value = tab
+}
 watch([activeTab, () => uiMode.isSimple], ([tab, simple]) => {
   if (tab !== 'overview' || !simple) advancedTabBlocked.value = false
 })
@@ -479,6 +486,7 @@ watch(
       const deployHidden = tab === 'deploy' && featureFlagsStore.loaded && !featureFlagsStore.showDeploySurface
       if (uiMode.isSimple || deployHidden) {
         advancedTabBlocked.value = uiMode.isSimple
+        blockedTab = uiMode.isSimple ? tab : ''
         activeTab.value = 'overview'
       }
       return
@@ -486,6 +494,7 @@ watch(
     if (pluginTabNames.value.includes(tab)) {
       if (uiMode.isSimple) {
         advancedTabBlocked.value = true
+        blockedTab = tab
         activeTab.value = 'overview'
       }
       return
