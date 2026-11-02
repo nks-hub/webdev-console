@@ -35,9 +35,11 @@
 
     <!-- What to do now (left) and the state of the stack (right). With at
          most one thing to do, the list becomes a strip above the table. -->
-    <div class="overview-grid" :class="{ 'is-stacked': attentionCount <= 1 }">
-      <AttentionList ref="attention" />
-      <StackTable @logs="openLogs" @config="openConfig" />
+    <div class="overview-wrap">
+      <div class="overview-grid" :class="{ 'is-stacked': attentionCount <= 1 }">
+        <AttentionList ref="attention" />
+        <StackTable @logs="openLogs" @config="openConfig" />
+      </div>
     </div>
 
     <DashboardSimple v-if="uiMode.isSimple" />
@@ -432,8 +434,10 @@ function openConfig(id: string) {
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Attention (5) | Stack (7); stacks under 75rem, and whenever there is at
-   most one thing to do (a strip above the table beats a mostly empty column). */
+/* Attention (5) | Stack (7); stacks when the content area (not the viewport,
+   the sidebar eats ~240px) is under 80rem, and whenever there is at most one
+   thing to do (a strip above the table beats a mostly empty column). */
+.overview-wrap { container-type: inline-size; }
 .overview-grid {
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
@@ -441,7 +445,7 @@ function openConfig(id: string) {
   align-items: start;
 }
 .overview-grid.is-stacked { grid-template-columns: minmax(0, 1fr); gap: var(--wdc-space-5); }
-@media (max-width: 75rem) {
+@container (max-width: 80rem) {
   .overview-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
