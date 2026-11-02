@@ -603,6 +603,10 @@ h1, h2, h3, h4,
   min-height: 34px;
   line-height: 34px;
 }
+.el-input--small .el-input__inner {
+  min-height: 30px;
+  line-height: 30px;
+}
 .el-input__inner::placeholder,
 .el-textarea__inner::placeholder { color: var(--wdc-text-3) !important; }
 
@@ -661,6 +665,12 @@ h1, h2, h3, h4,
 .el-radio-button__inner {
   min-height: 32px !important;
   line-height: 30px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+.el-radio-button--small .el-radio-button__inner {
+  min-height: 28px !important;
+  line-height: 26px !important;
 }
 
 /*
@@ -1435,3 +1445,7 @@ html:not(.dark) ::-webkit-scrollbar-thumb:hover {
 .el-pagination .el-pagination__sizes .el-select {
   min-width: 150px; /* fits "100 na stránku" */
 }
+/* Pager controls share the 32px height of the page buttons. */
+.el-pagination .el-select__wrapper,
+.el-pagination .el-input__wrapper { min-height: 32px !important; }
+.el-pagination .el-input__inner { min-height: 30px; line-height: 30px; }

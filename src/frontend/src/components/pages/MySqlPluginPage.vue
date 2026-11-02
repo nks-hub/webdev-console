@@ -32,13 +32,14 @@
               <div class="database-toolbar">
                 <div class="database-create-inline">
                   <el-input
+                    size="small"
                     v-model="newDatabaseName"
                     :placeholder="$t('databases.namePlaceholder')"
                     maxlength="64"
                     clearable
                     @keyup.enter="createDatabase"
                   />
-                  <el-button type="primary" :icon="Plus" :loading="creatingDatabase" :disabled="!canCreateDatabase" @click="createDatabase">
+                  <el-button size="small" type="primary" :icon="Plus" :loading="creatingDatabase" :disabled="!canCreateDatabase" @click="createDatabase">
                     {{ $t('databases.create') }}
                   </el-button>
                 </div>

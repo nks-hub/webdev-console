@@ -212,11 +212,10 @@ const chartOption = computed(() => {
 .metrics-controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--wdc-space-4); }
 .control { display: grid; gap: var(--wdc-space-1); }
 .control-label { color: var(--wdc-text-2); font-size: 0.8rem; }
-.control :deep(.el-input__wrapper) { height: 30px; box-sizing: border-box; }
 .control :deep(.el-date-editor.el-input) { width: 150px; }
 .series-toggles { display: flex; gap: var(--wdc-space-2); margin-left: auto; }
 .series-toggle {
-  min-height: 30px;
+  min-height: 32px;
   padding: 0 var(--wdc-space-3);
   border: 1px solid var(--wdc-border-strong);
   border-radius: var(--wdc-radius);
