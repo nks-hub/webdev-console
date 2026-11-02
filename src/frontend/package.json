@@ -57,7 +57,7 @@
     "echarts": "^6.1.0",
     "electron-log": "^5.4.4",
     "electron-updater": "^6.8.11",
-    "element-plus": "^2.14.1",
+    "element-plus": "^2.14.7",
     "monaco-editor": "^0.57.0",
     "pinia": "^2.2.0",
     "vue": "^3.5.44",
