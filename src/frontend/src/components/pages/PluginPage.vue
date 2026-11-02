@@ -111,6 +111,7 @@
 import { computed, onMounted, ref, shallowRef, watch, markRaw, type Component } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePluginsStore } from '../../stores/plugins'
+import { useDaemonStore } from '../../stores/daemon'
 import SchemaRenderer from '../../plugins/SchemaRenderer.vue'
 import PluginAutostartSwitch from '../shared/PluginAutostartSwitch.vue'
 
@@ -166,7 +167,16 @@ const PLUGIN_CUSTOM_ROUTES: Record<string, string> = {
 const manifest = computed(() =>
   pluginsStore.manifests.find(p => p.id === props.id)
 )
-const uiDef = computed(() => pluginsStore.getUi(props.id))
+const daemonStore = useDaemonStore()
+// The daemon's fallback UI assumes every plugin owns a service. A plugin with
+// no service of that id (deploy, ssl) must not get status/log panels, which
+// would only request /api/services/<id>/logs and 404.
+const uiDef = computed(() => {
+  const def = pluginsStore.getUi(props.id)
+  if (!def || daemonStore.services.length === 0 || daemonStore.services.some(s => s.id === props.id)) return def
+  const panels = def.panels.filter(p => p.props?.serviceId !== props.id)
+  return panels.length ? { ...def, panels } : undefined
+})
 
 // Task 26: watch manifest for pageBundleUrl and lazy-load when it shows up.
 // Using watch rather than onMounted-only so plugin reloads (hot-swap

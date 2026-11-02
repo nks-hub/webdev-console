@@ -72,7 +72,7 @@
                   {{ t(`servicesPage.status.${stateKeyOf(svc)}`) }}
                 </span>
               </td>
-              <td class="num mono">{{ stateOf(svc) === 'notInstalled' ? '—' : svc.port ?? '—' }}</td>
+              <td class="num mono">{{ portCell(svc) }}</td>
               <td v-if="uiMode.isAdvanced" class="mono muted">{{ svc.version || '—' }}</td>
             </tr>
           </tbody>
@@ -168,6 +168,8 @@ import { fetchServiceLogs } from '../../api/daemon'
 import type { ServiceInfo } from '../../api/types'
 import PluginAutostartSwitch from '../shared/PluginAutostartSwitch.vue'
 import ServiceErrorNote from '../shared/ServiceErrorNote.vue'
+import { errorMessage } from '../../utils/errors'
+import { servicePort } from '../../utils/servicePorts'
 import { formatBytes, formatDuration, formatPercent } from '../../utils/format'
 import { firstErrorLine, stripStreamTag } from '../../utils/logLevel'
 import { shortServiceName as shortName, type ServiceViewState } from '../../utils/serviceState'
@@ -194,6 +196,9 @@ const STATE_ICONS: Record<ServiceStateKey, Component> = {
   notInstalled: Download,
   startFailed: Close,
 }
+// Same ports text as the Overview: "HTTP 80 · HTTPS 443", settings table as fallback.
+const portCell = (svc: ServiceInfo) =>
+  stateOf(svc) === 'notInstalled' ? '—' : portsLabel(svc) ?? servicePort(svc.id)?.toString() ?? '—'
 const isTransient = (s: ServiceViewState) => s === 'starting' || s === 'stopping'
 
 const { t, locale } = useI18n()
@@ -282,9 +287,10 @@ function select(id: string) {
   selectedId.value = id
 }
 
-// Load the log tail of a crashed service as soon as it is shown.
+// Load the log tail of the shown service, so the panel is never an empty
+// "Show log" button: a crashed service explains itself, a running one shows its output.
 watch(selected, (svc) => {
-  if (svc && needsAttention(svc) && !logs.value[svc.id] && !loadingLogs.value.has(svc.id)) void loadLogs(svc.id)
+  if (svc && stateOf(svc) !== 'notInstalled' && !logs.value[svc.id] && !loadingLogs.value.has(svc.id)) void loadLogs(svc.id)
 }, { immediate: true })
 
 async function loadLogs(id: string) {
@@ -297,7 +303,8 @@ async function loadLogs(id: string) {
     logErrors.value = nextErrors
   } catch (e) {
     logs.value = { ...logs.value, [id]: [] }
-    logErrors.value = { ...logErrors.value, [id]: cleanError(e) }
+    // 404 = the service has no log file (yet): that is "empty", not a failure.
+    if (!/^HTTP 404/.test(errorMessage(e))) logErrors.value = { ...logErrors.value, [id]: cleanError(e) }
   } finally {
     const next = new Set(loadingLogs.value)
     next.delete(id)
@@ -359,7 +366,7 @@ function install(svc: ServiceInfo) {
 
 .split {
   display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
   gap: var(--wdc-space-6-5);
   align-items: start;
 }
@@ -399,7 +406,7 @@ function install(svc: ServiceInfo) {
   cursor: pointer;
 }
 .row-select:focus-visible { outline: 2px solid var(--wdc-accent); outline-offset: 2px; border-radius: var(--wdc-radius-xs); }
-.num { text-align: right !important; font-variant-numeric: tabular-nums; }
+.num { text-align: right !important; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .muted { color: var(--wdc-text-2); }
 .hidden-note { margin-top: var(--wdc-space-3); color: var(--wdc-text-3); font-size: 0.82rem; }
 
