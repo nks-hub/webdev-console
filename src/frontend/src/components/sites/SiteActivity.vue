@@ -160,7 +160,7 @@ defineExpose({ reload: load })
 }
 .sd-activity-actions { display: flex; gap: 12px; margin-top: 6px; }
 .sd-full-logs { margin-left: auto; min-height: 32px; }
-.sd-traffic-row { display: flex; align-items: center; gap: 12px; }
+.sd-traffic-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .sd-traffic-count { color: var(--el-text-color-secondary); font-size: 12px; }
 
 @media (max-width: 760px) {

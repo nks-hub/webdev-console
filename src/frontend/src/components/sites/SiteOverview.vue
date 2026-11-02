@@ -1,5 +1,6 @@
 <template>
   <div class="site-overview">
+    <div class="ov-col">
     <section class="ov-card" :aria-labelledby="`${uid}-state`">
       <h2 :id="`${uid}-state`" class="ov-heading">{{ $t('siteEdit.ov.state') }}</h2>
       <p class="ov-explain">
@@ -12,8 +13,6 @@
         </el-button>
       </div>
     </section>
-
-    <SiteServices :domain="site.domain" class="ov-card" />
 
     <section class="ov-card" :aria-labelledby="`${uid}-settings`">
       <h2 :id="`${uid}-settings`" class="ov-heading">{{ $t('siteEdit.ov.settings') }}</h2>
@@ -31,8 +30,12 @@
         </div>
       </dl>
     </section>
+    </div>
 
-    <SiteActivity :domain="site.domain" class="ov-card" />
+    <div class="ov-col">
+      <SiteServices :domain="site.domain" class="ov-card" />
+      <SiteActivity :domain="site.domain" class="ov-card" />
+    </div>
   </div>
 </template>
 
@@ -110,7 +113,14 @@ const rows = computed<Row[]>(() => {
 </script>
 
 <style scoped>
-.site-overview { display: grid; gap: var(--wdc-space-4); max-width: 880px; }
+/* Two columns fill the tab on wide windows and stack below ~860px. */
+.site-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(26rem, 100%), 1fr));
+  gap: var(--wdc-space-4);
+  align-items: start;
+}
+.ov-col { display: grid; gap: var(--wdc-space-4); min-width: 0; }
 .ov-card {
   padding: var(--wdc-space-4) var(--wdc-space-5);
   border: 1px solid var(--wdc-border);
