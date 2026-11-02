@@ -120,7 +120,7 @@
   },
   "login": {
     "subtitle": "Local development console",
-    "description": "Signing in with an NKS account syncs your plugins and unlocks actions that need verification. The app also works without signing in; you can sign in at any time from the left menu.",
+    "description": "Signing in with an NKS account syncs your plugins and unlocks actions that need verification. The app also works without signing in; you can sign in at any time with Sign in in the main menu.",
     "signInSso": "Sign in with your NKS account",
     "signOut": "Sign out",
     "continue": "Continue to app",
@@ -2956,7 +2956,7 @@
       "signedInAt": "Signed in to {url}.",
       "signedInAs": "Signed in as {who}",
       "configuredCatalog": "the configured catalog",
-      "description": "You sign in in the browser with your NKS account. The app does not store the password. The catalog address can be changed in Settings → Advanced.",
+      "description": "You sign in in the browser with your NKS account. The app does not store the password. In Advanced mode the catalog address can be changed in Settings → Advanced.",
       "catalog": "Plugin catalog",
       "catalogReachable": "reachable, last sync {ago}",
       "catalogNeverSynced": "not synced yet"

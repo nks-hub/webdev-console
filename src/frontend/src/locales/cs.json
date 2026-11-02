@@ -120,7 +120,7 @@
   },
   "login": {
     "subtitle": "Místní vývojová konzole",
-    "description": "Přihlášením k účtu NKS se vám synchronizují pluginy a zpřístupní se akce, které vyžadují ověření. Aplikace funguje i bez přihlášení, přihlásit se můžete kdykoli z menu vlevo.",
+    "description": "Přihlášením k účtu NKS se vám synchronizují pluginy a zpřístupní se akce, které vyžadují ověření. Aplikace funguje i bez přihlášení, přihlásit se můžete kdykoli položkou Přihlásit se v hlavním menu.",
     "signInSso": "Přihlásit se účtem NKS",
     "signOut": "Odhlásit se",
     "continue": "Pokračovat do aplikace",
@@ -2956,7 +2956,7 @@
       "signedInAt": "Přihlášeno k {url}.",
       "signedInAs": "Přihlášený účet: {who}",
       "configuredCatalog": "nastavenému katalogu",
-      "description": "Přihlášení proběhne v prohlížeči přes účet NKS. Aplikace heslo neukládá. Adresu katalogu lze změnit v Nastavení → Pokročilé.",
+      "description": "Přihlášení proběhne v prohlížeči přes účet NKS. Aplikace heslo neukládá. Adresu katalogu lze změnit v pokročilém režimu v Nastavení → Pokročilé.",
       "catalog": "Katalog pluginů",
       "catalogReachable": "dostupný, poslední synchronizace {ago}",
       "catalogNeverSynced": "zatím nesynchronizován"

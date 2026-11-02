@@ -120,24 +120,38 @@ const aggregatesLoading = ref(false)
 
 const recentSimpleSites = computed(() => sitesStore.sites.slice(0, 5))
 
+// One load at a time: mount, activation and the site-list watch used to start
+// overlapping loads of ~100 requests each, and none of them finished.
+let aggregatesRunning = false
+let aggregatesAgain = false
+const AGGREGATE_CONCURRENCY = 4
+
 async function loadAggregates() {
+  if (aggregatesRunning) { aggregatesAgain = true; return }
+  aggregatesRunning = true
   aggregatesLoading.value = true
-  const domains = sitesStore.sites.map(s => s.domain)
-  // Same access and error logs as the site's Metrics tab, so the totals agree with it.
-  const results = await Promise.allSettled(domains.map(async (domain: string) => {
-    const [hourly, errors] = await Promise.allSettled([fetchHourlyRequests(domain), fetchRecentErrors(domain)])
-    return {
-      hits: hourly.status === 'fulfilled' ? hourly.value.reduce((sum, n) => sum + n, 0) : 0,
-      errs: errors.status === 'fulfilled' ? errors.value.length : 0,
-    }
-  }))
-  totalHits.value = results.reduce(
-    (sum, r) => r.status === 'fulfilled' ? sum + r.value.hits : sum, 0,
-  )
-  totalErrors.value = results.reduce(
-    (sum, r) => r.status === 'fulfilled' ? sum + r.value.errs : sum, 0,
-  )
-  aggregatesLoading.value = false
+  try {
+    do {
+      aggregatesAgain = false
+      const domains = sitesStore.sites.map(s => s.domain)
+      let hits = 0
+      let errs = 0
+      // Same access and error logs as the site's Metrics tab, so the totals agree with it.
+      const queue = [...domains]
+      await Promise.all(Array.from({ length: Math.min(AGGREGATE_CONCURRENCY, queue.length) }, async () => {
+        for (let domain = queue.shift(); domain !== undefined; domain = queue.shift()) {
+          const [hourly, errors] = await Promise.allSettled([fetchHourlyRequests(domain), fetchRecentErrors(domain)])
+          if (hourly.status === 'fulfilled') hits += hourly.value.reduce((sum, n) => sum + n, 0)
+          if (errors.status === 'fulfilled') errs += errors.value.length
+        }
+      }))
+      totalHits.value = hits
+      totalErrors.value = errs
+    } while (aggregatesAgain)
+  } finally {
+    aggregatesRunning = false
+    aggregatesLoading.value = false
+  }
 }
 
 

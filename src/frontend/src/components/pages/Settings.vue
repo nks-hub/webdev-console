@@ -1042,7 +1042,7 @@
                 <div v-if="installedVersions.length" class="about-sys-title" style="margin-top: var(--wdc-space-3)">{{ $t('settings.about.installedVersions') }}</div>
                 <div v-for="bin in installedVersions" :key="bin.app" class="about-sys-row">
                   <span class="sys-label">{{ appDisplayName(bin.app) }}</span>
-                  <span class="sys-value">{{ bin.version }}</span>
+                  <span class="sys-value sys-version" :title="bin.version">{{ bin.version }}</span>
                 </div>
               </div>
             </div>
@@ -3191,6 +3191,7 @@ async function save() {
 .about-sys-row {
   display: flex;
   justify-content: space-between;
+  gap: var(--wdc-space-3);
   padding: var(--wdc-space-1) 0;
   font-size: 0.82rem;
   border-bottom: 1px dashed var(--wdc-border);
@@ -3199,6 +3200,8 @@ async function save() {
 .sys-label { color: var(--wdc-text-2); }
 .sys-value { color: var(--wdc-text); font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
 /* Service rows: the dot needs air before the name; a state word is text, not a version. */
+/* Long dev versions (2.10-dev+c53ccd…) ran into the label at 900 px. */
+.sys-version { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sys-label-dot { display: inline-flex; align-items: center; gap: var(--wdc-space-2); }
 .sys-state { font-family: inherit; font-size: inherit; }
 

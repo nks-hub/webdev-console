@@ -602,7 +602,8 @@ onMounted(() => {
 
 .pm-card-title {
   display: flex;
-  align-items: center;
+  /* Long names wrap inside .pm-name; the tag stays on the first line. */
+  align-items: flex-start;
   gap: var(--wdc-space-2-5);
   min-width: 0;
 }
