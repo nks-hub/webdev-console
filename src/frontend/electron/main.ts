@@ -190,6 +190,7 @@ let probeFailuresInRow = 0
 let trayUpdatedAt = 0
 let trayHiddenServices = new Set<string>()
 let lastGoodTraySnapshot: TraySnapshot | null = null
+let lastGoodTrayAt = 0
 const TRAY_REFRESH_MS = 15_000
 let daemonSpawnedAt = 0
 let connectedSinceSpawn = false
@@ -1150,12 +1151,14 @@ async function loadTraySnapshot(): Promise<TraySnapshot> {
       stopped: services.filter(s => s.state === 0).length,
       disabled: services.filter(s => s.disabled).length,
     }
+    lastGoodTrayAt = Date.now()
     return lastGoodTraySnapshot
   } catch (error) {
     log.warn('[tray] unable to load service snapshot:', error instanceof Error ? error.message : String(error))
     // The health probe says the daemon is up; a slow /api/services (busy
     // re-applying sites) must not grey the tray out. Keep the last good view.
-    if (lastGoodTraySnapshot) return lastGoodTraySnapshot
+    // Only briefly, though: a daemon whose service list keeps failing must show it.
+    if (lastGoodTraySnapshot && Date.now() - lastGoodTrayAt < 60_000) return lastGoodTraySnapshot
     return { connected: false, services: [], running: 0, failed: 0, transitioning: 0, stopped: 0, disabled: 0 }
   }
 }
