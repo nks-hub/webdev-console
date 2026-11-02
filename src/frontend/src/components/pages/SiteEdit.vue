@@ -266,7 +266,7 @@
               <div v-if="!tunnelConfigured" class="inline-callout">
                 <el-icon aria-hidden="true"><WarningFilled /></el-icon>
                 <span>{{ $t(siteState.cloudflareMissing === 'tunnel' ? 'siteEdit.tunnelNotConfigured' : siteState.cloudflareMissing === 'zone' ? 'siteEdit.zoneNotConfigured' : siteState.cloudflareMissing === 'unknown' ? 'siteEdit.cloudflareUnknown' : 'siteEdit.tunnelSiteNotConfigured') }}</span>
-                <el-button size="small" @click="uiMode.setUiMode('advanced'); router.push('/cloudflare')">{{ $t('siteEdit.openCloudflare') }}<template v-if="uiMode.isSimple"> {{ $t('common.inAdvanced') }}</template></el-button>
+                <el-button size="small" @click="uiMode.setUiMode('advanced'); router.push('/cloudflare')">{{ $t('siteEdit.openCloudflare') }}<template v-if="uiMode.isSimple">{{ ' ' + $t('common.inAdvanced') }}</template></el-button>
               </div>
               <div v-else-if="site.cloudflare?.enabled" class="hint mono">https://{{ site.cloudflare.subdomain }}.{{ site.cloudflare.zoneName }}</div>
             </EditCard>

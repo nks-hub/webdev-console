@@ -26,7 +26,7 @@
               <template #title>{{ $t('cloudflareSite.notConfiguredTitle') }}</template>
               <div>{{ $t('cloudflareSite.notConfiguredBody') }}</div>
               <el-button size="small" type="primary" @click="goToCloudflarePage">
-                {{ $t('cloudflareSite.openSetup') }}<template v-if="uiMode.isSimple"> {{ $t('common.inAdvanced') }}</template>
+                {{ $t('cloudflareSite.openSetup') }}<template v-if="uiMode.isSimple">{{ ' ' + $t('common.inAdvanced') }}</template>
               </el-button>
             </el-alert>
           </div>
@@ -34,7 +34,7 @@
             <el-alert type="warning" :closable="false" show-icon>
               <template #title>{{ $t('siteEdit.zoneNotConfigured') }}</template>
               <el-button size="small" type="primary" @click="goToCloudflarePage">
-                {{ $t('cloudflareSite.openSetup') }}<template v-if="uiMode.isSimple"> {{ $t('common.inAdvanced') }}</template>
+                {{ $t('cloudflareSite.openSetup') }}<template v-if="uiMode.isSimple">{{ ' ' + $t('common.inAdvanced') }}</template>
               </el-button>
             </el-alert>
           </div>
@@ -136,7 +136,7 @@
                   : $t('cloudflareSite.applyNow') }}
             </el-button>
             <el-button size="default" @click="goToCloudflarePage">
-              {{ $t('siteEdit.openCloudflare') }}<template v-if="uiMode.isSimple"> {{ $t('common.inAdvanced') }}</template>
+              {{ $t('siteEdit.openCloudflare') }}<template v-if="uiMode.isSimple">{{ ' ' + $t('common.inAdvanced') }}</template>
             </el-button>
             <span v-if="applyStatus" class="apply-status" :class="applyStatus.kind">
               {{ applyStatus.message }}

@@ -129,7 +129,7 @@
         <div v-if="!siteState.cloudflareReady" class="inline-callout">
           <el-icon aria-hidden="true"><WarningFilled /></el-icon>
           <span>{{ $t(siteState.cloudflareMissing === 'tunnel' ? 'sites.new.tunnelNotReady' : siteState.cloudflareMissing === 'unknown' ? 'siteEdit.cloudflareUnknown' : 'sites.new.zoneNotReady') }}</span>
-          <el-button size="small" @click="goToCloudflare">{{ $t('siteEdit.openCloudflare') }}<template v-if="uiMode.isSimple"> {{ $t('common.inAdvanced') }}</template></el-button>
+          <el-button size="small" @click="goToCloudflare">{{ $t('siteEdit.openCloudflare') }}<template v-if="uiMode.isSimple">{{ ' ' + $t('common.inAdvanced') }}</template></el-button>
         </div>
       </div>
 

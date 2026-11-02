@@ -15,7 +15,7 @@
           <EditCard :title="$t('mysqlPlugin.tabDatabases')">
             <template #hint>
               <el-button size="small" text @click="uiMode.setUiMode('advanced'); $router.push('/databases')">
-                {{ $t('mysqlPlugin.openDatabasesPage') }}<template v-if="uiMode.isSimple"> {{ $t('common.inAdvanced') }}</template>
+                {{ $t('mysqlPlugin.openDatabasesPage') }}<template v-if="uiMode.isSimple">{{ ' ' + $t('common.inAdvanced') }}</template>
               </el-button>
             </template>
             <div class="mysql-databases-panel">
