@@ -187,6 +187,8 @@ let daemonConnected = false
 let trayShowsConnected = false
 let lastTraySummary = ''
 let probeFailuresInRow = 0
+let trayUpdatedAt = 0
+const TRAY_REFRESH_MS = 15_000
 let daemonSpawnedAt = 0
 let connectedSinceSpawn = false
 let isQuitting = false
@@ -526,7 +528,9 @@ async function healthTick() {
     autoRestartSuspended = false
     // The tray is otherwise redrawn only on state changes; one whose last
     // snapshot failed (daemon still busy starting) kept saying "unavailable".
-    if (!daemonConnected || !trayShowsConnected) {
+    // Also refresh a healthy tray now and then: the running count changes
+    // while services start, and nothing else redraws it.
+    if (!daemonConnected || !trayShowsConnected || Date.now() - trayUpdatedAt > TRAY_REFRESH_MS) {
       daemonConnected = true
       void updateTray()
     }
@@ -1333,6 +1337,7 @@ async function updateTray() {
   if (!activeTray || activeTray.isDestroyed()) return
   activeTray.setImage(createTrayIcon(trayIconColor(snapshot)))
   trayShowsConnected = snapshot.connected
+  trayUpdatedAt = Date.now()
 
   const trayMenuLabel = menuText(snapshot.connected ? 'headerConnected' : 'headerOffline')
   if (snapshot.connected) connectedSinceSpawn = true
