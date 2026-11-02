@@ -162,8 +162,8 @@
             <template #default="{ row }">
               <div class="pkg-name-cell">
                 <span
-                  v-if="outdatedMap[row.name]"
                   class="pkg-outdated-dot"
+                  :class="{ 'is-off': !outdatedMap[row.name] }"
                   :title="t('sites.composer.outdatedBadge')"
                 />
                 <el-popover
@@ -809,7 +809,7 @@ onMounted(() => {
 
 <style scoped>
 .site-composer {
-  padding: var(--wdc-space-4);
+  padding: 0;
 }
 
 .composer-loading {
@@ -909,6 +909,11 @@ onMounted(() => {
   border-radius: 50%;
   background: var(--el-color-warning);
   flex-shrink: 0;
+}
+
+/* Keeps the name column aligned for rows without the dot. */
+.pkg-outdated-dot.is-off {
+  visibility: hidden;
 }
 
 .pkg-name-link {
