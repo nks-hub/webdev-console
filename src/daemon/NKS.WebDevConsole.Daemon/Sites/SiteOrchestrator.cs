@@ -128,7 +128,7 @@ public sealed class SiteOrchestrator
 
         var modules = _sp.GetServices<IServiceModule>().ToList();
 
-        // 1. SSL — generate certificate FIRST so the Apache vhost generator
+        // 1. SSL — make sure a certificate exists FIRST so the Apache vhost generator
         // can embed the cert/key paths in the rendered HTTPS VirtualHost block.
         // Previously this step ran AFTER vhost generation, which meant the
         // first apply always produced an HTTP-only vhost (cert didn't exist
@@ -139,7 +139,15 @@ public sealed class SiteOrchestrator
             {
                 var pluginLoader = _sp.GetService<PluginLoader>();
                 var sslPlugin = pluginLoader?.Plugins.FirstOrDefault(p => p.Instance.Id == "nks.wdc.ssl");
-                if (sslPlugin != null)
+                var aliasesForCert = site.Aliases ?? Array.Empty<string>();
+                var certDir = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.SslRoot, "sites", site.Domain);
+                if (sslPlugin != null && ExistingCertCovers(certDir, site.Domain, aliasesForCert, DateTime.UtcNow))
+                {
+                    // Re-issuing on every apply made each daemon start run mkcert for all
+                    // sites (slow start, a new certificate every time). Keep a valid one.
+                    result.Ok("ssl");
+                }
+                else if (sslPlugin != null)
                 {
                     var genMethod = sslPlugin.Instance.GetType().GetMethod("GenerateCert");
                     if (genMethod != null)
@@ -671,6 +679,44 @@ public sealed class SiteOrchestrator
     }
 
     /// <summary>
+    /// <summary>
+    /// True when <paramref name="certDir"/> holds a cert.pem + key.pem pair whose
+    /// certificate is valid for at least 30 more days and names the domain and
+    /// every alias (DNS names incl. wildcards, IP aliases as IP SANs).
+    /// </summary>
+    internal static bool ExistingCertCovers(string certDir, string domain, IEnumerable<string> aliases, DateTime nowUtc)
+    {
+        var certPath = Path.Combine(certDir, "cert.pem");
+        if (!File.Exists(certPath) || !File.Exists(Path.Combine(certDir, "key.pem"))) return false;
+        try
+        {
+            using var cert = System.Security.Cryptography.X509Certificates.X509Certificate2.CreateFromPemFile(
+                certPath, Path.Combine(certDir, "key.pem"));
+            return CertCovers(cert, domain, aliases, nowUtc);
+        }
+        catch
+        {
+            return false; // unreadable or key mismatch: let the plugin issue a new one
+        }
+    }
+
+    internal static bool CertCovers(System.Security.Cryptography.X509Certificates.X509Certificate2 cert,
+        string domain, IEnumerable<string> aliases, DateTime nowUtc)
+    {
+        if (cert.NotAfter.ToUniversalTime() < nowUtc.AddDays(30) || cert.NotBefore.ToUniversalTime() > nowUtc) return false;
+        var san = cert.Extensions.OfType<System.Security.Cryptography.X509Certificates.X509SubjectAlternativeNameExtension>().FirstOrDefault();
+        if (san is null) return false;
+        var dns = new HashSet<string>(san.EnumerateDnsNames(), StringComparer.OrdinalIgnoreCase);
+        var ips = san.EnumerateIPAddresses().ToHashSet();
+        foreach (var name in aliases.Prepend(domain))
+        {
+            if (string.IsNullOrWhiteSpace(name)) continue;
+            var covered = System.Net.IPAddress.TryParse(name, out var ip) ? ips.Contains(ip) : dns.Contains(name);
+            if (!covered) return false;
+        }
+        return true;
+    }
+
     /// Public wrapper around <see cref="UpdateHostsFileAsync"/> so the uninstall
     /// endpoint can clear the managed hosts block without needing a site payload.
     /// Pass an empty collection to strip the managed block entirely.
