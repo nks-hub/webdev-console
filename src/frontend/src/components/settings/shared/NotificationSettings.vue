@@ -151,8 +151,9 @@ async function onTest(): Promise<void> {
   min-width: 0;
 }
 .notification-label {
-  font-weight: 600;
-  color: var(--wdc-text);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--wdc-text-2);
 }
 .notification-hint {
   font-size: 0.78rem;

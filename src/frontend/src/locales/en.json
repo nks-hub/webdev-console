@@ -2893,7 +2893,7 @@
       "apacheHttps": "Apache HTTPS",
       "network": {
         "title": "Network & ports",
-        "subtitle": "The ports your services listen on right now.",
+        "subtitle": "Ports of the Apache web server and the MySQL database.",
         "editInAdvanced": "Change ports in Advanced mode"
       },
       "backup": {
@@ -3129,7 +3129,7 @@
       "duplicate": "Several services share a port: {ports}. Each service needs its own port."
     },
     "update": {
-      "current": "Current version",
+      "current": "Installed version",
       "latest": "Latest version",
       "available": "Available",
       "upToDate": "Up to date",

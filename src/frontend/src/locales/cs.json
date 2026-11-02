@@ -2893,7 +2893,7 @@
       "apacheHttps": "Apache HTTPS",
       "network": {
         "title": "Síť a porty",
-        "subtitle": "Porty, na kterých služby právě naslouchají.",
+        "subtitle": "Porty webového serveru Apache a databáze MySQL.",
         "editInAdvanced": "Změnit porty v pokročilém režimu"
       },
       "backup": {
@@ -3129,7 +3129,7 @@
       "duplicate": "Stejný port má víc služeb: {ports}. Každá služba potřebuje vlastní port."
     },
     "update": {
-      "current": "Aktuální verze",
+      "current": "Nainstalovaná verze",
       "latest": "Nejnovější verze",
       "available": "K dispozici",
       "upToDate": "Aktuální",
