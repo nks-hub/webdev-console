@@ -30,7 +30,10 @@ test.describe('Daemon startup contract', () => {
   })
 
   test('the tray redraws once the daemon answers and labels a start in progress', () => {
-    expect(main).toMatch(/if \(!daemonConnected \|\| !trayShowsConnected\)/)
+    expect(main).toMatch(/if \(!daemonConnected \|\| !trayShowsConnected \|\| Date\.now\(\) - trayUpdatedAt > TRAY_REFRESH_MS\)/)
+    // One slow or reset probe must not flip the tray; the default agent's keep-alive caused that.
+    expect(main).toMatch(/\+\+probeFailuresInRow >= 2/)
+    expect(main).toMatch(/new http\.Agent\(\{ keepAlive: false \}\)/)
     expect(main).toMatch(/menuText\(starting \? 'daemonStarting' : 'daemonUnavailable'\)/)
     expect(main).toMatch(/if \(\+\+attempts > 120\) clearInterval\(check\)/)
   })
