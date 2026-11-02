@@ -617,7 +617,7 @@
               <p class="hint">
                 {{ $t('settings.deploySubsystem.description') }}
               </p>
-              <el-form label-position="left" label-width="240px" size="small">
+              <el-form label-position="top" size="small">
                 <el-form-item :label="$t('settings.deploySubsystem.enableLabel')">
                   <el-switch v-model="deployEnabled" />
                 </el-form-item>
