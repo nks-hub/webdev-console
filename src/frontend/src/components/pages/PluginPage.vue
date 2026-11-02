@@ -32,9 +32,9 @@
           <el-tag size="small" type="info" effect="dark">v{{ manifest.version }}</el-tag>
           <el-tag
             size="small"
-            :type="manifest.enabled ? 'success' : 'info'"
+            :type="manifest.platformSupported === false ? 'warning' : manifest.enabled ? 'success' : 'info'"
             effect="dark"
-          >{{ manifest.enabled ? $t('plugins.page.enabled') : $t('plugins.page.disabled') }}</el-tag>
+          >{{ manifest.platformSupported === false ? $t('plugins.page.unsupported') : manifest.enabled ? $t('plugins.page.enabled') : $t('plugins.page.disabled') }}</el-tag>
           <el-tag
             v-if="uiDef?.category"
             size="small"

@@ -34,7 +34,7 @@ export const usePluginsStore = defineStore('plugins', () => {
   // enabled — otherwise the header /ssl tab flashes off on first mount.
   const navEntriesLoaded = ref(false)
 
-  const enabledPlugins = computed(() => manifests.value.filter(p => p.enabled))
+  const enabledPlugins = computed(() => manifests.value.filter(p => p.enabled && p.platformSupported !== false))
 
   // Shared sort comparator: group by category (alpha), then by explicit
   // order field, then by label as tiebreaker. Used by both loadAll and

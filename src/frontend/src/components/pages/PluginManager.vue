@@ -168,7 +168,11 @@
               {{ plugin.type === 'service' ? $t('plugins.type.service') : $t('plugins.type.tool') }}
             </el-tag>
           </div>
+          <el-tag v-if="plugin.platformSupported === false" size="small" type="warning" effect="plain">
+            {{ $t('plugins.page.unsupported') }}
+          </el-tag>
           <el-switch
+            v-else
             :model-value="plugin.enabled"
             :loading="toggling.has(plugin.id)"
             :aria-label="$t('plugins.enableAria', { name: pluginName(plugin) })"

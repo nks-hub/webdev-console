@@ -118,7 +118,8 @@ function install() {
 }
 .page-title { font-size: 1.728rem; line-height: 1.1; letter-spacing: -0.028em; }
 .page-sub { margin-top: var(--wdc-space-2); color: var(--wdc-text-2); }
-.head-actions { display: flex; flex-wrap: wrap; gap: var(--wdc-space-2); }
+.page-head > div:first-child { flex: 1 1 14rem; min-width: 0; }
+.head-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; margin-left: auto; gap: var(--wdc-space-2); }
 .head-actions :deep(.el-button + .el-button) { margin-left: 0; }
 
 .svc-sentence { color: var(--wdc-text); line-height: 1.45; }

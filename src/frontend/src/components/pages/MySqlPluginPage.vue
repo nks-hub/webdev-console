@@ -14,8 +14,8 @@
         <div v-else class="tab-content">
           <EditCard :title="$t('mysqlPlugin.tabDatabases')">
             <template #hint>
-              <el-button size="small" text @click="$router.push('/databases')">
-                {{ $t('mysqlPlugin.openDatabasesPage') }}
+              <el-button size="small" text @click="uiMode.setUiMode('advanced'); $router.push('/databases')">
+                {{ $t('mysqlPlugin.openDatabasesPage') }}<template v-if="uiMode.isSimple"> {{ $t('common.inAdvanced') }}</template>
               </el-button>
             </template>
             <div class="mysql-databases-panel">
@@ -385,6 +385,7 @@ import { useI18n } from 'vue-i18n'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useDaemonStore } from '../../stores/daemon'
+import { useUiModeStore } from '../../stores/uiMode'
 import { daemonBaseUrl, daemonAuthHeaders as authHeaders } from '../../api/daemon'
 import { errorMessage } from '../../utils/errors'
 import { stateOf } from '../../utils/services'
@@ -397,6 +398,7 @@ defineOptions({ name: 'MySqlPluginPage' })
 const { t } = useI18n()
 const route = useRoute()
 const daemonStore = useDaemonStore()
+const uiMode = useUiModeStore()
 interface MySqlUser {
   userName: string
   host: string

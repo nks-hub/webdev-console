@@ -825,9 +825,13 @@ async function autoVerifyToken() {
 
 .status-strip {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--wdc-space-3);
   padding: var(--wdc-space-4-5) 0 var(--wdc-space-1);
+}
+/* Four cards wrap 2+2, never 3+1. */
+@media (max-width: 1100px) {
+  .status-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .status-card {
   display: flex;
@@ -958,4 +962,8 @@ async function autoVerifyToken() {
 /* Icons sat ~3 px above the text in the tab labels. */
 .tab-label { display: inline-flex; align-items: center; gap: var(--wdc-space-1); }
 .perm { white-space: nowrap; }
+/* Scoped copies of these live in the site tabs; this page needs its own. */
+.ssl-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 0; }
+.ssl-toggle-title { font-weight: 600; color: var(--wdc-text); font-size: 0.87rem; }
+.ssl-toggle-desc { font-size: 0.82rem; color: var(--wdc-text-3); margin-top: 2px; }
 </style>
