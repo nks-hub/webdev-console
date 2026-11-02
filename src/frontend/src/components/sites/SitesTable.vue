@@ -469,6 +469,11 @@ a.web-url:hover { color: var(--wdc-accent-ink); text-decoration: underline; text
   .has-extra-columns .act-text { display: none; }
   .has-extra-columns .col-state { width: 120px; min-width: 110px; }
   .has-extra-columns .col-tunnel { width: 150px; }
+  /* Narrower labels alone still left ~940 px of minimum widths; runtime moves
+     into the web cell and the network column drops out, as on a phone. */
+  .has-extra-columns .col-runtime,
+  .has-extra-columns .col-network { display: none; }
+  .has-extra-columns .narrow-runtime { display: inline; }
 }
 /* Phone width: runtime, network and tunnel move into the web cell or drop out. */
 @container (max-width: 700px) {
