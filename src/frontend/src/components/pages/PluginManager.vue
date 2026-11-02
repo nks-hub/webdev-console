@@ -570,9 +570,14 @@ onMounted(() => {
   border-left-color: var(--wdc-accent);
   background: var(--wdc-surface);
 }
-.pm-card--disabled { opacity: 0.55; }
+/* Dim only the passive parts; the actions row and hint must stay readable. */
+.pm-card--disabled .pm-card-title,
+.pm-card--disabled .pm-card-desc,
+.pm-card--disabled .pm-card-footer { opacity: 0.6; }
 .pm-card--disabled .pm-name { color: var(--wdc-text-muted); }
-.pm-card--disabled:hover { opacity: 0.75; }
+.pm-card--disabled:hover .pm-card-title,
+.pm-card--disabled:hover .pm-card-desc,
+.pm-card--disabled:hover .pm-card-footer { opacity: 0.8; }
 
 .pm-card:hover {
   border-color: var(--wdc-border-strong);
