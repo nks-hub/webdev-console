@@ -9,9 +9,8 @@
           size="small"
           :disabled-date="isFutureDate"
           value-format="YYYY-MM-DD"
-          format="YYYY-MM-DD"
+          :format="locale === 'cs' ? 'D. M. YYYY' : 'YYYY-MM-DD'"
           :clearable="false"
-          class="date-picker"
           @change="load"
         />
       </label>
@@ -213,7 +212,8 @@ const chartOption = computed(() => {
 .metrics-controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--wdc-space-4); }
 .control { display: grid; gap: var(--wdc-space-1); }
 .control-label { color: var(--wdc-text-2); font-size: 0.8rem; }
-.date-picker { width: 150px; }
+.control :deep(.el-input__wrapper) { height: 30px; box-sizing: border-box; }
+.control :deep(.el-date-editor.el-input) { width: 150px; }
 .series-toggles { display: flex; gap: var(--wdc-space-2); margin-left: auto; }
 .series-toggle {
   min-height: 30px;

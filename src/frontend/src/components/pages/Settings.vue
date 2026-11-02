@@ -171,7 +171,7 @@
             >
               <span class="sys-label">
                 <HealthStatusDot :level="serviceDot(svc)" />
-                {{ svc.displayName || svc.name || svc.id }}
+                {{ shortServiceName(svc) }}
               </span>
               <span class="sys-value">{{ serviceStateLabel(svc) }}</span>
             </div>
@@ -1029,7 +1029,7 @@
                 </div>
                 <div class="about-sys-row">
                   <span class="sys-label">{{ $t('settings.about.binaries') }}</span>
-                  <span class="sys-value">{{ systemInfo.binaries }}</span>
+                  <span class="sys-value">{{ installedVersions.length }}</span>
                 </div>
                 <div class="about-sys-row">
                   <span class="sys-label">{{ $t('settings.about.os') }}</span>
@@ -1105,6 +1105,7 @@ import SyncSnapshotsCard from '../settings/sync/SyncSnapshotsCard.vue'
 import { compareSemver, versionCore } from '../../utils/semver'
 import { pickSyncableSettings } from '../../utils/settingsSync'
 import { appDisplayName } from '../../utils/binaries'
+import { shortServiceName } from '../../utils/serviceState'
 import { useAppVersion } from '../../utils/appVersion'
 
 const versionRef = useAppVersion()
@@ -2814,11 +2815,19 @@ onMounted(async () => {
     if (r.ok) {
       const bins: Array<{ app: string; version: string }> = await r.json()
       const seen = new Set<string>()
+      // Composer's catalog entry says "latest"; the Binaries page reads the real version below.
       installedVersions.value = bins.filter(b => {
-        if (seen.has(b.app)) return false
+        if (b.app.toLowerCase() === 'composer' || seen.has(b.app)) return false
         seen.add(b.app)
         return true
       })
+    }
+  } catch { /* optional */ }
+  try {
+    const r = await fetch(`${daemonBaseUrl()}/api/composer/version`, { headers: authHeaders() })
+    if (r.ok) {
+      const d = await r.json() as { version: string | null; path: string | null }
+      if (d.version) installedVersions.value = [...installedVersions.value, { app: 'composer', version: d.version }]
     }
   } catch { /* optional */ }
 })

@@ -81,7 +81,7 @@
 
           <el-table-column :label="$t('sites.framework')" width="130">
             <template #default="{ row }">
-              <el-tag v-if="row.status?.framework" size="small" type="info">{{ row.status.framework }}</el-tag>
+              <el-tag v-if="row.status?.framework && row.status.framework !== 'none'" size="small" type="info">{{ row.status.framework }}</el-tag>
               <span v-else class="text-muted">—</span>
             </template>
           </el-table-column>

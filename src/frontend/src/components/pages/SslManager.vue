@@ -100,7 +100,7 @@
                 <span v-if="cert.notAfterUtc" class="cert-meta-item">
                   {{ $t('ssl.metaExpires') }}: {{ formatDate(cert.notAfterUtc) }}
                 </span>
-                <span v-if="cert.issuer" class="cert-meta-item mono" :title="cert.issuer">
+                <span v-if="cert.issuer" class="cert-meta-item" :title="cert.issuer">
                   {{ $t('ssl.metaIssuer') }}: {{ issuerShort(cert.issuer) }}
                 </span>
                 <span v-if="cert.fingerprint" class="cert-meta-item mono cert-fingerprint">
