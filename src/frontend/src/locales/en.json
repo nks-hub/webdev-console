@@ -2016,6 +2016,7 @@
     "goToStep1": "Go to step 1"
   },
   "siteEdit": {
+    "advancedTabNote": "This tab belongs to Advanced mode, so Simple mode does not show it.",
     "composeUp": "Start",
     "composeDown": "Stop",
     "staticDesc": "Plain HTML and files, no PHP or Node.",
@@ -3098,7 +3099,7 @@
       "mampConfirm": "MAMP PRO sites found ({count}): {sites}. Import them?"
     },
     "ports": {
-      "description": "The ports your services listen on. After saving, the affected services reload on their own.",
+      "description": "The ports your services listen on. The Save settings button appears at the bottom once you change a port. The affected services then reload on their own.",
       "httpPort": "HTTP Port",
       "httpsPort": "HTTPS Port",
       "mysqlPort": "MySQL Port",

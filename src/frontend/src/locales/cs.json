@@ -2016,6 +2016,7 @@
     "goToStep1": "Přejít na krok 1"
   },
   "siteEdit": {
+    "advancedTabNote": "Tato karta patří do pokročilého režimu, proto ji jednoduchý režim neukazuje.",
     "composeUp": "Spustit",
     "composeDown": "Zastavit",
     "staticDesc": "Obyčejné HTML a soubory, bez PHP a Node.",
@@ -3098,7 +3099,7 @@
       "mampConfirm": "Nalezené weby z MAMP PRO ({count}): {sites}. Importovat je?"
     },
     "ports": {
-      "description": "Porty, na kterých služby naslouchají. Po uložení se dotčené služby samy znovu načtou.",
+      "description": "Porty, na kterých služby naslouchají. Tlačítko Uložit nastavení se objeví dole, jakmile port změníte. Dotčené služby se pak samy znovu načtou.",
       "httpPort": "Port HTTP",
       "httpsPort": "Port HTTPS",
       "mysqlPort": "Port MySQL",

@@ -42,6 +42,10 @@
 
       <!-- Logs, metrics and deploy are lazy: they read logs and call the deploy plugin, which a page
            that only edits a folder should not do on load. -->
+      <div v-if="advancedTabBlocked && activeTab === 'overview'" class="mode-tab-note" role="note">
+        <span>{{ $t('siteEdit.advancedTabNote') }}</span>
+        <el-button size="small" @click="uiMode.setUiMode('advanced')">{{ $t('app.switchToAdvanced') }}</el-button>
+      </div>
       <el-tabs v-model="activeTab" class="site-tabs">
         <!-- ── Overview: read-only ── -->
         <el-tab-pane name="overview" :label="$t('siteEdit.overview')">
@@ -454,6 +458,11 @@ watch(activeTab, (tab) => {
 
 // Fall back to Overview when the active tab has no pane to show: an Advanced-only tab (plugin tabs
 // included) in Simple mode, Deploy with the deploy surface off, or an unknown ?tab= value.
+// Set when Simple mode swapped a requested Advanced tab for Overview, so the page can say why.
+const advancedTabBlocked = ref(false)
+watch([activeTab, () => uiMode.isSimple], ([tab, simple]) => {
+  if (tab !== 'overview' || !simple) advancedTabBlocked.value = false
+})
 const BASE_TABS: readonly string[] = ['overview', 'settings', 'logs', 'metrics']
 const ADVANCED_TABS: readonly string[] = ['deploy', 'history']
 const pluginTabNames = computed(() =>
@@ -468,11 +477,17 @@ watch(
     if (BASE_TABS.includes(tab)) return
     if (ADVANCED_TABS.includes(tab)) {
       const deployHidden = tab === 'deploy' && featureFlagsStore.loaded && !featureFlagsStore.showDeploySurface
-      if (uiMode.isSimple || deployHidden) activeTab.value = 'overview'
+      if (uiMode.isSimple || deployHidden) {
+        advancedTabBlocked.value = uiMode.isSimple
+        activeTab.value = 'overview'
+      }
       return
     }
     if (pluginTabNames.value.includes(tab)) {
-      if (uiMode.isSimple) activeTab.value = 'overview'
+      if (uiMode.isSimple) {
+        advancedTabBlocked.value = true
+        activeTab.value = 'overview'
+      }
       return
     }
     // Plugin manifests not loaded yet: the tab may still be contributed.
@@ -1032,6 +1047,19 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 .site-apply { margin-bottom: var(--wdc-space-3); }
 
 /* Tabs keep their natural width and sit on the left. */
+.mode-tab-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--wdc-space-3);
+  margin-bottom: var(--wdc-space-3);
+  padding: var(--wdc-space-2) var(--wdc-space-4);
+  background: var(--wdc-accent-dim);
+  border: 1px solid var(--wdc-border);
+  border-radius: var(--wdc-radius);
+  color: var(--wdc-accent-ink);
+  font-size: 0.87rem;
+}
 .site-tabs :deep(.el-tabs__header) { margin-bottom: 0; }
 .site-tabs :deep(.el-tabs__nav-wrap) { overflow-x: auto; }
 .site-tabs :deep(.el-tabs__item) { padding: 0 var(--wdc-space-4); font-size: 0.93rem; }
