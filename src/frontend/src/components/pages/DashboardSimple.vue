@@ -61,7 +61,7 @@
             :aria-label="t('sites.card.openSiteAria', { domain: s.domain })"
           >
             <HealthStatusDot
-              :level="s.enabled === false ? 'muted' : 'ok'"
+              :level="s.enabled === false ? 'muted' : webServerUp ? 'ok' : 'warn'"
             />
             <span class="simple-recent-domain">{{ s.domain }}</span>
             <span class="simple-recent-meta mono">
@@ -105,6 +105,9 @@ const { t } = useI18n()
 const router = useRouter()
 const sitesStore = useSitesStore()
 const daemonStore = useDaemonStore()
+// A site only answers while the web server runs; green dots next to a stopped
+// Apache said every site was fine while all of them were waiting for it.
+const webServerUp = computed(() => daemonStore.services.some(s => s.id === 'apache' && isRunning(s)))
 
 const mailpit = computed(() => daemonStore.visibleServices.find(s => s.id === 'mailpit'))
 const mailpitUsable = computed(() => !!mailpit.value && isRunning(mailpit.value))

@@ -187,7 +187,7 @@ const stoppingAll = ref(false)
 const services = computed(() => daemonStore.visibleServices)
 const running = computed(() => daemonStore.runningServices)
 // "Start all" only touches what can start: installed and stopped.
-const startable = computed(() => services.value.filter(s => serviceViewState(s) === 'stopped'))
+const startable = computed(() => services.value.filter(s => ['stopped', 'crashed', 'startFailed'].includes(serviceViewState(s))))
 const mailpit = computed(() => services.value.find(s => s.id === 'mailpit'))
 const mailpitUsable = computed(() => !!mailpit.value && isRunning(mailpit.value))
 

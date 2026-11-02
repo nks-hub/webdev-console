@@ -2102,8 +2102,8 @@
       "tunnel": "Cloudflare tunnel",
       "explain": {
         "running": "The site answers at:",
-        "waitingStopped": "The configuration is written. The site starts answering once you start Apache; the button is below in Site services.",
-        "waitingMissing": "The configuration is written. The site starts answering after Apache is installed and started; the button is below in Site services.",
+        "waitingStopped": "The configuration is written. The site starts answering once you start Apache from the Site services card.",
+        "waitingMissing": "The configuration is written. The site starts answering after Apache is installed and started from the Site services card.",
         "failed": "The last configuration apply did not succeed. Details are in the bar above.",
         "applying": "The configuration is being saved and applied.",
         "disabled": "The site is turned off: its configuration is kept, but it does not answer. Turning it on brings it back.",

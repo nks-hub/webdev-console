@@ -2102,8 +2102,8 @@
       "tunnel": "Tunel Cloudflare",
       "explain": {
         "running": "Web odpovídá na adrese:",
-        "waitingStopped": "Konfigurace je zapsaná. Web začne odpovídat, až spustíte Apache, tlačítko je níže ve Službách webu.",
-        "waitingMissing": "Konfigurace je zapsaná. Web začne odpovídat po instalaci a spuštění Apache, tlačítko je níže ve Službách webu.",
+        "waitingStopped": "Konfigurace je zapsaná. Web začne odpovídat, až spustíte Apache tlačítkem v kartě Služby webu.",
+        "waitingMissing": "Konfigurace je zapsaná. Web začne odpovídat po instalaci a spuštění Apache v kartě Služby webu.",
         "failed": "Poslední použití konfigurace se nepovedlo. Podrobnosti jsou v pruhu nahoře.",
         "applying": "Konfigurace se právě ukládá a používá.",
         "disabled": "Web je vypnutý: konfigurace zůstala zachována, ale web neodpovídá. Po zapnutí se vrátí do provozu.",
