@@ -1871,7 +1871,7 @@
     "tabLogs": "Log"
   },
   "cloudflareSite": {
-    "title": "Cloudflare Tunnel",
+    "title": "Tunel Cloudflare",
     "subtitle": "Veřejná adresa tohoto webu",
     "exposeTitle": "Zpřístupnit přes tunel",
     "exposeDesc": "Vytvoří ve vaší zóně Cloudflare záznam CNAME s proxy a přidá do tunelu pravidlo, takže web bude dostupný přes HTTPS bez přesměrování portů.",

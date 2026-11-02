@@ -47,7 +47,7 @@
             <el-switch
               :model-value="enabled"
               size="large"
-              :disabled="metaLoaded && !hasCloudflareSetup && !enabled"
+              :disabled="metaLoaded && (!hasCloudflareSetup || !cfHasDefaultZone) && !enabled"
               @update:model-value="onToggle"
             />
           </div>
@@ -135,7 +135,7 @@
                   ? (applied ? $t('cloudflareSite.applyAgain') : $t('cloudflareSite.applyNow'))
                   : $t('cloudflareSite.applyNow') }}
             </el-button>
-            <el-button size="default" @click="goToCloudflarePage">
+            <el-button v-if="cfHasDefaultZone" size="default" @click="goToCloudflarePage">
               {{ $t('siteEdit.openCloudflare') }}<template v-if="uiMode.isSimple">{{ ' ' + $t('common.inAdvanced') }}</template>
             </el-button>
             <span v-if="applyStatus" class="apply-status" :class="applyStatus.kind">
