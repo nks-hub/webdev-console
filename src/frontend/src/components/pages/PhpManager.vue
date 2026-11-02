@@ -44,7 +44,7 @@
           </div>
           <div class="ver-full">{{ ver.version }}</div>
           <div class="ver-path mono" :title="ver.directory ?? ver.path">{{ ver.directory ?? ver.path }}</div>
-          <div class="ver-actions" v-if="!isActive(ver)">
+          <div class="ver-actions" v-if="ver.majorMinor !== defaultMajorMinor">
             <el-button size="small" text @click.stop="setDefault(ver.version)">{{ $t('php.setDefault') }}</el-button>
           </div>
         </div>
@@ -140,8 +140,13 @@ const configLoading = ref(false)
 const configError = ref('')
 
 // The daemon marks the version new sites get as `isActive`.
+// The default is stored as major.minor, so two installs of 8.5.x both come back
+// flagged: only the first (newest) one is shown as the default.
+const defaultVersion = computed(() =>
+  versions.value.find(v => v.isActive ?? v.isDefault ?? false)?.version ?? '')
+const defaultMajorMinor = computed(() => defaultVersion.value.split('.').slice(0, 2).join('.'))
 function isActive(ver: PhpVersion): boolean {
-  return !!(ver.isActive ?? ver.isDefault)
+  return ver.version === defaultVersion.value
 }
 
 function addVersion() {

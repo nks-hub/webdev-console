@@ -1829,7 +1829,7 @@
     },
     "tabDatabases": "Databases",
     "tabLogs": "Log",
-    "databaseTools": "Databases",
+    "databaseTools": "Databases on the server",
     "noDatabases": "No databases yet.",
     "resetPassword": "Reset postgres user password",
     "resetWarning": "Changes the local PostgreSQL postgres user password. It does not delete databases.",

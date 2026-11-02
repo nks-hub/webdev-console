@@ -156,7 +156,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onActivated, ref, watch, type Component } from 'vue'
+import { computed, nextTick, onActivated, ref, watch, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Check, Close, Download, Loading, Remove, WarningFilled } from '@element-plus/icons-vue'
@@ -285,6 +285,10 @@ const logReason = computed(() => {
 
 function select(id: string) {
   selectedId.value = id
+  // Stacked layout: the panel sits below the list, out of sight after a click.
+  if (window.matchMedia('(max-width: 75rem)').matches) {
+    void nextTick(() => document.getElementById('svc-panel')?.scrollIntoView({ block: 'start' }))
+  }
 }
 
 // Load the log tail of the shown service, so the panel is never an empty

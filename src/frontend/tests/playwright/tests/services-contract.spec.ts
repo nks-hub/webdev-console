@@ -125,7 +125,7 @@ test.describe('Services UI contract', () => {
 
   test('the PHP page reads the version for new sites from isActive, like PhpManager', () => {
     const page = read('components', 'pages', 'PhpPluginPage.vue')
-    expect(page).toContain('ver.isActive ?? ver.isDefault')
+    expect(page).toContain('v.isActive ?? v.isDefault ??')
     expect(page).not.toMatch(/v\.isDefault\)|ver\.isDefault"/)
   })
 
