@@ -821,7 +821,7 @@ async function autoVerifyToken() {
 
 .status-strip {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: var(--wdc-space-3);
   padding: var(--wdc-space-4-5) 0 var(--wdc-space-1);
 }

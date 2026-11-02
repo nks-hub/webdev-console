@@ -24,7 +24,7 @@
         <div v-if="versionLoading">
           <el-skeleton :rows="2" animated />
         </div>
-        <el-descriptions v-else-if="composerVersion || composerPath" :column="2" border size="small">
+        <el-descriptions v-else-if="composerVersion || composerPath" :column="1" border size="small">
           <el-descriptions-item :label="$t('composer.versionLabel')">
             <el-tag v-if="composerVersion" type="success" size="small" class="mono">{{ composerVersion }}</el-tag>
             <span v-else class="text-muted">{{ $t('composer.versionUnknown') }}</span>
@@ -263,7 +263,6 @@ onMounted(() => {
 .composer-manager {
   display: flex;
   flex-direction: column;
-  height: 100%;
 }
 
 .page-header {
@@ -302,9 +301,9 @@ onMounted(() => {
   align-items: center;
 }
 
+/* The page scrolls in the app's main area; a second scroller here showed two scrollbars. */
 .page-body {
   flex: 1;
-  overflow-y: auto;
   padding: var(--wdc-space-4) 0;
   display: flex;
   flex-direction: column;
