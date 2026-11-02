@@ -158,11 +158,11 @@
         v-for="plugin in filteredPlugins"
         :key="plugin.id"
         class="pm-card"
-        :class="{ 'pm-card--enabled': plugin.enabled, 'pm-card--disabled': !plugin.enabled }"
+        :class="{ 'pm-card--enabled': isUsable(plugin), 'pm-card--disabled': !isUsable(plugin) }"
       >
         <div class="pm-card-header">
           <div class="pm-card-title">
-            <ServiceIcon :service="plugin.id" :active="plugin.enabled" />
+            <ServiceIcon :service="plugin.id" :active="isUsable(plugin)" />
             <span class="pm-name">{{ pluginName(plugin) }}</span>
             <el-tag size="small" type="info" effect="plain" class="pm-type-tag">
               {{ plugin.type === 'service' ? $t('plugins.type.service') : $t('plugins.type.tool') }}
@@ -216,7 +216,7 @@
         <!-- Open plugin page button if has UI. Must be a full-width solid
              button for readable contrast — the old text-primary variant
              rendered as low-contrast blue-on-blue on the flat surface. -->
-        <div class="pm-card-actions" v-if="plugin.enabled && plugin.ui">
+        <div class="pm-card-actions" v-if="isUsable(plugin) && plugin.ui">
           <el-button
             size="small"
             type="primary"
@@ -371,6 +371,12 @@ watch(activeTab, (tab) => {
 })
 
 const { pluginName, authorName, platformWarning } = usePluginText()
+
+// Enabled but unsupported on this OS (e.g. the rsync backend on Windows) is not
+// in use: show it like a disabled plugin, without the panel link.
+function isUsable(p: { enabled: boolean; platformSupported?: boolean }): boolean {
+  return p.enabled && p.platformSupported !== false
+}
 
 function pluginDescription(p: { id: string; description?: string | null }): string {
   const key = `plugins.descriptions.${p.id.replace(/^nks\.wdc\./, '').replace(/\./g, '_')}`
