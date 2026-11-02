@@ -12,7 +12,7 @@
           <p class="att-text">
             <template v-if="item.subject"><strong>{{ item.subject }}</strong>{{ item.sep ?? ' ' }}</template>{{ item.text }}
           </p>
-          <p v-if="item.detail" class="att-detail mono">{{ item.detail }}</p>
+          <p v-if="item.detail" class="att-detail" :class="{ mono: !item.rawDetail }" :title="item.rawDetail ?? undefined">{{ item.detail }}</p>
           <button
             type="button"
             class="link-act"
@@ -56,6 +56,8 @@ interface AttentionItem {
   sep?: string
   text: string
   detail?: string | null
+  /** Original backend text, kept for a tooltip when `detail` is a Czech summary of it. */
+  rawDetail?: string | null
   action: string
   busy?: boolean
   run: () => void
@@ -70,6 +72,17 @@ const updatesStore = useUpdatesStore()
 
 const BACKUP_STALE_DAYS = 7
 const startingApache = ref(false)
+
+const TIMEOUT_RE = /timed? ?out|HttpClient.Timeout|request was canceled|TaskCanceled/i
+const CONNECTION_RE = /HttpRequestException|No such host|actively refused|unreachable|name resolution/i
+
+/** Czech one-liner for known backend failure texts (always English), or null when unknown. */
+function failureSummary(step: string, detail: string | null | undefined): string | null {
+  if (!detail) return null
+  if (TIMEOUT_RE.test(detail)) return t(step === 'cloudflare' ? 'overview.attention.cloudflareTimeout' : 'overview.attention.stepTimeout')
+  if (CONNECTION_RE.test(detail)) return t(step === 'cloudflare' ? 'overview.attention.cloudflareUnreachable' : 'overview.attention.stepUnreachable')
+  return null
+}
 
 function stepLabel(name: string): string {
   const key = `siteApply.steps.${name}`
@@ -136,7 +149,8 @@ const items = computed<AttentionItem[]>(() => {
       subject: rec.domain,
       sep: ': ',
       text: t('overview.attention.applyFailed', { step: failed.map(s => stepLabel(s.name)).join(', ') }, failed.length),
-      detail: failed[0].detail,
+      detail: failureSummary(failed[0].name, failed[0].detail) ?? failed[0].detail,
+      rawDetail: failureSummary(failed[0].name, failed[0].detail) ? failed[0].detail : null,
       action: t('overview.attention.openSite'),
       run: () => void router.push(`/sites/${encodeURIComponent(rec.domain)}/edit`),
     })
