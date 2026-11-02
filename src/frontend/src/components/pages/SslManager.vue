@@ -100,8 +100,8 @@
                 <span v-if="cert.notAfterUtc" class="cert-meta-item">
                   {{ $t('ssl.metaExpires') }}: {{ formatDate(cert.notAfterUtc) }}
                 </span>
-                <span v-if="cert.issuer" class="cert-meta-item mono">
-                  {{ $t('ssl.metaIssuer') }}: {{ cert.issuer }}
+                <span v-if="cert.issuer" class="cert-meta-item mono" :title="cert.issuer">
+                  {{ $t('ssl.metaIssuer') }}: {{ issuerShort(cert.issuer) }}
                 </span>
                 <span v-if="cert.fingerprint" class="cert-meta-item mono cert-fingerprint">
                   SHA1: {{ cert.fingerprint }}
@@ -215,6 +215,11 @@ const genAliases = ref('')
 const availableSites = ref<string[]>([])
 const pluginsStore = usePluginsStore()
 const pluginDisabled = computed(() => pluginsStore.manifests.some(p => p.id === 'nks.wdc.ssl' && !p.enabled))
+
+/** The organisation of an issuer DN; the full DN (it carries the local user name) stays in the tooltip. */
+function issuerShort(dn: string): string {
+  return /(?:^|,\s*)O=([^,]+)/.exec(dn)?.[1]?.trim() || dn
+}
 
 /** Czech/English sentence for a failed SSL call; daemon `code` first, raw text as fallback. */
 function sslError(data: { code?: string; message?: string } | null, fallbackKey: string): string {
