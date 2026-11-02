@@ -748,7 +748,7 @@
       "quickActions": {
         "newSite": "New site",
         "mailpit": "Open Mailpit",
-        "backup": "Backup"
+        "backup": "Open backups"
       },
       "apacheStopped": {
         "title": "Web server is stopped",
