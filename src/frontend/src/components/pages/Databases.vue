@@ -803,7 +803,7 @@ onActivated(() => { void loadDatabases() })
 .page-body {
   flex: 1;
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 280px minmax(0, 1fr);
   gap: 0;
   min-height: 0;
   background: var(--wdc-bg);
@@ -819,6 +819,8 @@ onActivated(() => { void loadDatabases() })
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
+  container-type: inline-size;
   background: var(--wdc-bg);
 }
 
@@ -835,14 +837,15 @@ onActivated(() => { void loadDatabases() })
   background: var(--wdc-surface-2);
   border-bottom: 1px solid var(--wdc-border);
   flex-shrink: 0;
+  flex-wrap: wrap;
   padding: 0 var(--wdc-space-4) 0 var(--wdc-space-3);
-  height: 52px;
+  min-height: 52px;
 }
 
 .tab-strip {
   display: flex;
   align-items: stretch;
-  height: 100%;
+  height: 52px;
 }
 
 .tab-btn {
@@ -872,7 +875,15 @@ onActivated(() => { void loadDatabases() })
 }
 .tab-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-.tab-actions { display: flex; gap: 6px; padding-right: 6px; }
+.tab-actions { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 6px 6px 0; }
+.tab-actions .el-button + .el-button { margin-left: 0; }
+
+/* Next to the 280px tree in a narrow window: four tabs with icons are
+   wider than the pane, so drop the icons and tighten the padding. */
+@container (max-width: 520px) {
+  .tab-btn { padding: 0 var(--wdc-space-2); }
+  .tab-btn .el-icon { display: none; }
+}
 
 .tab-content {
   flex: 1;

@@ -24,7 +24,7 @@
           <th scope="col">{{ t('overview.stack.status') }}</th>
           <th v-if="advanced" scope="col" class="num">{{ t('overview.stack.port') }}</th>
           <th v-if="advanced" scope="col">{{ t('overview.stack.version') }}</th>
-          <th v-if="advanced" scope="col" class="num">{{ t('overview.stack.usage') }}</th>
+          <th v-if="advanced" scope="col" class="num col-usage">{{ t('overview.stack.usage') }}</th>
           <th scope="col"><span class="visually-hidden">{{ t('overview.stack.actions') }}</span></th>
         </tr>
       </thead>
@@ -43,7 +43,7 @@
           </td>
           <td v-if="advanced" class="num mono">{{ row.port ?? '—' }}</td>
           <td v-if="advanced" class="mono muted">{{ row.svc.version || '—' }}</td>
-          <td v-if="advanced" class="num mono muted">
+          <td v-if="advanced" class="num mono muted col-usage">
             <template v-if="row.state === 'running'">{{ formatPercent(row.svc.cpuPercent ?? 0, localeName) }} · {{ formatBytes(row.svc.memoryBytes ?? 0, localeName) }}</template>
             <template v-else>—</template>
           </td>
@@ -158,7 +158,13 @@ function statusLabel(row: Row): string {
 }
 .link:hover { text-decoration-color: var(--wdc-accent); color: var(--wdc-text); }
 
+.stack { container-type: inline-size; }
 .table-wrap { overflow-x: auto; }
+/* In a narrow window the row action scrolled out of view; CPU and RAM
+   stay on the Services page. */
+@container (max-width: 700px) {
+  .col-usage { display: none; }
+}
 .table {
   width: 100%;
   border-collapse: collapse;
