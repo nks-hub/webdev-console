@@ -23,7 +23,7 @@ jobs:
               src/frontend/release/*.exe
               src/frontend/release/*.blockmap
               src/frontend/release/latest.yml
-          - os: macos-14
+          - os: macos-15
             target: mac
             daemon_rid: osx-arm64
             npm_script: dist:mac
