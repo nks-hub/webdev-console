@@ -462,8 +462,8 @@ onMounted(() => {
 
 /* F81 expiry / orphan state styling. The border hints at severity so a
    quick glance across many certs highlights what needs attention. */
-.cert-card.cert-expiring { border-left: 3px solid var(--wdc-warning); }
-.cert-card.cert-expired { border-left: 3px solid var(--wdc-status-error); }
+.cert-card.cert-expiring { border-color: var(--wdc-warning); }
+.cert-card.cert-expired { border-color: var(--wdc-status-error); }
 .cert-card.cert-orphan .cert-lock,
 .cert-card.cert-orphan .cert-name,
 .cert-card.cert-orphan .cert-meta,

@@ -960,7 +960,6 @@ onBeforeUnmount(() => {
 .bin-card {
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
-  border-left: 3px solid var(--wdc-border);
   border-radius: var(--wdc-radius);
   padding: var(--wdc-space-4) var(--wdc-space-4-5);
   display: flex;
@@ -970,16 +969,9 @@ onBeforeUnmount(() => {
   transition: border-color 0.12s, background 0.12s;
 }
 
-.bin-card--has-installed {
-  border-left-color: var(--wdc-accent);
-}
-
 .bin-card:hover {
   border-color: var(--wdc-border-strong);
   background: var(--wdc-surface-2);
-}
-.bin-card--has-installed:hover {
-  border-left-color: var(--wdc-accent);
 }
 
 .bin-card-header {
@@ -1108,12 +1100,7 @@ onBeforeUnmount(() => {
 }
 
 .bin-card--builtin {
-  border-left-color: var(--el-color-info);
   cursor: default;
-}
-
-.bin-card--builtin:hover {
-  border-left-color: var(--el-color-info);
 }
 
 .builtin-tag {

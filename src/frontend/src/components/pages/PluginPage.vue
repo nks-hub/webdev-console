@@ -279,7 +279,6 @@ watch(() => props.id, async (id) => {
 .plugin-desc-card {
   background: var(--wdc-surface);
   border: 1px solid var(--wdc-border);
-  border-left: 3px solid var(--wdc-accent);
   border-radius: var(--wdc-radius);
   padding: var(--wdc-space-4-5) var(--wdc-space-5);
 }

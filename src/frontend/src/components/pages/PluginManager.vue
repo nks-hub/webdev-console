@@ -585,15 +585,8 @@ onMounted(() => {
   flex-direction: column;
   gap: var(--wdc-space-3);
   transition: border-color 0.15s, background 0.15s;
-  border-left-width: 3px;
-  border-left-style: solid;
-  border-left-color: var(--wdc-border);
 }
 
-.pm-card--enabled {
-  border-left-color: var(--wdc-accent);
-  background: var(--wdc-surface);
-}
 /* Dim only the passive parts; the actions row and hint must stay readable. */
 .pm-card--disabled .pm-card-title,
 .pm-card--disabled .pm-card-desc,
@@ -607,7 +600,6 @@ onMounted(() => {
   border-color: var(--wdc-border-strong);
   background: var(--wdc-surface-2);
 }
-.pm-card--enabled:hover { border-left-color: var(--wdc-accent); }
 
 .pm-card-header {
   display: flex;

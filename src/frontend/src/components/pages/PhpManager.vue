@@ -365,7 +365,6 @@ onMounted(() => { void loadVersions() })
 
 .version-card:hover { border-color: var(--wdc-border-strong); }
 .version-card.active { border-color: var(--wdc-accent); background: var(--wdc-accent-dim); }
-.version-card.default { border-left: 3px solid var(--wdc-status-running); }
 
 .ver-header {
   display: flex;
