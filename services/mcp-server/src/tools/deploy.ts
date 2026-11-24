@@ -49,11 +49,12 @@ const GroupIdSchema = z
 const LimitSchema = z.number().int().min(1).max(200).default(50)
   .describe('Maximum number of entries to return (1-200, default 50).')
 
-const IdempotencyKeySchema = z
+// z.guid() (any 8-4-4-4-12 hex), not z.uuid(): Zod 4's uuid() rejects non-RFC variants a client may generate.
+export const IdempotencyKeySchema = z
   .string()
-  .uuid()
+  .guid()
   .optional()
-  .describe('Caller-generated UUIDv4 sent with the deploy request, for correlating retries.')
+  .describe('Caller-generated UUID sent with the deploy request, for correlating retries.')
 
 function intentTokenSchema(howToMint: string) {
   return z
@@ -436,7 +437,7 @@ export function registerDeployTools(server: McpServer, opts: RegisterOptions): v
           '  host: Target host from the deploy settings.\n' +
           '  branch: Optional branch override.\n' +
           '  intentToken: Approved deploy intent for this host.\n' +
-          '  idempotencyKey: Optional UUIDv4 for correlating retries.',
+          '  idempotencyKey: Optional UUID for correlating retries.',
         inputSchema: {
           domain: DomainSchema,
           host: HostSchema,

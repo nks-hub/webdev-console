@@ -17,7 +17,7 @@ import { recorder, type RecordedCall } from '../testing/recorder.js'
 import { fakeServer, resultBody } from '../testing/fakeServer.js'
 import { DAEMON_SRC, matchRoute } from '../testing/daemonRoutes.js'
 import { CONFIRMABLE_OPERATIONS, intentFor } from './confirmation.js'
-import { deployIntentFor, registerDeployTools } from './deploy.js'
+import { IdempotencyKeySchema, deployIntentFor, registerDeployTools } from './deploy.js'
 
 const P = '/api/nks.wdc.deploy/sites/shop.loc'
 const DEPLOY = '11111111-1111-4111-8111-111111111111'
@@ -264,7 +264,7 @@ describe('intent (kind, host) matches what the daemon route checks', () => {
   }
 
   function gate(code: string): { kind: string; host: string } {
-    const m = code.match(/ValidateAndConsumeAsync\(\s*\w+ \?\? "", "(\w+)", domain, (?:host: )?("[^"]*"|[\w[\]0-9]+)/)
+    const m = code.match(/ValidateAndConsumeAsync\(\s*\w+ \?\? "", "(\w+)", domain, (?:host: )?("[^"]*"|[\w[\]]+)/)
     expect(m, 'intent gate call').not.toBeNull()
     return { kind: m![1]!, host: m![2]!.replace(/"/g, '') }
   }
@@ -314,5 +314,15 @@ describe('scopes', () => {
   it('registers no write tools in read-only mode', () => {
     const t = tools({ readonly: true, deployScopes: ['*'] }).tools
     expect([...t.values()].every(x => x.config.annotations?.readOnlyHint)).toBe(true)
+  })
+})
+
+describe('idempotencyKey', () => {
+  it('accepts a non-RFC GUID and rejects garbage', () => {
+    expect(IdempotencyKeySchema.safeParse('11111111-2222-3333-4444-555555555555').success).toBe(true)
+    expect(IdempotencyKeySchema.safeParse(KEY).success).toBe(true)
+    expect(IdempotencyKeySchema.safeParse(undefined).success).toBe(true)
+    expect(IdempotencyKeySchema.safeParse('not-a-guid').success).toBe(false)
+    expect(IdempotencyKeySchema.safeParse('11111111-2222-3333-4444-55555555555').success).toBe(false)
   })
 })
