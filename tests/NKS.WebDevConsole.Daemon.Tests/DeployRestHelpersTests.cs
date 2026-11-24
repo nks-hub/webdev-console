@@ -83,4 +83,33 @@ public sealed class DeployRestHelpersTests
         // across all empty-domain calls).
         Assert.Equal("_", DeployRestHelpers.SanitiseDomainForFilename(input!));
     }
+
+    // --- BackupFolder ---
+
+    [Theory]
+    [InlineData("..")]
+    [InlineData(".")]
+    [InlineData("..\\..\\x")]
+    [InlineData("../../x")]
+    [InlineData("a/../../b")]
+    [InlineData("C:\\Windows")]
+    [InlineData("")]
+    public void BackupFolder_HostileDomain_StaysUnderSubfolder(string domain)
+    {
+        var root = Path.GetFullPath(Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.BackupsRoot, "manual"));
+        var dir = Path.GetFullPath(DeployRestHelpers.BackupFolder("manual", domain));
+
+        Assert.StartsWith(root + Path.DirectorySeparatorChar, dir);
+        Assert.Equal(root, Path.GetDirectoryName(dir));
+    }
+
+    [Theory]
+    [InlineData("blog.loc")]
+    [InlineData("api-staging.example.com")]
+    public void BackupFolder_ValidDomain_IsTheDomainFolder(string domain)
+    {
+        var expected = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.BackupsRoot, "pre-deploy", domain);
+
+        Assert.Equal(expected, DeployRestHelpers.BackupFolder("pre-deploy", domain));
+    }
 }

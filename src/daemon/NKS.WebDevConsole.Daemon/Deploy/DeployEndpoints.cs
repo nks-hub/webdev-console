@@ -331,7 +331,7 @@ internal static class DeployEndpoints
             if (retentionDays <= 0) return 0;
             try
             {
-                var dir = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.BackupsRoot, subfolder, domain);
+                var dir = NKS.WebDevConsole.Daemon.Deploy.DeployRestHelpers.BackupFolder(subfolder, domain);
                 if (!Directory.Exists(dir)) return 0;
                 var cutoff = DateTime.UtcNow - TimeSpan.FromDays(retentionDays);
                 var purged = 0;
@@ -1224,7 +1224,7 @@ internal static class DeployEndpoints
                 }
                 catch { /* fall back to current path */ }
 
-                var backupsDir = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.BackupsRoot, "manual", domain);
+                var backupsDir = NKS.WebDevConsole.Daemon.Deploy.DeployRestHelpers.BackupFolder("manual", domain);
                 Directory.CreateDirectory(backupsDir);
                 var realPath = Path.Combine(backupsDir, $"{snapshotId}.zip");
                 try
@@ -1249,14 +1249,14 @@ internal static class DeployEndpoints
                     return Results.Json(new { error = "snapshot_zip_failed", detail = ex.Message },
                         statusCode: 500);
                 }
-                returnedPath = $"~/.wdc/backups/manual/{domain}/{snapshotId}.zip";
+                returnedPath = $"~/.wdc/backups/manual/{Path.GetFileName(backupsDir)}/{snapshotId}.zip";
             }
             else
             {
                 // No local target available — record a placeholder row so GUI
                 // shows an entry but flag the path as the legacy stub shape.
                 sizeBytes = 1024 * 512;
-                returnedPath = $"~/.wdc/backups/manual/{domain}/{snapshotId}.sql.gz";
+                returnedPath = $"~/.wdc/backups/manual/{Path.GetFileName(DeployRestHelpers.BackupFolder("manual", domain))}/{snapshotId}.sql.gz";
             }
 
             sw.Stop();
@@ -1859,8 +1859,8 @@ internal static class DeployEndpoints
                     }
                     catch { /* fall back to currentDir */ }
 
-                    var preDir = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.BackupsRoot,
-                        "pre-deploy", domain);
+                    var preDir = NKS.WebDevConsole.Daemon.Deploy.DeployRestHelpers.BackupFolder("pre-deploy", domain);
+                    var preName = Path.GetFileName(preDir);
                     Directory.CreateDirectory(preDir);
                     var realPath = Path.Combine(preDir, $"{deployId}.zip");
                     try
@@ -1871,7 +1871,7 @@ internal static class DeployEndpoints
                             includeBaseDirectory: false);
                         var size = new FileInfo(realPath).Length;
                         await runs.UpdatePreDeployBackupAsync(deployId,
-                            $"~/.wdc/backups/pre-deploy/{domain}/{deployId}.zip", size, ct);
+                            $"~/.wdc/backups/pre-deploy/{preName}/{deployId}.zip", size, ct);
 
                         // Phase 7.5+++ — retention prune. Default 30 days when
                         // settings missing (matches defaultDeploySettings()).
@@ -1884,14 +1884,14 @@ internal static class DeployEndpoints
                         // placeholder so audit shows the attempt + the failure
                         // is visible in deploy logs.
                         await runs.UpdatePreDeployBackupAsync(deployId,
-                            $"~/.wdc/backups/pre-deploy/{domain}/{deployId}.zip.failed", 0, ct);
+                            $"~/.wdc/backups/pre-deploy/{preName}/{deployId}.zip.failed", 0, ct);
                     }
                 }
                 else
                 {
                     // No prior deploy — placeholder for audit symmetry.
                     await runs.UpdatePreDeployBackupAsync(deployId,
-                        $"~/.wdc/backups/pre-deploy/{domain}/{deployId}.empty", 0, ct);
+                        $"~/.wdc/backups/pre-deploy/{Path.GetFileName(DeployRestHelpers.BackupFolder("pre-deploy", domain))}/{deployId}.empty", 0, ct);
                 }
             }
 

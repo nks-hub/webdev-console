@@ -43,4 +43,20 @@ public static class DeployRestHelpers
         return System.Text.RegularExpressions.Regex.Replace(
             domain, "[^a-zA-Z0-9._-]", "_");
     }
+
+    /// <summary>
+    /// <c>{BackupsRoot}/{subfolder}/{name}</c> for a route-supplied domain. The name is
+    /// the sanitised domain with "." and ".." mapped to "_", and the result must stay
+    /// under <c>{BackupsRoot}/{subfolder}</c>; a valid hostname maps to itself.
+    /// </summary>
+    public static string BackupFolder(string subfolder, string domain)
+    {
+        var root = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.BackupsRoot, subfolder);
+        var name = SanitiseDomainForFilename(domain);
+        if (name is "." or "..") name = "_";
+        var dir = Path.Combine(root, name);
+        if (!NKS.WebDevConsole.Daemon.Config.PathContainment.IsUnder(root, dir))
+            throw new ArgumentException("Domain does not map to a folder under the backups root.", nameof(domain));
+        return dir;
+    }
 }
