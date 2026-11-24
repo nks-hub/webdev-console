@@ -277,6 +277,8 @@ builder.Services.AddHostedService<CatalogHeartbeatService>();
 // Request finished). That's cheap on macOS but hit Windows CI smoke
 // hard enough to time out bootstrap at 60s. Warnings/Errors from the
 // framework are still captured for real incidents.
+builder.Logging.AddConsole(o => o.FormatterName = SingleLineConsoleFormatter.FormatterName)
+    .AddConsoleFormatter<SingleLineConsoleFormatter, Microsoft.Extensions.Logging.Console.ConsoleFormatterOptions>();
 builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
 builder.Logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.Information); // keep "Now listening on:" banner
 var daemonLogDir = Path.Combine(NKS.WebDevConsole.Core.Services.WdcPaths.LogsRoot, "daemon");
@@ -325,7 +327,8 @@ try
             fileLoggerOpts.FileSizeLimitBytes = 10 * 1024 * 1024;   // 10 MB per file
             fileLoggerOpts.MaxRollingFiles = 7;                       // keep a week of rolled files
             fileLoggerOpts.FormatLogEntry = msg =>
-                $"{DateTime.Now:HH:mm:ss.fff} {msg.LogLevel,-11} {msg.LogName} {msg.Message} {msg.Exception?.ToString() ?? ""}".Trim();
+                NKS.WebDevConsole.Daemon.Config.LogLineFormatter.Format(
+                    DateTime.Now, msg.LogLevel, msg.LogName, msg.Message, msg.Exception);
         });
     }
 }
